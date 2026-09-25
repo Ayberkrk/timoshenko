@@ -1,4 +1,4 @@
-# Scalar equation uncertainty propagation (1.6)
+# Scalar equation uncertainty propagation
 
 Timoshenko wraps an existing scalar equation instead of requiring users to
 rewrite it to get a first uncertainty estimate. The methods follow the GUM

@@ -1,4 +1,4 @@
-# Readable reports (0.9)
+# Readable reports
 
 Timoshenko calculation results remain available as Python objects and JSON dictionaries. The report module adds a human-readable, self-contained HTML view for the same evidence:
 

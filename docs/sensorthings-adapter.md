@@ -60,7 +60,7 @@ pagination URLs are followed. Requests use JSON `Accept`, a finite timeout, and
 an optional bearer authorization header. TLS certificate validation follows
 Python's default HTTPS behavior.
 
-This first reader accepts instant `phenomenonTime` and scalar finite numeric
+The reader accepts instant `phenomenonTime` and scalar finite numeric
 `result` values. It rejects interval times, arrays/complex results, malformed
 pages, and oversized responses. Quality is **false by default**, so unknown
 quality cannot silently enter the monitoring window. Set

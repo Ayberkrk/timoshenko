@@ -1,33 +1,35 @@
-# Timoshenko architecture
+# Architecture
 
-Timoshenko is a small embeddable engineering engine. It provides shared numerical/data contracts and a local one-shot runner; it does not own a web server, broker, dashboard, database cluster, or project-specific decision rules.
+Timoshenko is a small embeddable engineering engine. It provides shared numerical and data contracts, analysis steps, and a bounded monitoring session. It does not own a web server, message broker, dashboard, database cluster, scheduler, or project-specific decision rules; the host application keeps those.
 
 ```text
-User code / Cauren / another host application
-    ├── tm.<equation>(...)                 direct analytic calculation
-    ├── tm.modal / tm.health / tm.update   composable analysis steps
-    └── tm.load_project + tm.run_project   explicit local manifest workflow
+Host application (your code, Cauren, a gateway service)
+    │
+    ├── tm.<equation>(...)                  analytic calculations, usable on their own
+    ├── tm.modal / tm.update / tm.health    composable analysis steps
+    ├── tm.monitor, tm.run_project          one-shot pipelines over supplied data
+    └── tm.MonitoringSession                bounded rolling-window analysis of fed batches
                  │
        validated data contracts and provenance
+       (SensorData, MultiChannelData, Observation, ObservationBatch)
                  │
-   mechanics · sections · beams · vibration · modal/FDD
+   sections · mechanics · beams · vibration · modal / FDD · uncertainty
                  │
-  optional adapters / storage / reports (future releases)
+   source adapters (CSV, MQTT, SensorThings) · SQLite history · HTML reports
 ```
 
 ## Design decisions
 
-- **Engine core:** explicit project inputs, common result objects, validation, provenance, and operation composition. `monitor` and `run_project` are deterministic one-shot entry points for the supplied batch.
-- **Small dependency base:** NumPy is required by the current package; integrations with Cauren are optional at runtime. Database, broker, BIM, API, and chart libraries should be extras when there is a demonstrated need.
-- **Composable APIs:** calculation functions are importable directly from `timoshenko` and grouped by topic (`sections`, `mechanics`, `beams`, `vibration`, `stability`, `oma`, `health`). A project runner composes those parts but users can call them independently.
-- **Explicit lifecycle:** there is no hidden global runtime. Load a manifest, validate the model and sources, execute once, serialize the result, then close/release input resources. Streaming sessions and resumable state are future layers.
-- **Host integration:** Cauren and other applications own their API, risk interpretation, UI, and business workflows. `cauren_physics.timoshenko_adapter` is an optional compatibility boundary; the engine itself has no Cauren dependency.
-- **Result trust:** every method states its assumptions and known limits. A numerical result is not a design approval, diagnosis, or safety status.
+- **Small core, explicit inputs.** NumPy is the only required dependency. Optional integrations are extras (`mqtt`) or plugins discovered through the `timoshenko.plugins` entry-point group. Nothing is inferred that the caller did not state: sample rates, units, and channel identities are always explicit.
+- **Composable APIs.** Calculation functions are importable directly from `timoshenko` and grouped by topic modules (`sections`, `mechanics`, `beams`, `vibration`, `stability`, `modal`, `oma`, `health`). Pipelines such as `monitor`, `run_project`, and `MonitoringSession` only compose those parts.
+- **Explicit lifecycle.** There is no hidden global runtime or background thread. `ObservationSource` implementations are opened, read, and closed by `SessionRunner`; a `MonitoringSession` analyzes only what the host feeds it and can restore its buffers from a `SQLiteStore` after a restart.
+- **Host integration.** Applications own their API, user interface, alarm and risk policy, and engineering interpretation. For example, Cauren uses Timoshenko through an optional adapter and keeps its own risk thresholds; the engine has no dependency on any host.
+- **Result trust.** Every method documents its assumptions and limits, and results carry the evidence behind them. A numerical result is not a design approval, damage diagnosis, or safety status.
 
-## Planned boundaries
+## Extension points
 
-`SourceAdapter` should turn an external protocol into typed `Observation` records. A `Processor` transforms an immutable/bounded observation batch. A `StorageAdapter` persists raw input plus provenance and state changes. A `Reporter` serializes results or renders a view. These interfaces are introduced only once a real implementation exists. Source adapters now follow the `ObservationSource` protocol (CSV, MQTT, SensorThings), and version 1.1 added entry-point discovery for source factories only; processor, storage and reporter plugin families are not defined yet.
+Source adapters implement the `ObservationSource` protocol (`open`, `read_batch`, `close`, and optionally `acknowledge`). Built-in sources cover CSV replay, MQTT, and OGC SensorThings. The [plugin contract](plugin-contract.md) lets installed packages register additional source factories. Plugin families for processors, storage backends, and reporters are intentionally not defined until a real implementation needs them.
 
-## Why not a full general FEM solver now?
+## Why not a general FEM solver?
 
-FEM needs mesh/element/material/constraint contracts, sparse linear algebra, solver convergence and verification. It is a distinct deep subsystem. The current `Structure` is explicitly a lumped-mass shear-building reference model; the analytical primitives are useful even without a mesh. A future solver integration should use an adapter boundary instead of implying the existing model is general FEM.
+FEM needs mesh, element, material, and constraint contracts, sparse linear algebra, solver convergence, and verification. It is a distinct deep subsystem. `Structure` is explicitly a lumped-mass shear-building reference model, and the analytic primitives are useful without a mesh. A future solver integration should sit behind an adapter boundary rather than implying that the existing model is general FEM.

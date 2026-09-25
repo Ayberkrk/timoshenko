@@ -1,4 +1,4 @@
-# Local SQLite history (0.7)
+# Local SQLite history
 
 `SQLiteStore` uses the Python standard library and a local SQLite file. It persists a minimal asset graph (`Asset`, `Relation`), point observations/batches, and JSON analysis results. The database uses `PRAGMA user_version` schema migration marker 1 and foreign keys for asset relations.
 

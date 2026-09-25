@@ -1,4 +1,4 @@
-# Plugin contract (1.1)
+# Plugin contract
 
 Timoshenko supports explicit source-factory registration and opt-in Python entry-point discovery. Plugins are packaged separately so protocol libraries remain optional.
 

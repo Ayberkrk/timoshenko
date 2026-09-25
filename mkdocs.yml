@@ -20,27 +20,29 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Foundations:
+  - Start here:
       - Architecture: architecture.md
-      - Data contract: data-contract.md
-      - Project manifest: project-manifest.md
-      - Plugin contract: plugin-contract.md
-      - Literature review: literature-review.md
+      - API reference: api.md
+      - Numerical methods: numerical-methods.md
   - Modal analysis and monitoring:
-      - Numerical methods and FDD: numerical-methods.md
+      - Data contract: data-contract.md
       - Live sessions: live-sessions.md
-      - Reporting: reporting.md
-      - Cauren integration: cauren-integration.md
-  - Data and integrations:
-      - CSV source: csv-source.md
+      - Project manifests: project-manifest.md
+      - Reports: reporting.md
+  - Data sources and storage:
       - Source adapters: adapters.md
-      - MQTT adapter: mqtt-adapter.md
-      - SensorThings adapter: sensorthings-adapter.md
+      - Plugin contract: plugin-contract.md
+      - CSV replay: csv-source.md
+      - MQTT: mqtt-adapter.md
+      - OGC SensorThings: sensorthings-adapter.md
       - Local storage: storage.md
   - Engineering calculations:
       - Section properties: section-properties.md
       - Polygon sections: polygon-sections.md
       - Rayleigh damping: rayleigh-damping.md
       - Uncertainty: uncertainty.md
-  - Publishing:
-      - Release and citation setup: publishing.md
+  - Project:
+      - Changelog: changelog.md
+      - Literature review: literature-review.md
+      - Cauren integration: cauren-integration.md
+      - Publishing and citation: publishing.md

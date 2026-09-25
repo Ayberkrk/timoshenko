@@ -8,7 +8,7 @@
 
 ## Regular time series
 
-`SensorData` represents one regularly sampled channel with one explicit sample rate. Optional timestamps are validated as strictly increasing but are not used to infer or repair an irregular clock. `MultiChannelData` is a rectangular `(sample, channel)` array: channels are aligned row by row and share one sample rate. Version 0.6 FDD requires one unit for all analyzed channels. Neither time-series class fabricates missing observations.
+`SensorData` represents one regularly sampled channel with one explicit sample rate. Optional timestamps are validated as strictly increasing but are not used to infer or repair an irregular clock. `MultiChannelData` is a rectangular `(sample, channel)` array: channels are aligned row by row and share one sample rate. FDD requires one unit for all analyzed channels. Neither time-series class fabricates missing observations.
 
 ## Project input and result provenance
 

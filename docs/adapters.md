@@ -1,4 +1,4 @@
-# Observation source adapters (0.10)
+# Observation source adapters
 
 Timoshenko separates analysis/session logic from the system that collects sensor data. Any gateway can implement `tm.ObservationSource` as a small synchronous pull interface:
 

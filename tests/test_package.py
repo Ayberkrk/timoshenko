@@ -54,3 +54,23 @@ def test_formula_modules_share_validation_messages():
                  lambda: tm.cantilever_tip_load(1.0, 0.0, 1.0, 1.0), lambda: tm.natural_frequency_hz(float("nan"), 1.0)):
         with pytest.raises(ValueError, match="must be finite and greater than zero"):
             call()
+
+
+def test_every_public_name_is_in_the_api_reference():
+    import inspect
+
+    reference = (ROOT / "docs" / "api.md").read_text(encoding="utf-8")
+    missing = [
+        name for name in tm.__all__
+        if not inspect.ismodule(getattr(tm, name)) and f"`tm.{name}`" not in reference
+    ]
+    assert missing == []
+
+
+@pytest.mark.parametrize("heading", ["## Quick start", "## Engineering calculations"])
+def test_readme_examples_run(heading):
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    section = readme[readme.index(heading):]
+    code = section[section.index("```python") + len("```python"):]
+    code = code[: code.index("```")]
+    exec(compile(code, f"README {heading}", "exec"), {})

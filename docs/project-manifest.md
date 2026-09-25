@@ -1,6 +1,6 @@
 # Project manifest, version 1
 
-Version 0.6 adds an explicit JSON manifest for repeatable local analysis. “Automatic loading” means the manifest names the model, input file, channel headings, units, sample rate, analysis method, and options. Timoshenko does not infer absent engineering facts.
+A project manifest is an explicit JSON file for repeatable local analysis. “Automatic loading” means the manifest names the model, input file, channel headings, units, sample rate, analysis method, and options. Timoshenko does not infer absent engineering facts.
 
 ## Schema example
 
@@ -28,7 +28,7 @@ Version 0.6 adds an explicit JSON manifest for repeatable local analysis. “Aut
 }
 ```
 
-Paths are resolved relative to the manifest file. Version 0.6 supports JSON manifests, CSV source data, and the shear-building model. A one-channel project uses `peak_picking`; a multi-channel aligned source uses `fdd` and all channels must have the same measurement unit. Sampling rate must be provided. Blank/non-numeric samples, unknown columns, duplicate channel identifiers, and unsupported schema versions fail with explicit errors; the loader does not impute or resample.
+Paths are resolved relative to the manifest file. Manifest version 1 supports JSON manifests, CSV source data, and the shear-building model. A one-channel project uses `peak_picking`; a multi-channel aligned source uses `fdd` and all channels must have the same measurement unit. Sampling rate must be provided. Blank/non-numeric samples, unknown columns, duplicate channel identifiers, and unsupported schema versions fail with explicit errors; the loader does not impute or resample.
 
 Allowed `peak_picking` options are `max_modes`, `min_frequency_hz`, `max_frequency_hz`, and `min_peak_ratio`. FDD additionally supports `nperseg`, `overlap`, `max_singular_values`, and `min_singular_value_ratio`. Unknown options are rejected.
 
@@ -47,7 +47,7 @@ result = tm.run_project("project/manifest.json")
 
 The output carries project/model IDs, analysis method/options, absolute resolved source paths, SHA-256 hashes of both the manifest and CSV input, modal results, updated model parameters when modes are available, and evidence-oriented health comparison. No raw sensor data is embedded in the output. Hashes/provenance make it easier for the caller to detect changed inputs; they do not guarantee scientific repeatability across changed software or numerical libraries.
 
-For a one-channel run, the 0.1 flow applies the documented uniform-stiffness update. For multi-channel FDD, the same frequency-derived global scale can be applied when peaks are available. In either case, mode pairing remains frequency-order based; the engine does not claim damage localization, independent story updates, automated mode tracking, or a safety decision.
+For a one-channel run, the documented uniform-stiffness update is applied. For multi-channel FDD, the same frequency-derived global scale is applied when peaks are available. In either case, observed modes are paired with reference modes by nearest frequency (`tm.modal.pair_modes`); the engine does not claim damage localization, independent story updates, automated mode tracking, or a safety decision.
 
 ## Generate the bundled synthetic example
 

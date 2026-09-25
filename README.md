@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <img alt="Version 2.0.1" src="https://img.shields.io/badge/version-2.0.1-orange?style=for-the-badge">
+  <a href="https://pypi.org/project/timoshenko-engine/"><img alt="PyPI" src="https://img.shields.io/pypi/v/timoshenko-engine?style=for-the-badge"></a>
+  <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/timoshenko-engine?style=for-the-badge">
   <img alt="Alpha" src="https://img.shields.io/badge/stage-alpha-orange?style=for-the-badge">
-  <img alt="Python 3.10 to 3.13" src="https://img.shields.io/badge/python-3.10%20to%203.13-blue?style=for-the-badge">
   <img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge">
   <a href="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml/badge.svg"></a>
 </p>
@@ -19,46 +19,32 @@
 Timoshenko packages common structural calculations, modal analysis, sensor
 workflows, and monitoring components so applications can reuse them instead
 of rebuilding the same foundations for every project. It is an embeddable
-Python library and engine core, not a hosted monitoring service or a general
-finite-element solver.
+Python library, not a hosted monitoring service or a general finite-element
+solver.
 
-> **Alpha:** the API may still change between releases.
+> **Alpha:** the API may still change between releases. Every behavior change
+> is listed in the [changelog](https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md).
 
 ## Install
-
-From PyPI:
 
 ```bash
 python -m pip install timoshenko-engine
 ```
 
-Or from the root of a checkout:
+The distribution is named `timoshenko-engine`; the import package is
+`timoshenko`. Optional MQTT support is an extra:
 
 ```bash
-python -m pip install .
+python -m pip install "timoshenko-engine[mqtt]"
 ```
-
-The distribution package is named `timoshenko-engine`. The Python import
-package is named `timoshenko`:
-
-```python
-import timoshenko as tm
-print(tm.__version__)
-```
-
-To install optional MQTT support, use:
-
-```bash
-python -m pip install '.[mqtt]'
-```
-
-A future published release can be installed with
-`python -m pip install timoshenko-engine`. That command is only usable after a
-release is available from the selected package index.
 
 ## Quick start
 
+Compare measured vibration with a reference model. This example simulates a
+record in which both modes are 5% below the model:
+
 ```python
+import numpy as np
 import timoshenko as tm
 
 structure = tm.Structure(
@@ -66,45 +52,68 @@ structure = tm.Structure(
     story_masses_kg=[120_000.0, 110_000.0],
     story_stiffness_n_m=[85_000_000.0, 70_000_000.0],
 )
+print(structure.natural_frequencies_hz)          # (2.626, 6.476)
 
-sensors = tm.load_sensors(
-    "acceleration.csv",
-    sampling_hz=100.0,
-    column="acceleration_m_s2",
-    unit="m/s^2",
-)
+fs = 100.0
+t = np.arange(60_000) / fs
+f1, f2 = (0.95 * f for f in structure.natural_frequencies_hz)
+signal = np.sin(2 * np.pi * f1 * t) + 0.4 * np.sin(2 * np.pi * f2 * t)
+sensors = tm.SensorData(signal, sampling_hz=fs, unit="m/s^2")
 
-modal = tm.modal.identify(sensors)
-updated = tm.update(structure, modal)
-health = tm.health.assess(structure=updated, observations=sensors)
-
-print(health.to_dict())
+result = tm.monitor(structure, sensors, review_threshold_pct=3.0)
+print(result.structure.update_scale_factor)      # 0.903, since stiffness scales with frequency squared
+for change in result.health.mode_changes:
+    print(change.mode_number, change.change_pct)  # 1 -5.0, then 2 -5.0
+print(result.health.review_recommended)          # True
 ```
 
-For a one-shot pipeline, `tm.monitor(structure, sensors)` performs the same
-analysis sequence and returns a serializable result. The model update applies
-one global stiffness multiplier and keeps the analytical reference frequencies
-separate from measured frequencies.
+Real records load from CSV or JSON with
+`tm.load_sensors("acceleration.csv", sampling_hz=100.0, column="acc")`. The
+steps inside `tm.monitor` are also available separately as `tm.modal.identify`,
+`tm.update`, and `tm.health.assess`. The review flag is raised only when you
+pass a threshold: a meaningful value depends on the structure and its
+environmental variability, so the engine does not choose one.
+
+## Engineering calculations
+
+Closed-form functions take and return SI units and validate their inputs:
+
+```python
+import timoshenko as tm
+
+section = tm.rectangle_section(width_m=0.3, height_m=0.6)
+beam = tm.simply_supported_uniform_load(
+    20_000.0, 6.0, 30e9, section.second_moment_y_m4,
+    shear_modulus_pa=12.5e9, area_m2=section.area_m2,
+)
+print(beam.bending_m, beam.shear_m)  # 2.083 mm bending, 0.048 mm shear
+
+frequency = tm.propagate_uncertainty(
+    tm.natural_frequency_hz,
+    {"mass_kg": 250.0, "stiffness_n_m": 4e5},
+    standard_uncertainties={"mass_kg": 5.0, "stiffness_n_m": 8e3},
+)
+print(frequency.estimate, frequency.standard_uncertainty)  # 6.366 Hz ± 0.090 Hz
+```
 
 ## What it provides
 
-| Area | Reusable components |
+| Area | Components |
 |---|---|
-| Structural models | Lumped-mass shear-building models and analytical natural frequencies |
-| Modal analysis | Single-channel peak picking, damping estimates when resolvable, and multi-channel FDD with complex mode shapes |
-| Model comparison | Log-frequency mode pairing, global stiffness updating, and evidence-oriented health assessment |
-| Monitoring | Caller-fed bounded sessions, batch validation, source adapters, and optional plugins |
-| Data workflow | Sensor CSV loading, project manifests, local SQLite history, and CSV replay |
-| Reporting | Standalone HTML reports with an embedded SVG frequency comparison |
-| Engineering calculations | Beam cases, section properties, mechanics, vibration, stability, stress, pressure, torsion, and uncertainty helpers |
+| Engineering calculations | Section properties (including polygons with holes), beam deflection with shear, torsion, Euler buckling, plane stress, thin-wall pressure, SDOF vibration, Rayleigh damping, and GUM / Monte Carlo uncertainty |
+| Structural models | Lumped-mass shear-building models and their natural frequencies |
+| Modal analysis | Single-channel peak picking with resolution-checked damping, and multi-channel FDD with complex mode shapes |
+| Model comparison | Nearest-frequency mode pairing, global stiffness updating, and evidence-oriented health assessment |
+| Monitoring | Bounded rolling-window sessions, restart from local history, and source adapters for CSV, MQTT, and OGC SensorThings |
+| Data and reporting | Project manifests with SHA-256 provenance, local SQLite history, and standalone HTML reports |
 
-Timoshenko can be used module by module or embedded in a larger product such as
-Cauren. Sensor collection, application-specific risk rules, and engineering
-interpretation remain with the integrating application.
+Sensor collection, alarm policy, and engineering interpretation remain with the
+application that embeds Timoshenko.
 
-## Multi-channel modal screening
+## Multi-channel modal analysis
 
-FDD requires synchronized channels with a common sample rate and unit:
+Frequency domain decomposition needs synchronized channels with a common
+sample rate and unit:
 
 ```python
 signals = tm.load_multichannel_csv(
@@ -114,17 +123,15 @@ signals = tm.load_multichannel_csv(
     units=["m/s^2"] * 3,
 )
 fdd = tm.identify_fdd(signals, nperseg=1024, max_modes=5)
-print(fdd.to_dict())
+for mode in fdd.modes:
+    print(mode.frequency_hz, mode.shape_real)
 ```
 
-This first FDD implementation returns candidate frequencies and complex mode
-shapes. It does not estimate damping or issue a damage or safety conclusion.
+## Monitoring sessions
 
-## Bounded monitoring session
-
-A caller supplies timestamped observation batches. The session aligns samples,
-waits for a fresh contiguous analysis window after gaps, and emits reports after
-each configured hop:
+A host application feeds timestamped observation batches. The session aligns
+samples to the sample grid, waits for a fresh contiguous window after gaps, and
+analyzes every configured hop:
 
 ```python
 session = tm.MonitoringSession(
@@ -135,49 +142,35 @@ session = tm.MonitoringSession(
     window_samples=2048,
     hop_samples=512,
     analysis_options={"nperseg": 512, "max_modes": 4},
+    review_threshold_pct=5.0,
 )
-result = session.ingest(batch)
+result = session.ingest(batch)  # batch: tm.ObservationBatch from your gateway or a source adapter
 for report in result.reports:
     tm.report.save_html(report, "reports/latest.html")
 ```
 
-A gateway remains responsible for collecting data and handling transport
-reconnection. Timoshenko does not run a background collector or select an alarm
-policy.
+The session does not open network connections or run in the background. Use
+`tm.SessionRunner` with a source such as `tm.CSVObservationSource` or
+`tm.MqttObservationSource` to drive it.
 
-## Further examples and documentation
+## Documentation
 
-- [Documentation home](docs/index.md)
-- [Architecture](docs/architecture.md)
-- [Data contract](docs/data-contract.md)
-- [Historical CSV replay](docs/csv-source.md)
-- [Plugin contract](docs/plugin-contract.md)
-- [Rayleigh damping](docs/rayleigh-damping.md)
-- [Section properties](docs/section-properties.md)
-- [Polygon section properties](docs/polygon-sections.md)
-- [Equation uncertainty](docs/uncertainty.md)
-- [Numerical methods and limits](docs/numerical-methods.md)
-- [Monitoring sessions](docs/live-sessions.md)
-- [Source adapters](docs/adapters.md)
-- [Project manifests](docs/project-manifest.md)
-- [Local storage](docs/storage.md)
-- [Reports](docs/reporting.md)
-- [Optional MQTT adapter](docs/mqtt-adapter.md)
-- [SensorThings adapter](docs/sensorthings-adapter.md)
-- [Engineering calculations](examples/engineering_primitives.py)
-- [Runnable examples](examples/)
-- [Publishing and citation](docs/publishing.md)
+- [Documentation home](https://github.com/Ayberkrk/timoshenko/blob/main/docs/index.md)
+- [API reference](https://github.com/Ayberkrk/timoshenko/blob/main/docs/api.md)
+- [Numerical methods and limits](https://github.com/Ayberkrk/timoshenko/blob/main/docs/numerical-methods.md)
+- [Architecture](https://github.com/Ayberkrk/timoshenko/blob/main/docs/architecture.md)
+- [Monitoring sessions](https://github.com/Ayberkrk/timoshenko/blob/main/docs/live-sessions.md) and [source adapters](https://github.com/Ayberkrk/timoshenko/blob/main/docs/adapters.md)
+- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples)
+- [Changelog](https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md)
 
 ## Limits and engineering posture
 
 - Timoshenko is alpha software and is not a structural safety certification tool.
-- Its shear-building model is a small lumped-mass reference model, not a full FEM solver.
-- Modal identification is a screening estimate. A single sensor may miss a mode near a modal node.
-- Damping is reported only when the averaged spectrum resolves the half-power bandwidth; otherwise it is `None`.
-- FDD requires synchronized channels and does not estimate damping.
+- The shear-building model is a small lumped-mass reference model, not a full FEM solver.
+- Modal identification is a screening estimate. A single sensor may miss a mode near a modal node; unpaired peaks are reported rather than compared with the wrong mode.
+- Damping is a coarse screening estimate, reported only when the averaged spectrum resolves the half-power bandwidth. FDD does not estimate damping.
 - The model update applies a single stiffness scale. It cannot locate or size local damage.
-- A frequency shift is evidence for human review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects can shift measurements.
-- A monitoring session consumes data supplied by the caller. It does not implement a broker subscription, reconnect loop, scheduler, hosted dashboard, or alarm policy.
+- A frequency shift is evidence for human review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects also shift measured frequencies.
 - Closed-form mechanics and section functions rely on their documented ideal assumptions. They are not code-compliance checks.
 
 ## Development
@@ -187,18 +180,22 @@ python -m pip install -e ".[test]"
 python -m pytest
 ```
 
-To build the documentation locally, install the optional documentation tools
-and run MkDocs:
+To preview the documentation site:
 
 ```bash
 python -m pip install -e ".[docs]"
 python -m mkdocs serve
 ```
 
-The test suite checks analytical cases, input validation, adapters, storage,
-monitoring sessions, and reports. Package distributions should be built and
-installed in a clean environment before a release is uploaded.
+Bug reports and pull requests are welcome in the
+[issue tracker](https://github.com/Ayberkrk/timoshenko/issues).
+
+## Citation
+
+If you use Timoshenko in research, please cite it using the metadata in
+[`CITATION.cff`](https://github.com/Ayberkrk/timoshenko/blob/main/CITATION.cff)
+(GitHub's "Cite this repository" button reads the same file).
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](https://github.com/Ayberkrk/timoshenko/blob/main/LICENSE).

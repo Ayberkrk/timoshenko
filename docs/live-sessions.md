@@ -1,4 +1,4 @@
-# Live monitoring sessions (0.8)
+# Live monitoring sessions
 
 `MonitoringSession` accepts observations supplied by a host application and runs modal screening on a bounded rolling window. This is the engine-side session and window lifecycle; it does not open a network connection or start a background thread. A caller can use a sensor gateway, web service, or Cauren process to construct batches and feed them to `ingest()`.
 

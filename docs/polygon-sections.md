@@ -1,4 +1,4 @@
-# Polygon section properties (1.9)
+# Polygon section properties
 
 `tm.polygon_section(outer, holes=...)` calculates uniform-material geometric
 properties from simple closed polygon boundaries. Each vertex is `(x, y)` in

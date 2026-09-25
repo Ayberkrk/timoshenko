@@ -1,4 +1,4 @@
-# MQTT observation adapter (1.2)
+# MQTT observation adapter
 
 The built-in MQTT adapter is optional. From the repository root, install the source checkout with its MQTT extra:
 

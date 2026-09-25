@@ -1,4 +1,4 @@
-# Idealized I-section and rectangular tube (1.8)
+# Idealized I-section and rectangular tube
 
 `tm.sections.i_section` and `tm.sections.rectangular_tube` calculate cross
 section area, both centroidal second moments, and elastic section moduli. The

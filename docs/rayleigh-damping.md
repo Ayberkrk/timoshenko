@@ -1,4 +1,4 @@
-# Rayleigh damping coefficient helper (1.7)
+# Rayleigh damping coefficient helper
 
 Rayleigh, or proportional viscous, damping represents a damping matrix as
 `C = alpha_M M + beta_K K`, combining mass and stiffness proportional terms.

@@ -45,6 +45,7 @@ Homepage = "https://github.com/Ayberkrk/timoshenko"
 Repository = "https://github.com/Ayberkrk/timoshenko"
 Issues = "https://github.com/Ayberkrk/timoshenko/issues"
 Documentation = "https://github.com/Ayberkrk/timoshenko/tree/main/docs"
+Changelog = "https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

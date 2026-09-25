@@ -2,13 +2,13 @@
 
 This note records the equations exposed by the current package and the assumptions that bound their use. Public function arguments use SI units. Functions reject non-finite or non-positive physical parameters where those are invalid; signed forces, moments, stresses, and temperature changes preserve sign.
 
-## 0.2 cross-sections and elementary mechanics
+## Cross-sections and elementary mechanics
 
 For a rectangle of width `b` and height `h`, the package reports `A = b h`, `I_y = b h^3/12`, `I_z = h b^3/12`, and the corresponding centroidal elastic section moduli. For a solid circle, `A = pi d^2/4` and `I = pi d^4/64`. The concentric circular tube uses outer-minus-inner area and inertia.
 
 The elastic primitives are `sigma = N/A`, `sigma_b = M/S`, average shear `tau_avg = V/A`, solid-rectangle peak shear `tau_max = 3V/(2A)`, uniaxial strain `epsilon = sigma/E`, free thermal strain `epsilon_T = alpha delta_T`, and isotropic elasticity `E = 2G(1+nu)`. These are section-level relations; they do not combine stress components or judge material capacity.
 
-## 0.2 closed-form beam cases
+## Closed-form beam cases
 
 For a prismatic, linearly elastic beam under small deflection, the bending terms are:
 
@@ -23,11 +23,11 @@ If both `G` and `A` are provided, the result also includes the first-order shear
 
 The shear split is an engineering approximation. Timoshenko beam theory adds transverse shear deformation to Euler-Bernoulli bending, but shear coefficients and deflection definitions need care; the functions do not claim general Timoshenko-beam finite-element or arbitrary-load solutions. See the primary beam solution discussions at [Cowper (1968)](https://doi.org/10.1061/JMCEA3.0001048), [Timoshenko-beam solutions (1995)](https://doi.org/10.1061/%28ASCE%290733-9399%281995%29121%3A6%28763%29), and the shear-coefficient formulation paper [Faghidian (2017)](https://doi.org/10.1061/%28ASCE%29EM.1943-7889.0001297).
 
-## 0.2 single-degree-of-freedom vibration
+## Single-degree-of-freedom vibration
 
 For positive lumped mass `m`, stiffness `k`, and nonnegative viscous damping `c`, the package calculates `f_n = sqrt(k/m)/(2 pi)` and `zeta = c/(2 sqrt(k m))`. Harmonic response uses `r = omega/omega_n`, displacement amplitude `|F_0|/k / sqrt((1-r^2)^2+(2 zeta r)^2)`, and phase lag `atan2(2 zeta r, 1-r^2)`. It is a steady-state SDOF solution, not a transient integrator or a multi-degree-of-freedom modal solver.
 
-## 0.3 torsion, elastic stability, plane stress, and pressure
+## Torsion, elastic stability, plane stress, and pressure
 
 For a solid or concentric hollow circular shaft, the polar area moment is `J = pi (D_o^4-D_i^4)/32`. Under uniform Saint-Venant torsion, the API reports outer-fiber stress `tau_max = T (D_o/2)/J` and twist `phi = T L/(G J)`. It does not accept non-circular sections, restrained warping, variable torque/section, or plastic torsion. Classical Saint-Venant torsion is reviewed in engineering mechanics literature; the circular-section assumptions are materially narrower than arbitrary-section torsion ([UBC mechanics note](https://civil-terje.sites.olt.ubc.ca/files/2023/08/Saint-Venant-Torsion.pdf), with later work on section torsion factors [arXiv:0912.2622](https://arxiv.org/abs/0912.2622)).
 
@@ -37,15 +37,15 @@ For plane stress `(sigma_x, sigma_y, tau_xy)`, the in-plane principal values are
 
 For a closed-end thin cylindrical wall under net pressure `p`, membrane estimates are `sigma_hoop=p r/t` and `sigma_longitudinal=p r/(2t)`. The API reports `t/r` so the caller can judge the thin-wall approximation; it does not enforce a universal cutoff. Local discontinuities, heads/nozzles, thick-wall radial stress, external-pressure collapse, code factors, and fatigue are excluded. A 2022 ultrasonic measurement study of thin-walled pressure vessels discusses these membrane assumptions and their stress measurements ([Materials Research, DOI: 10.1590/1980-5373-MR-2021-0495](https://doi.org/10.1590/1980-5373-MR-2021-0495)); a review of simple elastic hoop-stress formulas emphasizes their scope limits ([Sinclair & Helms, 2015, International Journal of Pressure Vessels and Piping](https://doi.org/10.1016/j.ijpvp.2015.01.006)).
 
-## 0.1 signal analysis boundary
+## Single-channel modal identification
 
-The 0.1 `modal.identify` implementation is a single-channel Hann-windowed FFT with local peak selection. It does not provide a stable automated operational modal analysis result for arbitrary field data. Method comparisons and reviews describe frequency-domain decomposition and automated frequency-domain methods that also assess mode shapes and stability/quality, including [Brincker, Zhang & Andersen (2001)](https://doi.org/10.1088/0964-1726/10/3/303) and a recent automated OMA study using MAC [(Cardoni et al., 2025)](https://doi.org/10.1016/j.engstruct.2024.119210). Those are research directions for later releases, not capabilities implied by this peak picker.
+`modal.identify` is a single-channel Hann-windowed FFT with local peak selection. It does not provide a stable automated operational modal analysis result for arbitrary field data. Method comparisons and reviews describe frequency-domain decomposition and automated frequency-domain methods that also assess mode shapes and stability/quality, including [Brincker, Zhang & Andersen (2001)](https://doi.org/10.1088/0964-1726/10/3/303) and a recent automated OMA study using MAC [(Cardoni et al., 2025)](https://doi.org/10.1016/j.engstruct.2024.119210). Those are research directions for later releases, not capabilities implied by this peak picker.
 
 Damping is estimated separately from the frequency. A single periodogram of ambient response fluctuates by about 100% per bin, so half-power points taken from it land on noise spikes, and a Hann window alone has a half-power width of about 1.44 bins, so a narrow peak reports the window rather than the structure. `identify` therefore takes the half-power bandwidth from a Welch spectrum (Hann, 50% overlap) using the longest power-of-two segment that still gives eight averages, and returns `None` when that bandwidth is narrower than four bins. On a white-noise driven oscillator with 2% damping, 600 s records give estimates within about a factor of two; the value is a screening estimate, not a substitute for SSI or EFDD damping identification.
 
 `update` and `health.assess` pair each observed frequency with the nearest reference mode on a logarithmic scale, keeping only the closest observed peak per reference mode (`tm.modal.pair_modes`). A uniform stiffness change scales all frequencies by the same factor, so pairing holds unless the change exceeds the spacing between modes. A change no larger than the spectral resolution is marked `resolution_limited`, and `review_recommended` requires an explicit `review_threshold_pct`.
 
-## 0.4 multi-channel FDD
+## Multi-channel FDD
 
 The `MultiChannelData` contract stores synchronized, regularly sampled rows with one common sample rate and channel metadata. `identify_fdd` removes each segment's mean, multiplies by a Hann window, estimates a one-sided Welch cross-spectral density matrix, and computes its Hermitian eigendecomposition at each frequency. The implementation searches local maxima in up to four leading singular-value curves; the matching eigenvector becomes the normalized complex mode-shape estimate. Secondary curves are screened against the maximum of the leading curve and candidate singular values are also compared locally with the leading value. `nperseg` sets resolution `fs/nperseg`; overlap changes the number of spectral averages. At least two segments are required. The initial API bounds one analysis to 32 channels and 4096 samples per FFT segment to keep temporary memory predictable.
 
@@ -57,7 +57,7 @@ Measured modal parameters vary with environmental and operational conditions. A 
 
 This note documents equations, not code approval. Before safety-critical use, compare against a trusted engineering reference, verify units/sign conventions/boundary conditions, and obtain qualified engineering review.
 
-## 1.6 scalar uncertainty propagation
+## Scalar uncertainty propagation
 
 `tm.uncertainty.propagate` accepts caller-supplied input estimates and either
 independent standard uncertainties or a full covariance matrix. The
@@ -75,11 +75,11 @@ normal coverage interval from first-order propagation is an approximation, and
 Monte Carlo is only as appropriate as the caller's Gaussian input model. The
 full limits are in [uncertainty.md](uncertainty.md).
 
-## 1.7 Rayleigh damping
+## Rayleigh damping
 
 For a classical proportional damping matrix `C = alpha_M M + beta_K K`, a
 modal frequency `omega` has damping ratio
-`zeta = alpha_M/(2 omega) + beta_K omega/2`. The 1.7 helper fits two target
+`zeta = alpha_M/(2 omega) + beta_K omega/2`. The helper fits two target
 frequency/damping pairs and evaluates the resulting curve; the host solver
 still owns the mass/stiffness matrices and damping-model choice. See
 [rayleigh-damping.md](rayleigh-damping.md), the [OpenSees command
@@ -90,7 +90,7 @@ increasing roughly linearly with frequency. These sources show why a
 two-target fit must not be interpreted as constant damping or assumed valid
 for nonlinear response.
 
-## 1.8 idealized I-section and rectangular tube
+## Idealized I-section and rectangular tube
 
 The `tm.i_section` and `tm.rectangular_tube_section` helpers compose sharp-
 corner rectangles and use the parallel-axis theorem about the symmetry
@@ -105,7 +105,7 @@ widths, shear areas, local buckling, resistance, or code checks. Sharp corners
 and uniform ideal walls omit fillets, weld details and manufacturing
 tolerances.
 
-## 1.9 polygon section geometry
+## Polygon section geometry
 
 `tm.polygon_section` evaluates signed boundary integrals for area, first
 moments, both centroidal second moments and the product moment. Optional hole
