@@ -39,7 +39,7 @@ from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
 from .project import LoadedProject, ProjectManifest, ProjectRunResult, load_project, read_manifest, run_project
 from .storage import BatchAppendResult, SQLiteStore
-from .session import MonitoringSession, SessionIngestResult, SessionReport
+from .session import MonitoringSession, SessionIngestResult, SessionReport, SessionRestoreResult
 from .sections import SectionProperties
 from .sections import circular_tube as circular_tube_section
 from .sections import rectangle as rectangle_section
@@ -53,7 +53,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 __all__ = [
     "HealthAssessment",
@@ -94,6 +94,7 @@ __all__ = [
     "SQLiteStore",
     "SessionIngestResult",
     "SessionReport",
+    "SessionRestoreResult",
     "SessionRunner",
     "axial_strain",
     "axial_stress",

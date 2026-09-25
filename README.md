@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.2.0** continues from the 0.1–0.10 foundation and 1.1 plugin registry. It adds an optional Paho MQTT observation source with a bounded queue, validated JSON batches, retained-message policy, and post-ingestion QoS acknowledgement through `SessionRunner`. Additional source factories can be discovered through versioned Python entry points. A synchronous source contract and context-managed runner feed batches into bounded rolling-window analysis. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
+Release **1.3.0** continues from the 0.1–0.10 foundation and 1.1–1.2 plugin/adapter layers. It adds explicit restoration of the newest common contiguous observation window from SQLite so a new monitoring session can resume analysis after process restart. The optional Paho MQTT source uses a bounded queue, validated JSON batches, retained-message policy, and post-ingestion QoS acknowledgement through `SessionRunner`. Additional source factories can be discovered through versioned Python entry points. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. SQLite stores idempotent batches and local analysis history. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -144,6 +144,17 @@ for report in result.reports:
 ```
 
 The session aligns samples to the explicit rate, counts rejected records, waits for a fresh contiguous window after gaps, and returns reports after each configured hop. A source/gateway remains responsible for collecting data and reconnecting. See [live-sessions.md](docs/live-sessions.md) and [examples/live_session.py](examples/live_session.py).
+
+When SQLite history is enabled, a new process can refill its bounded sample buffers before starting the source runner:
+
+```python
+session = tm.MonitoringSession(structure, ..., store=store)
+restore = session.restore()
+if not restore.ready_for_analysis:
+    print("Waiting for a full fresh window", restore.to_dict())
+```
+
+Restoration uses the newest common contiguous timestamped samples with matching units and quality. It does not replay old analysis reports or restore the model object; the application supplies the desired structure definition.
 
 ## Readable report output (0.9)
 

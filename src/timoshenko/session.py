@@ -76,6 +76,22 @@ class SessionIngestResult:
         }
 
 
+@dataclass(frozen=True)
+class SessionRestoreResult:
+    restored_samples: int
+    samples_per_sensor: int
+    ready_for_analysis: bool
+    last_event_time_s: float | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "restored_samples": self.restored_samples,
+            "samples_per_sensor": self.samples_per_sensor,
+            "ready_for_analysis": self.ready_for_analysis,
+            "last_event_time_s": self.last_event_time_s,
+        }
+
+
 class MonitoringSession:
     """Analyze regularly sampled point observations in bounded rolling windows.
 
@@ -159,6 +175,69 @@ class MonitoringSession:
     @property
     def buffered_samples_by_sensor(self) -> dict[str, int]:
         return {sensor_id: len(buffer) for sensor_id, buffer in self._buffers.items()}
+
+    def restore(self, *, extra_history_samples: int = 64) -> SessionRestoreResult:
+        """Restore the newest common contiguous window from the configured store.
+
+        The stored structure/model definition remains the caller's input; this
+        method restores observation buffers and stream cursors only. It never
+        re-appends restored observations or reruns an old analysis report.
+        """
+        if self._store is None:
+            raise RuntimeError("restore requires a SQLiteStore configured on this session")
+        extra = int(extra_history_samples)
+        if extra < 0 or extra > 4096:
+            raise ValueError("extra_history_samples must be between 0 and 4096")
+        candidate_limit = min(self._window_samples + extra, 262_144)
+        values_by_sensor: dict[str, dict[int, float]] = {}
+        last_keys: dict[str, int] = {}
+        for sensor_id, unit in zip(self._sensor_ids, self._units):
+            samples: dict[int, float] = {}
+            recent = self._store.recent_observations(
+                sensor_id=sensor_id,
+                unit=unit,
+                limit=candidate_limit,
+            )
+            for observation in recent:
+                if observation.timestamp is None:
+                    continue
+                key = int(round(observation.timestamp * self._sampling_hz))
+                grid_time = key / self._sampling_hz
+                if abs(observation.timestamp - grid_time) > self._timestamp_tolerance_s:
+                    continue
+                samples.setdefault(key, observation.value)
+            values_by_sensor[sensor_id] = samples
+            if samples:
+                last_keys[sensor_id] = max(samples)
+
+        common = set.intersection(*(set(samples) for samples in values_by_sensor.values()))
+        common_keys = sorted(common)
+        contiguous: list[int] = []
+        if common_keys:
+            contiguous = [common_keys[-1]]
+            for key in reversed(common_keys[:-1]):
+                if contiguous[-1] - key != 1:
+                    break
+                contiguous.append(key)
+            contiguous.reverse()
+        restored_keys = contiguous[-self._window_samples :]
+        self._seen_by_key.clear()
+        for sensor_id, buffer in self._buffers.items():
+            buffer.clear()
+            values = values_by_sensor[sensor_id]
+            for key in restored_keys:
+                buffer.append((key, values[key]))
+        for key in restored_keys:
+            self._seen_by_key[key] = set(self._sensor_ids)
+        self._last_key = last_keys
+        self._last_analysis_key = restored_keys[-1] if len(restored_keys) >= self._window_samples else None
+        last_time = None if not restored_keys else restored_keys[-1] / self._sampling_hz
+        return SessionRestoreResult(
+            restored_samples=len(restored_keys) * len(self._sensor_ids),
+            samples_per_sensor=len(restored_keys),
+            ready_for_analysis=len(restored_keys) >= self._window_samples,
+            last_event_time_s=last_time,
+        )
 
     def ingest(self, batch: ObservationBatch) -> SessionIngestResult:
         if not isinstance(batch, ObservationBatch):

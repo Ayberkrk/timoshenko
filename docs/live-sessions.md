@@ -32,6 +32,20 @@ for report in result.reports:
 
 For a single sensor, the session calls `modal.identify` (peak picking). For two or more sensors, it calls Welch FDD and requires a common unit. `analysis_options` are validated against the selected method. Reports include event time, method, modal output, updated reference model, and evidence-oriented health comparison.
 
+If the session uses `SQLiteStore`, a process can explicitly restore its most recent synchronized contiguous samples before opening a source:
+
+```python
+with tm.SQLiteStore("history.sqlite") as store:
+    session = tm.MonitoringSession(structure, ..., store=store)
+    restored = session.restore()
+    print(restored.to_dict())
+    with tm.SessionRunner(source, session) as runner:
+        for result in runner:
+            ...
+```
+
+Restoration is bounded to the rolling-window size plus a small configurable history margin. The session discards bad-quality, wrong-unit, and off-grid rows, then keeps only the newest shared contiguous run. If that does not fill a window, it resumes with the partial contiguous tail and waits for new samples. Previously generated reports are not replayed, and the caller remains responsible for supplying the current model definition.
+
 ## Time and quality policy
 
 - Timestamps are Unix seconds and must be within the configured tolerance of the explicit sample grid (`sampling_hz`). The default tolerance is one quarter of a sample interval.

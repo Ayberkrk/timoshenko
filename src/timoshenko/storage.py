@@ -295,6 +295,50 @@ class SQLiteStore:
             for row in rows
         )
 
+    def recent_observations(
+        self,
+        *,
+        sensor_id: str,
+        limit: int,
+        unit: str | None = None,
+    ) -> tuple[Observation, ...]:
+        """Return a bounded event-time tail for one sensor, oldest first.
+
+        Only timestamped, good-quality observations are eligible. This is a
+        history query, not a resampler; consumers must still check the sample
+        grid and continuity of the returned records.
+        """
+        count = int(limit)
+        if count < 1 or count > 262_144:
+            raise ValueError("limit must be between 1 and 262144")
+        clauses = ["sensor_id=?", "quality=1", "event_timestamp IS NOT NULL"]
+        parameters: list[Any] = [str(sensor_id)]
+        if unit is not None:
+            clauses.append("unit=?")
+            parameters.append(str(unit))
+        parameters.append(count)
+        rows = self._connection.execute(
+            "SELECT * FROM (SELECT * FROM observations WHERE "
+            + " AND ".join(clauses)
+            + " ORDER BY event_timestamp DESC, observation_row_id DESC LIMIT ?) "
+            + "ORDER BY event_timestamp ASC, observation_row_id ASC",
+            parameters,
+        ).fetchall()
+        return tuple(
+            Observation(
+                sensor_id=row["sensor_id"],
+                name=row["name"],
+                unit=row["unit"],
+                value=row["value"],
+                timestamp=row["event_timestamp"],
+                quality=True,
+                asset_id=row["asset_id"],
+                source_id=row["observation_source_id"],
+                metadata=json.loads(row["metadata_json"]),
+            )
+            for row in rows
+        )
+
     def save_run(self, result: ProjectRunResult, *, run_id: str | None = None) -> str:
         if not isinstance(result, ProjectRunResult):
             raise TypeError("result must be a ProjectRunResult")
