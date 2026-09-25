@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
+from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, vibration
 from .assets import Asset, Relation
 from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
 from .csv_source import CSVObservationSource, CSVSourceError
@@ -33,6 +33,7 @@ from .mechanics import (
 )
 from .modal import ModalResult, Mode
 from .mqtt import MQTTSourceError, MqttObservationSource
+from .sensorthings import SensorThingsObservationSource, SensorThingsPlugin, SensorThingsSourceError
 from .monitor import MonitoringResult, monitor
 from .observations import Observation, ObservationBatch
 from .multichannel import MultiChannelData, load_multichannel_csv
@@ -54,7 +55,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 __all__ = [
     "HealthAssessment",
@@ -62,6 +63,9 @@ __all__ = [
     "BatchAppendResult",
     "CSVObservationSource",
     "CSVSourceError",
+    "SensorThingsObservationSource",
+    "SensorThingsPlugin",
+    "SensorThingsSourceError",
     "BeamDeflection",
     "CircularTorsionResult",
     "ModalResult",
@@ -132,6 +136,7 @@ __all__ = [
     "rectangular_max_shear_stress",
     "read_manifest",
     "sections",
+    "sensorthings",
     "session",
     "shafts",
     "simply_supported_midpoint_load",

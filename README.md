@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.4.0** continues from the 0.1–0.10 foundation and 1.1–1.3 plugin, adapter, and session layers. It adds a bounded-memory long-format CSV observation source that replays historical sensor data through the same `SessionRunner` and monitoring session used by live adapters. It supports explicit column mapping, Unix or timezone-aware ISO-8601 event times, stable replay batch IDs, and quality values. Earlier releases add SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
+Release **1.5.0** continues from the 0.1–0.10 foundation and 1.1–1.4 plugin, source, and session layers. It adds a bounded HTTP reader for scalar OGC SensorThings Observation pages, mapping `phenomenonTime` and `result` into Timoshenko batches and following same-origin `@iot.nextLink` pagination. Endpoint, sensor ID, and unit are explicitly supplied; no metadata discovery or unit inference is performed. Earlier releases add long-format CSV replay, SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -207,6 +207,24 @@ with tm.SessionRunner(source, session) as runner:
 ```
 
 The source reads a long-format CSV incrementally and preserves the declared units and row order. Column names can be mapped explicitly. It does not infer units, interpolate gaps, or tail a changing file. See [csv-source.md](docs/csv-source.md) and [`examples/replay_csv.py`](examples/replay_csv.py).
+
+## OGC SensorThings observation pages (1.5)
+
+```python
+source = tm.SensorThingsObservationSource(
+    "https://sensors.example.org/v1.1/Datastreams(42)/Observations",
+    sensor_id="bridge-01-accel-z",
+    unit="m/s^2",
+    source_id="bridge-01:datastream-42",
+    bearer_token=token,
+    quality_parameter="measurement_valid",
+)
+with tm.SessionRunner(source, session) as runner:
+    for result in runner:
+        consume(result)
+```
+
+The adapter requests the configured collection as JSON and follows each server page link without modifying its query. It accepts scalar numeric results with timezone-aware instant `phenomenonTime`; the caller provides the sensor identity and unit. See [sensorthings-adapter.md](docs/sensorthings-adapter.md).
 
 ## Sensor files
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "timoshenko-engine"
-version = "1.4.0"
+version = "1.5.0"
 description = "Composable structural engineering calculations and analysis primitives for Python applications."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,6 +28,7 @@ mqtt = ["paho-mqtt>=2.1,<3"]
 
 [project.entry-points."timoshenko.plugins"]
 mqtt = "timoshenko.mqtt:MqttPlugin"
+sensorthings = "timoshenko.sensorthings:SensorThingsPlugin"
 
 [project.urls]
 Repository = "https://github.com/Ayberkrk/cauren/tree/main/Timoshenko"
