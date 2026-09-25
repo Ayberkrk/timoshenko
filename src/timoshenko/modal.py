@@ -8,6 +8,7 @@ import math
 import numpy as np
 
 from .sensors import SensorData
+from .oma import FDDMode, FDDResult, identify_fdd
 
 
 @dataclass(frozen=True)

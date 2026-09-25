@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.3.0** builds on the 0.1 monitoring and 0.2 calculation foundations. It adds common circular-shaft torsion, ideal elastic Euler column stability, plane-stress transformations, and thin-wall cylinder estimates, with selected functions available both as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, damage-localization system, continuous monitoring service, or structural safety certification tool.
+Release **0.4.0** builds on the 0.1 monitoring and 0.2–0.3 calculation foundations. It adds aligned multi-channel sensor data and a first-pass Welch FDD modal identification path that returns candidate frequencies and mode shapes. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, damage-localization system, continuous monitoring service, or structural safety certification tool.
 
 ## Install from this checkout
 
@@ -76,6 +76,21 @@ shaft = tm.circular_shaft_torsion(
 `tm.sections` includes rectangular, solid circular, and concentric circular-tube properties. `tm.mechanics` includes axial/bending/average shear stress, rectangular peak shear stress, uniaxial elastic strain, free thermal strain, and the isotropic `E`–`G`–Poisson relation. `tm.beams` includes four standard static load cases. Beam functions report Euler–Bernoulli bending deflection; pass both `shear_modulus_pa` and `area_m2` to also calculate a first-order shear term. `tm.vibration` provides undamped SDOF natural frequency, viscous damping ratio, and steady-state harmonic response. Version 0.3 adds `tm.shafts.circular_shaft_torsion`, `tm.stability.euler_critical_load`, `tm.strength.plane_stress`, and `tm.pressure.thin_wall_cylinder_stress`. Common formulas are also re-exported at the top level, so users can call names such as `tm.axial_stress(...)`, `tm.cantilever_tip_load(...)`, `tm.natural_frequency_hz(...)`, `tm.euler_critical_load(...)`, or `tm.thin_wall_cylinder_stress(...)` directly.
 
 These closed-form equations assume the stated idealized geometry, loading, material behavior, and boundary conditions. They do not account for strength limits, buckling, fatigue, load combinations, code factors, nonlinear response, or project-specific acceptance criteria. Validate engineering inputs and applicability independently.
+
+## Multi-channel modal screening (0.4)
+
+```python
+signals = tm.load_multichannel_csv(
+    "aligned_accelerometers.csv",
+    columns=["deck_left", "deck_center", "deck_right"],
+    sampling_hz=100.0,
+    units=["m/s^2"] * 3,
+)
+fdd = tm.identify_fdd(signals, nperseg=1024, max_modes=5)
+print(fdd.to_dict())
+```
+
+This first FDD implementation returns candidate frequencies and complex mode shapes for synchronized channels with one common sample rate and unit. It does not estimate damping or issue a damage/safety conclusion. Details and limits are in [numerical-methods.md](docs/numerical-methods.md).
 
 ## Sensor files
 

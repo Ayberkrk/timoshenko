@@ -19,12 +19,12 @@ This is a curated starting bibliography for architectural and calculation choice
 - Brincker, Zhang and Andersen introduced frequency-domain decomposition as output-only modal identification ([2001](https://doi.org/10.1088/0964-1726/10/3/303)).
 - Mottershead and Friswell survey structural dynamic model updating and its parameterization/identification challenges ([1993](https://doi.org/10.1006/jsvi.1993.1340)). A one-factor stiffness scaling is therefore documented as a narrow baseline, not general model updating.
 - A 2024 review summarizes modal parameter recognition and damage identification under environmental excitation ([DOI: 10.32604/sdhm.2024.053662](https://doi.org/10.32604/sdhm.2024.053662)).
-- A 2024 automated output-only identification paper combines frequency-domain methods with MAC to identify frequencies and mode shapes ([Engineering Structures, DOI: 10.1016/j.engstruct.2024.119210](https://doi.org/10.1016/j.engstruct.2024.119210)). This is a possible 0.4+ direction; the package's 0.1 FFT peak picker does not implement it.
+- A 2024 automated output-only identification paper combines frequency-domain methods with MAC to identify frequencies and mode shapes ([Engineering Structures, DOI: 10.1016/j.engstruct.2024.119210](https://doi.org/10.1016/j.engstruct.2024.119210)). This is a later direction; current 0.4 FDD does not implement MAC-based pairing or SSI stabilization diagrams.
 
 ## Digital twins and infrastructure interoperability
 
 - A civil-infrastructure digital-twin review surveys work from 2005–2024, including sensing, data/model integration, platforms, use cases, and persistent challenges ([2024 review, PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC11723349/)). The practical architectural implication is to make the asset model, observations, and integrations explicit and separate rather than hiding project-specific assumptions in the analysis core.
-- The [OGC SensorThings API standard](https://www.ogc.org/standards/sensorthings/) provides an interoperable vocabulary for things, sensors, datastreams, and observations. Timoshenko does not claim conformance in 0.3; it remains a candidate adapter target.
+- The [OGC SensorThings API standard](https://www.ogc.org/standards/sensorthings/) provides an interoperable vocabulary for things, sensors, datastreams, and observations. Timoshenko does not claim conformance in 0.4; it remains a candidate adapter target.
 - The [buildingSMART IFC standards](https://standards.buildingsmart.org/) and [OPC Foundation specifications](https://reference.opcfoundation.org/) are candidate exchange/streaming boundaries for future optional adapters, not core dependencies.
 
 ## Time-varying environmental effects

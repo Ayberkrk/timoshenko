@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import beams, health, mechanics, modal, pressure, sections, shafts, stability, strength, vibration
+from . import beams, health, mechanics, modal, oma, pressure, sections, shafts, stability, strength, vibration
 from .beams import (
     BeamDeflection,
     cantilever_tip_load,
@@ -20,6 +20,8 @@ from .mechanics import (
 )
 from .modal import ModalResult, Mode
 from .monitor import MonitoringResult, monitor
+from .multichannel import MultiChannelData, load_multichannel_csv
+from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
 from .sections import SectionProperties
 from .sections import circular_tube as circular_tube_section
@@ -34,7 +36,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "HealthAssessment",
@@ -42,6 +44,9 @@ __all__ = [
     "CircularTorsionResult",
     "ModalResult",
     "Mode",
+    "FDDMode",
+    "FDDResult",
+    "MultiChannelData",
     "MonitoringResult",
     "SensorData",
     "Structure",
@@ -62,10 +67,13 @@ __all__ = [
     "harmonic_response",
     "health",
     "load_sensors",
+    "load_multichannel_csv",
     "mechanics",
     "modal",
     "monitor",
     "natural_frequency_hz",
+    "identify_fdd",
+    "oma",
     "plane_stress",
     "pressure",
     "rectangle_section",
