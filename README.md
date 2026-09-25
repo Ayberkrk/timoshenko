@@ -22,15 +22,14 @@ of rebuilding the same foundations for every project. It is an embeddable
 Python library and engine core, not a hosted monitoring service or a general
 finite-element solver.
 
-> **Alpha:** the API may still change between releases. Timoshenko is not yet
-> published on PyPI; install it from GitHub or from a checkout as shown below.
+> **Alpha:** the API may still change between releases.
 
 ## Install
 
-From GitHub:
+From PyPI:
 
 ```bash
-python -m pip install "timoshenko-engine @ git+https://github.com/Ayberkrk/timoshenko"
+python -m pip install timoshenko-engine
 ```
 
 Or from the root of a checkout:
