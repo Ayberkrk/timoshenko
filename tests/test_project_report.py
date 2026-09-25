@@ -87,7 +87,10 @@ def test_report_handles_result_without_modes():
     assert "No usable modal frequencies" in html
 
 
-@pytest.mark.parametrize("script", sorted(p.name for p in EXAMPLES.glob("*.py") if p.name != "replay_csv.py"))
+EXAMPLES_WITH_OWN_TEST = {"replay_csv.py", "pynite_shear_beam.py"}
+
+
+@pytest.mark.parametrize("script", sorted(p.name for p in EXAMPLES.glob("*.py") if p.name not in EXAMPLES_WITH_OWN_TEST))
 def test_examples_run(script, tmp_path):
     completed = subprocess.run([sys.executable, str(EXAMPLES / script)], cwd=tmp_path, capture_output=True, text=True, timeout=120)
     assert completed.returncode == 0, completed.stderr
@@ -101,5 +104,17 @@ def test_replay_csv_example(tmp_path):
     completed = subprocess.run(
         [sys.executable, str(EXAMPLES / "replay_csv.py"), str(path), "--sensor-id", "a", "--unit", "g", "--sample-rate", "100"],
         capture_output=True, text=True, timeout=120,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_pynite_example(tmp_path):
+    pynite = pytest.importorskip("Pynite")
+    import inspect
+
+    if "shear_deformable" not in inspect.signature(pynite.FEModel3D.add_member).parameters:
+        pytest.skip("installed PyNite has no shear-deformable members")
+    completed = subprocess.run(
+        [sys.executable, str(EXAMPLES / "pynite_shear_beam.py")], cwd=tmp_path, capture_output=True, text=True, timeout=120
     )
     assert completed.returncode == 0, completed.stderr

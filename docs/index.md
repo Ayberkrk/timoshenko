@@ -54,4 +54,5 @@ print(tm.cantilever_tip_load(5_000.0, 3.0, 200e9, 8.0e-6).bending_m)
 - [Changelog](changelog.md).
 - [Literature review](literature-review.md): sources behind the methods and their limits.
 - [Cauren integration](cauren-integration.md): an example of a host application.
+- [Verifying PyNite shear-deformable members](pynite-verification.md): closed-form checks of a finite element model.
 - [Publishing and citation](publishing.md).

@@ -45,4 +45,5 @@ nav:
       - Changelog: changelog.md
       - Literature review: literature-review.md
       - Cauren integration: cauren-integration.md
+      - PyNite verification: pynite-verification.md
       - Publishing and citation: publishing.md

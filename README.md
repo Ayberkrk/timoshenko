@@ -160,7 +160,7 @@ The session does not open network connections or run in the background. Use
 - [Numerical methods and limits](https://github.com/Ayberkrk/timoshenko/blob/main/docs/numerical-methods.md)
 - [Architecture](https://github.com/Ayberkrk/timoshenko/blob/main/docs/architecture.md)
 - [Monitoring sessions](https://github.com/Ayberkrk/timoshenko/blob/main/docs/live-sessions.md) and [source adapters](https://github.com/Ayberkrk/timoshenko/blob/main/docs/adapters.md)
-- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples)
+- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples), including a [cross-check of PyNite shear-deformable beams](https://github.com/Ayberkrk/timoshenko/blob/main/docs/pynite-verification.md)
 - [Changelog](https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md)
 
 ## Limits and engineering posture
