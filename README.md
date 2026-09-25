@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.2.0** builds on the 0.1 monitoring foundation with reusable section, linear-elastic mechanics, closed-form beam, and single-degree-of-freedom vibration calculations. It is still not a general FEM solver, damage-localization system, continuous monitoring service, or structural safety certification tool.
+Release **0.3.0** builds on the 0.1 monitoring and 0.2 calculation foundations. It adds common circular-shaft torsion, ideal elastic Euler column stability, plane-stress transformations, and thin-wall cylinder estimates, with selected functions available both as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, damage-localization system, continuous monitoring service, or structural safety certification tool.
 
 ## Install from this checkout
 
@@ -48,8 +48,8 @@ The modules use SI units and explicit physical inputs. They are small calculatio
 ```python
 import timoshenko as tm
 
-section = tm.sections.rectangle(width_m=0.30, height_m=0.50)
-stress = tm.mechanics.bending_stress(
+section = tm.rectangle_section(width_m=0.30, height_m=0.50)
+stress = tm.bending_stress(
     moment_nm=12_000.0,
     section_modulus_m3=section.section_modulus_y_m3,
 )
@@ -61,10 +61,19 @@ tip = tm.beams.cantilever_tip_load(
     shear_modulus_pa=12.5e9,
     area_m2=section.area_m2,
 )
-frequency = tm.vibration.natural_frequency_hz(mass_kg=1_000.0, stiffness_n_m=2e6)
+frequency = tm.natural_frequency_hz(mass_kg=1_000.0, stiffness_n_m=2e6)
+critical_load = tm.euler_critical_load(
+    youngs_modulus_pa=200e9,
+    second_moment_m4=section.second_moment_y_m4,
+    length_m=3.0,
+    effective_length_factor=1.0,
+)
+shaft = tm.circular_shaft_torsion(
+    torque_nm=500.0, length_m=2.0, shear_modulus_pa=80e9, outer_diameter_m=0.04
+)
 ```
 
-`tm.sections` includes rectangular, solid circular, and concentric circular-tube properties. `tm.mechanics` includes axial/bending/average shear stress, rectangular peak shear stress, uniaxial elastic strain, free thermal strain, and the isotropic `E`–`G`–Poisson relation. `tm.beams` includes four standard static load cases. Beam functions report Euler–Bernoulli bending deflection; pass both `shear_modulus_pa` and `area_m2` to also calculate a first-order shear term. `tm.vibration` provides undamped SDOF natural frequency, viscous damping ratio, and steady-state harmonic response.
+`tm.sections` includes rectangular, solid circular, and concentric circular-tube properties. `tm.mechanics` includes axial/bending/average shear stress, rectangular peak shear stress, uniaxial elastic strain, free thermal strain, and the isotropic `E`–`G`–Poisson relation. `tm.beams` includes four standard static load cases. Beam functions report Euler–Bernoulli bending deflection; pass both `shear_modulus_pa` and `area_m2` to also calculate a first-order shear term. `tm.vibration` provides undamped SDOF natural frequency, viscous damping ratio, and steady-state harmonic response. Version 0.3 adds `tm.shafts.circular_shaft_torsion`, `tm.stability.euler_critical_load`, `tm.strength.plane_stress`, and `tm.pressure.thin_wall_cylinder_stress`. Common formulas are also re-exported at the top level, so users can call names such as `tm.axial_stress(...)`, `tm.cantilever_tip_load(...)`, `tm.natural_frequency_hz(...)`, `tm.euler_critical_load(...)`, or `tm.thin_wall_cylinder_stress(...)` directly.
 
 These closed-form equations assume the stated idealized geometry, loading, material behavior, and boundary conditions. They do not account for strength limits, buckling, fatigue, load combinations, code factors, nonlinear response, or project-specific acceptance criteria. Validate engineering inputs and applicability independently.
 
@@ -81,6 +90,7 @@ CSV input requires a header and a numeric column selected by `column`. JSON inpu
 - A frequency change is evidence for review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects can also shift measured frequencies.
 - `monitor` analyzes the supplied batch once. Continuous subscriptions, persistence, field protocols, dashboards, and alarm policies are planned separately.
 - The 0.2 mechanics and beam functions use idealized linear formulas and SI units; they are not a general-purpose solver or code-compliance engine.
+- The 0.3 column, shaft, stress-transformation, and pressure-vessel formulas have narrowly stated ideal assumptions. They do not check slenderness applicability, material yield, local instability, pressure-vessel codes, stress concentrations, or combined loading outside the documented plane-stress calculation.
 
 ## Roadmap
 

@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "timoshenko-engine"
-version = "0.2.0"
+version = "0.3.0"
 description = "Composable structural engineering calculations and analysis primitives for Python applications."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "Apache-2.0"
+license = { file = "LICENSE" }
 dependencies = ["numpy>=1.24"]
 authors = [{ name = "Timoshenko contributors" }]
 classifiers = [
