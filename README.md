@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.11.0** builds on the 0.1–0.10 monitoring and calculation/integration foundations. It adds explicit plugin registration and opt-in Python entry-point discovery for optional observation-source factories, with API version checks and atomic per-plugin registration. A synchronous source contract and context-managed runner feed batches into bounded rolling-window analysis and close sources on exit. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not ship live broker clients or provide structural safety certification.
+Release **1.1.0** continues from the 0.1–0.10 foundation. It adds explicit plugin registration and opt-in Python entry-point discovery for optional observation-source factories, with API version checks and atomic per-plugin registration. A synchronous source contract and context-managed runner feed batches into bounded rolling-window analysis and close sources on exit. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not ship live broker clients or provide structural safety certification.
 
 ## Install from this checkout
 
@@ -165,7 +165,7 @@ with tm.SessionRunner(source, session, max_batches=1000) as runner:
 
 Implement `open()`, `read_batch()`, and `close()` on your gateway. `read_batch()` returns a `tm.ObservationBatch`, or `None` at end-of-stream. The runner does not implement transport reconnects or retries. See [adapters.md](docs/adapters.md).
 
-## Optional source plugins (0.11)
+## Optional source plugins (1.1)
 
 ```python
 registry = tm.PluginRegistry.load_entry_points()

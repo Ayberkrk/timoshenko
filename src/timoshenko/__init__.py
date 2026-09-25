@@ -52,7 +52,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.11.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "HealthAssessment",
