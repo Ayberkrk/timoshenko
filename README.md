@@ -23,8 +23,12 @@ Python library and engine core, not a hosted monitoring service or a general
 finite-element solver.
 
 > **Alpha preview:** this checkout is prepared as `2.1.0a1`. The existing
-> `v2.0.0` tag is preserved. PyPI availability for this preview has not been
-> verified, so install from this checkout until a package release is confirmed.
+> `v2.0.0` tag is preserved. The PyPI project page returned 404 on
+> 2026-09-25, and this version has not been uploaded. Install from this
+> checkout until a package release is confirmed.
+> A PyPI pending publisher is configured for the planned GitHub workflow.
+> Read the Docs and Zenodo still need repository access, and no package or DOI
+> has been published.
 
 ## Install
 
@@ -143,6 +147,7 @@ policy.
 
 ## Further examples and documentation
 
+- [Documentation home](docs/index.md)
 - [Architecture](docs/architecture.md)
 - [Data contract](docs/data-contract.md)
 - [Historical CSV replay](docs/csv-source.md)
@@ -180,6 +185,14 @@ policy.
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest
+```
+
+To build the documentation locally, install the optional documentation tools
+and run MkDocs:
+
+```bash
+python -m pip install -e ".[docs]"
+python -m mkdocs serve
 ```
 
 The test suite checks analytical cases, input validation, adapters, storage,

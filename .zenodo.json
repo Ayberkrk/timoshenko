@@ -1,0 +1,19 @@
+{
+  "title": "Timoshenko Engine",
+  "description": "An embeddable Python library with reusable structural engineering calculations, modal analysis, sensor workflows, and monitoring components for engineering applications.",
+  "creators": [
+    {
+      "name": "Korkmaz, Ayberk"
+    }
+  ],
+  "license": "apache-2.0",
+  "upload_type": "software",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": [
+    "structural engineering",
+    "structural health monitoring",
+    "modal analysis",
+    "digital twin"
+  ]
+}

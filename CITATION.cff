@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use Timoshenko Engine, please cite this software."
+title: "Timoshenko Engine"
+type: software
+version: 2.1.0a1
+license: Apache-2.0
+repository-code: "https://github.com/Ayberkrk/timoshenko"
+abstract: >-
+  Timoshenko Engine is an embeddable Python library with reusable structural
+  engineering calculations, modal analysis, sensor workflows, and monitoring
+  components for engineering applications.
+authors:
+  - family-names: Korkmaz
+    given-names: Ayberk
+keywords:
+  - structural engineering
+  - structural health monitoring
+  - modal analysis
+  - digital twin
