@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/timoshenko-logo.png" alt="Timoshenko Engine logo" width="920">
+  <img src="https://raw.githubusercontent.com/Ayberkrk/timoshenko/main/assets/timoshenko-logo.png" alt="Timoshenko Engine logo" width="920">
 </p>
 
 <h1 align="center">Timoshenko Engine</h1>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version 2.1.0a1" src="https://img.shields.io/badge/version-2.1.0a1-orange?style=for-the-badge">
+  <img alt="Version 2.0.1" src="https://img.shields.io/badge/version-2.0.1-orange?style=for-the-badge">
   <img alt="Alpha" src="https://img.shields.io/badge/stage-alpha-orange?style=for-the-badge">
   <img alt="Python 3.10 to 3.13" src="https://img.shields.io/badge/python-3.10%20to%203.13-blue?style=for-the-badge">
   <img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge">
@@ -22,17 +22,18 @@ of rebuilding the same foundations for every project. It is an embeddable
 Python library and engine core, not a hosted monitoring service or a general
 finite-element solver.
 
-> **Alpha preview:** this checkout is prepared as `2.1.0a1`. The existing
-> `v2.0.0` tag is preserved. The PyPI project page returned 404 on
-> 2026-09-25, and this version has not been uploaded. Install from this
-> checkout until a package release is confirmed.
-> A PyPI pending publisher is configured for the planned GitHub workflow.
-> Read the Docs and Zenodo still need repository access, and no package or DOI
-> has been published.
+> **Alpha:** the API may still change between releases. Timoshenko is not yet
+> published on PyPI; install it from GitHub or from a checkout as shown below.
 
 ## Install
 
-From the root of this repository:
+From GitHub:
+
+```bash
+python -m pip install "timoshenko-engine @ git+https://github.com/Ayberkrk/timoshenko"
+```
+
+Or from the root of a checkout:
 
 ```bash
 python -m pip install .
@@ -166,7 +167,7 @@ policy.
 - [SensorThings adapter](docs/sensorthings-adapter.md)
 - [Engineering calculations](examples/engineering_primitives.py)
 - [Runnable examples](examples/)
-- [Release and change roadmap](yolharitasi.md)
+- [Publishing and citation](docs/publishing.md)
 
 ## Limits and engineering posture
 

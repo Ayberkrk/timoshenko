@@ -73,11 +73,13 @@ by these repository files.
 
 ## Current state
 
-- Package metadata is prepared for version `2.1.0a1`. The public PyPI project
-  page returned 404 on 2026-09-25; this does not reserve the name.
+- Package metadata is prepared for version `2.0.1`. The project is not yet on
+  PyPI; a pending publisher does not reserve the name.
 - A PyPI pending publisher is registered for `Ayberkrk/timoshenko`, workflow
-  `publish.yml`, environment `pypi`. It does not reserve the project name.
-- The existing `v2.0.0` tag remains unchanged.
+  `publish.yml`, environment `pypi`.
+- Before the first public push, internal planning notes were removed from the
+  Git history, so commit hashes differ from earlier local copies. The `v2.0.0`
+  tag points at the rewritten commit with the same source.
 - Repository-side PyPI, Read the Docs, and Zenodo configuration is present.
 - No PyPI upload, GitHub Release, Read the Docs project, Zenodo repository
   connection, or DOI has been created by this setup.
