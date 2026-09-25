@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.7.0** builds on the 0.1 monitoring and 0.2–0.6 calculation/integration foundations. It adds local SQLite asset/relation, observation, batch-idempotency, and analysis-run history. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability and aligned multi-channel Welch FDD. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is not yet a live broker listener or structural safety certification tool.
+Release **0.8.0** builds on the 0.1–0.7 monitoring and calculation/integration foundations. It adds a bounded rolling-window session that accepts timestamped batches from a caller and periodically runs single-channel peak picking or multi-channel Welch FDD. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not open live broker connections or provide structural safety certification.
 
 ## Install from this checkout
 
@@ -126,6 +126,25 @@ with SQLiteStore("project/history.sqlite") as store:
 
 SQLite is local persistence only. Batch IDs are required; the same ID with changed contents raises an error. The store preserves late/out-of-order observations and lets reads select event-time or arrival ordering. It does not connect to MQTT/OPC UA, resample signals, or execute a live analysis loop. See [storage.md](docs/storage.md).
 
+## Bounded live analysis session (0.8)
+
+```python
+session = tm.MonitoringSession(
+    structure,
+    sensor_ids=["deck-left", "deck-right"],
+    units=["m/s^2", "m/s^2"],
+    sampling_hz=100.0,
+    window_samples=2048,
+    hop_samples=512,
+    analysis_options={"nperseg": 512, "max_modes": 4},
+)
+result = session.ingest(batch)  # timestamped tm.ObservationBatch from your collector
+for report in result.reports:
+    print(report.to_dict())
+```
+
+The session aligns samples to the explicit rate, counts rejected records, waits for a fresh contiguous window after gaps, and returns reports after each configured hop. A source/gateway remains responsible for collecting data and reconnecting. See [live-sessions.md](docs/live-sessions.md) and [examples/live_session.py](examples/live_session.py).
+
 ## Sensor files
 
 CSV input requires a header and a numeric column selected by `column`. JSON input may be a numeric array, an object with a `samples` array, or an array of objects with the selected column. Sampling frequency is required and is never guessed from the filename. A series must contain at least eight finite values. Timestamps/irregularly sampled series are not resampled in 0.1.
@@ -137,7 +156,7 @@ CSV input requires a header and a numeric column selected by `column`. JSON inpu
 - The damping estimate uses a half-power bandwidth approximation when the peak supports it.
 - Model updating applies a single scale to all story stiffnesses; it cannot locate or size local damage.
 - A frequency change is evidence for review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects can also shift measured frequencies.
-- `monitor` analyzes the supplied batch once. Continuous subscriptions, persistence, field protocols, dashboards, and alarm policies are planned separately.
+- `monitor` analyzes the supplied batch once. `MonitoringSession` adds a bounded caller-fed window loop, but no broker subscription, reconnection, background scheduler, dashboard, or alarm policy.
 - The 0.2 mechanics and beam functions use idealized linear formulas and SI units; they are not a general-purpose solver or code-compliance engine.
 - The 0.3 column, shaft, stress-transformation, and pressure-vessel formulas have narrowly stated ideal assumptions. They do not check slenderness applicability, material yield, local instability, pressure-vessel codes, stress concentrations, or combined loading outside the documented plane-stress calculation.
 

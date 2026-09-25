@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import assets, beams, health, mechanics, modal, observations, oma, pressure, project, sections, shafts, stability, storage, strength, vibration
+from . import assets, beams, health, mechanics, modal, observations, oma, pressure, project, sections, session, shafts, stability, storage, strength, vibration
 from .assets import Asset, Relation
 from .beams import (
     BeamDeflection,
@@ -27,6 +27,7 @@ from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
 from .project import LoadedProject, ProjectManifest, ProjectRunResult, load_project, read_manifest, run_project
 from .storage import BatchAppendResult, SQLiteStore
+from .session import MonitoringSession, SessionIngestResult, SessionReport
 from .sections import SectionProperties
 from .sections import circular_tube as circular_tube_section
 from .sections import rectangle as rectangle_section
@@ -40,7 +41,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 __all__ = [
     "HealthAssessment",
@@ -50,6 +51,7 @@ __all__ = [
     "CircularTorsionResult",
     "ModalResult",
     "Mode",
+    "MonitoringSession",
     "FDDMode",
     "FDDResult",
     "LoadedProject",
@@ -66,6 +68,8 @@ __all__ = [
     "ProjectRunResult",
     "Relation",
     "SQLiteStore",
+    "SessionIngestResult",
+    "SessionReport",
     "axial_strain",
     "axial_stress",
     "average_shear_stress",
@@ -95,6 +99,7 @@ __all__ = [
     "rectangular_max_shear_stress",
     "read_manifest",
     "sections",
+    "session",
     "shafts",
     "simply_supported_midpoint_load",
     "simply_supported_uniform_load",
