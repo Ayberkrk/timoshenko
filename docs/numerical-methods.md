@@ -80,6 +80,36 @@ frequency/damping pairs and evaluates the resulting curve; the host solver
 still owns the mass/stiffness matrices and damping-model choice. See
 [rayleigh-damping.md](rayleigh-damping.md), the [OpenSees command
 definition](https://opensees.github.io/OpenSeesDocumentation/user/manual/model/damping/rayleigh.html),
-and the recorded-building evaluation by [Chopra & McKenna (2017)](https://doi.org/10.1016/j.engstruct.2017.02.001).
-The latter and other work show why a two-target fit must not be interpreted as
-constant damping or assumed valid for nonlinear response.
+and Chopra and McKenna's recorded-building evaluation
+([2017](https://doi.org/10.1016/j.engstruct.2017.02.001)). These sources show
+why a two-target fit must not be interpreted as constant damping or assumed
+valid for nonlinear response.
+
+## 1.8 idealized I-section and rectangular tube
+
+The `tm.i_section` and `tm.rectangular_tube_section` helpers compose sharp-
+corner rectangles and use the parallel-axis theorem about the symmetry
+centroid. They return area, centroidal second moments about both principal
+axes, and elastic section moduli. Dimensions are metres. For a named rolled or
+manufactured shape, use published catalog properties instead of this ideal
+geometry; see [section-properties.md](section-properties.md) and the [AISC
+Shapes Database](https://www.aisc.org/aisc/publications/steel-construction-manual/aisc-shapes-database-v160/).
+
+These geometric equations do not calculate torsion constants, effective
+widths, shear areas, local buckling, resistance, or code checks. Sharp corners
+and uniform ideal walls omit fillets, weld details and manufacturing
+tolerances.
+
+## 1.9 polygon section geometry
+
+`tm.polygon_section` evaluates signed boundary integrals for area, first
+moments, both centroidal second moments and the product moment. Optional hole
+rings are sign-normalized and subtracted; directional section moduli use the
+outer boundary's extreme fibres. The formulas and validation rules are
+specified in [polygon-sections.md](polygon-sections.md), based on Green's
+theorem / shoelace polygon sums ([Bourke, 1988](https://paulbourke.net/geometry/polygonmesh/)).
+
+Only simple, uniform-material planar polygons with non-overlapping holes are
+supported. The result preserves `Ixy`; it does not transform to principal axes
+or calculate stress for coupled bending. It also omits material interfaces,
+plasticity, shear/torsion properties and design checks.

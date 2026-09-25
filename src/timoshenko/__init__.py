@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, uncertainty, vibration
+from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, polygon, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, uncertainty, vibration
 from .assets import Asset, Relation
 from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
 from .csv_source import CSVObservationSource, CSVSourceError
@@ -39,11 +39,14 @@ from .observations import Observation, ObservationBatch
 from .multichannel import MultiChannelData, load_multichannel_csv
 from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
+from .polygon import PolygonSectionProperties, polygon_section
 from .project import LoadedProject, ProjectManifest, ProjectRunResult, load_project, read_manifest, run_project
 from .storage import BatchAppendResult, SQLiteStore
 from .session import MonitoringSession, SessionIngestResult, SessionReport, SessionRestoreResult
 from .sections import SectionProperties
 from .sections import circular_tube as circular_tube_section
+from .sections import i_section
+from .sections import rectangular_tube as rectangular_tube_section
 from .sections import rectangle as rectangle_section
 from .sections import solid_circle as solid_circle_section
 from .sensors import SensorData, load_sensors
@@ -56,7 +59,7 @@ from .update import update
 from .uncertainty import UncertaintyError, UncertaintyResult, propagate as propagate_uncertainty
 from .vibration import RayleighDampingResult, damping_ratio, harmonic_response, natural_frequency_hz, rayleigh_damping_coefficients
 
-__version__ = "1.7.0"
+__version__ = "1.9.0"
 
 __all__ = [
     "HealthAssessment",
@@ -99,6 +102,7 @@ __all__ = [
     "ThinWallCylinderResult",
     "RayleighDampingResult",
     "PlaneStressResult",
+    "PolygonSectionProperties",
     "ProjectManifest",
     "ProjectRunResult",
     "Relation",
@@ -121,6 +125,7 @@ __all__ = [
     "euler_critical_load",
     "harmonic_response",
     "health",
+    "i_section",
     "load_sensors",
     "load_multichannel_csv",
     "mechanics",
@@ -136,8 +141,11 @@ __all__ = [
     "pressure",
     "project",
     "plugins",
+    "polygon",
+    "polygon_section",
     "report",
     "rectangle_section",
+    "rectangular_tube_section",
     "rayleigh_damping_coefficients",
     "rectangular_max_shear_stress",
     "read_manifest",

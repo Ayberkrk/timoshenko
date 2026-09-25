@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.7.0** adds a reusable two-mode Rayleigh damping coefficient fit and lets users evaluate its frequency-dependent modal damping curve. The earlier 1.6 release adds scalar uncertainty propagation around any keyword-callable Timoshenko or user equation. The first-order method uses sensitivity coefficients and input covariance; the Monte Carlo method samples a bounded multivariate Gaussian input model. Earlier releases add OGC SensorThings and CSV sources, SQLite session restoration, optional Paho MQTT, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Equations remain directly callable as `tm.function_name(...)`; Timoshenko does not provide structural safety certification.
+Release **1.9.0** adds geometric area properties for simple polygonal sections with optional holes, including centroid, product of inertia and directional elastic moduli. Release 1.8 adds idealized symmetric I-section and uniform-wall rectangular-tube properties; 1.7 adds a reusable two-mode Rayleigh damping coefficient fit and frequency-curve evaluator; 1.6 adds scalar uncertainty propagation around built-in or user equations. Earlier releases add OGC SensorThings and CSV sources, SQLite session restoration, optional Paho MQTT, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Equations remain directly callable as `tm.function_name(...)`; Timoshenko does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -73,7 +73,7 @@ shaft = tm.circular_shaft_torsion(
 )
 ```
 
-`tm.sections` includes rectangular, solid circular, and concentric circular-tube properties. `tm.mechanics` includes axial/bending/average shear stress, rectangular peak shear stress, uniaxial elastic strain, free thermal strain, and the isotropic `E`–`G`–Poisson relation. `tm.beams` includes four standard static load cases. Beam functions report Euler–Bernoulli bending deflection; pass both `shear_modulus_pa` and `area_m2` to also calculate a first-order shear term. `tm.vibration` provides undamped SDOF natural frequency, viscous damping ratio, and steady-state harmonic response. Version 0.3 adds `tm.shafts.circular_shaft_torsion`, `tm.stability.euler_critical_load`, `tm.strength.plane_stress`, and `tm.pressure.thin_wall_cylinder_stress`. Common formulas are also re-exported at the top level, so users can call names such as `tm.axial_stress(...)`, `tm.cantilever_tip_load(...)`, `tm.natural_frequency_hz(...)`, `tm.euler_critical_load(...)`, or `tm.thin_wall_cylinder_stress(...)` directly.
+`tm.sections` includes rectangles, solid/circular tubes, and in 1.8 idealized symmetric I-sections and uniform-wall rectangular tubes. `tm.polygon_section(outer, holes=...)` calculates geometric properties for user-defined simple polygon boundaries; see [section-properties.md](docs/section-properties.md). `tm.mechanics` includes axial/bending/average shear stress, rectangular peak shear stress, uniaxial elastic strain, free thermal strain, and the isotropic `E`–`G`–Poisson relation. `tm.beams` includes four standard static load cases. Beam functions report Euler–Bernoulli bending deflection; pass both `shear_modulus_pa` and `area_m2` to also calculate a first-order shear term. `tm.vibration` provides undamped SDOF natural frequency, viscous damping ratio, and steady-state harmonic response. Version 0.3 adds `tm.shafts.circular_shaft_torsion`, `tm.stability.euler_critical_load`, `tm.strength.plane_stress`, and `tm.pressure.thin_wall_cylinder_stress`. Common formulas are also re-exported at the top level, so users can call names such as `tm.axial_stress(...)`, `tm.cantilever_tip_load(...)`, `tm.natural_frequency_hz(...)`, `tm.euler_critical_load(...)`, `tm.i_section(...)`, or `tm.thin_wall_cylinder_stress(...)` directly.
 
 These closed-form equations assume the stated idealized geometry, loading, material behavior, and boundary conditions. They do not account for strength limits, buckling, fatigue, load combinations, code factors, nonlinear response, or project-specific acceptance criteria. Validate engineering inputs and applicability independently.
 
@@ -253,6 +253,24 @@ print(damping.modal_damping_ratio(2.0))
 ```
 
 This fits `C = alpha_M M + beta_K K` at two targets; it does not build the damping matrix or select the model for an FEM analysis. See [rayleigh-damping.md](docs/rayleigh-damping.md).
+
+## Common section properties (1.8)
+
+```python
+i = tm.i_section(
+    overall_width_m=0.20,
+    overall_height_m=0.30,
+    web_thickness_m=0.01,
+    flange_thickness_m=0.015,
+)
+box = tm.rectangular_tube_section(
+    outer_width_m=0.20,
+    outer_height_m=0.30,
+    wall_thickness_m=0.01,
+)
+```
+
+These are sharp-corner geometric formulas; they do not replace catalog properties for a named manufactured shape or check its design strength. See [section-properties.md](docs/section-properties.md).
 
 ## Sensor files
 
