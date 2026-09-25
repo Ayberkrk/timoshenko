@@ -183,7 +183,7 @@ class SensorThingsObservationSource:
             )
         except SensorThingsSourceError:
             raise
-        except (ValueError, TypeError, KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        except (ValueError, TypeError, KeyError, OverflowError, UnicodeDecodeError, json.JSONDecodeError) as error:
             raise SensorThingsSourceError(f"invalid SensorThings observation page: {error}") from error
 
     def _fetch_page(self, url: str) -> bytes:

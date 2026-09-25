@@ -8,7 +8,8 @@ also returned (constant ``kappa`` shear-correction approximation).
 from __future__ import annotations
 
 from dataclasses import dataclass
-import math
+
+from ._validation import finite as _finite, positive as _positive
 
 
 @dataclass(frozen=True)
@@ -19,20 +20,6 @@ class BeamDeflection:
     @property
     def total_m(self) -> float:
         return self.bending_m + self.shear_m
-
-
-def _positive(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value) or value <= 0.0:
-        raise ValueError(f"{name} must be finite and greater than zero")
-    return value
-
-
-def _finite(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value):
-        raise ValueError(f"{name} must be finite")
-    return value
 
 
 def _response(bending: float, shear_force_factor: float, *, shear_modulus_pa: float | None,

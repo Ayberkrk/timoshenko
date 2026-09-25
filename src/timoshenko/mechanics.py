@@ -8,19 +8,7 @@ from __future__ import annotations
 
 import math
 
-
-def _positive(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value) or value <= 0.0:
-        raise ValueError(f"{name} must be finite and greater than zero")
-    return value
-
-
-def _finite(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value):
-        raise ValueError(f"{name} must be finite")
-    return value
+from ._validation import finite as _finite, positive as _positive
 
 
 def axial_stress(force_n: float, area_m2: float) -> float:

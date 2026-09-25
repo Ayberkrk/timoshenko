@@ -26,7 +26,7 @@ User code / Cauren / another host application
 
 ## Planned boundaries
 
-`SourceAdapter` should turn an external protocol into typed `Observation` records. A `Processor` transforms an immutable/bounded observation batch. A `StorageAdapter` persists raw input plus provenance and state changes. A `Reporter` serializes results or renders a view. These interfaces should be introduced when implemented by at least one real adapter; version 0.6 does not claim a plugin framework.
+`SourceAdapter` should turn an external protocol into typed `Observation` records. A `Processor` transforms an immutable/bounded observation batch. A `StorageAdapter` persists raw input plus provenance and state changes. A `Reporter` serializes results or renders a view. These interfaces are introduced only once a real implementation exists. Source adapters now follow the `ObservationSource` protocol (CSV, MQTT, SensorThings), and version 1.1 added entry-point discovery for source factories only; processor, storage and reporter plugin families are not defined yet.
 
 ## Why not a full general FEM solver now?
 

@@ -5,12 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-
-def _positive(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value) or value <= 0.0:
-        raise ValueError(f"{name} must be finite and greater than zero")
-    return value
+from ._validation import positive as _positive
 
 
 def natural_frequency_hz(mass_kg: float, stiffness_n_m: float) -> float:

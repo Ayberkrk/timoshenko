@@ -9,12 +9,16 @@ import hashlib
 import math
 from pathlib import Path
 import sqlite3
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 import uuid
 
 from .assets import Asset, Relation
 from .observations import Observation, ObservationBatch
-from .project import ProjectRunResult
+
+if TYPE_CHECKING:
+    # Only for annotations: importing the project runner at module level would
+    # make this low-level store depend on the whole analysis stack.
+    from .project import ProjectRunResult
 
 
 _SCHEMA_VERSION = 1
@@ -73,18 +77,18 @@ class SQLiteStore:
             raise ValueError("timeout_seconds must be finite and positive")
         self._connection = sqlite3.connect(self.path, timeout=timeout)
         self._connection.row_factory = sqlite3.Row
-        self._connection.execute("PRAGMA foreign_keys = ON")
+        self._db.execute("PRAGMA foreign_keys = ON")
         self._initialize()
 
     def _initialize(self) -> None:
-        version = int(self._connection.execute("PRAGMA user_version").fetchone()[0])
+        version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
         if version > _SCHEMA_VERSION:
             self.close()
             raise RuntimeError(f"database schema {version} is newer than supported schema {_SCHEMA_VERSION}")
         if version == _SCHEMA_VERSION:
             return
-        with self._connection:
-            self._connection.executescript(
+        with self._db:
+            self._db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS assets (
                     asset_id TEXT PRIMARY KEY,
@@ -142,6 +146,13 @@ class SQLiteStore:
                 """
             )
 
+    @property
+    def _db(self) -> sqlite3.Connection:
+        connection = getattr(self, "_connection", None)
+        if connection is None:
+            raise RuntimeError("SQLiteStore is closed")
+        return connection
+
     def close(self) -> None:
         if getattr(self, "_connection", None) is not None:
             self._connection.close()
@@ -158,8 +169,8 @@ class SQLiteStore:
     def upsert_asset(self, asset: Asset) -> None:
         if not isinstance(asset, Asset):
             raise TypeError("asset must be an Asset")
-        with self._connection:
-            self._connection.execute(
+        with self._db:
+            self._db.execute(
                 """INSERT INTO assets(asset_id, asset_type, name, metadata_json, updated_at)
                    VALUES (?, ?, ?, ?, ?)
                    ON CONFLICT(asset_id) DO UPDATE SET asset_type=excluded.asset_type,
@@ -168,23 +179,23 @@ class SQLiteStore:
             )
 
     def get_asset(self, asset_id: str) -> Asset | None:
-        row = self._connection.execute("SELECT * FROM assets WHERE asset_id=?", (str(asset_id),)).fetchone()
+        row = self._db.execute("SELECT * FROM assets WHERE asset_id=?", (str(asset_id),)).fetchone()
         if row is None:
             return None
         return Asset(row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"]))
 
     def list_assets(self, *, asset_type: str | None = None) -> tuple[Asset, ...]:
         if asset_type is None:
-            rows = self._connection.execute("SELECT * FROM assets ORDER BY asset_id").fetchall()
+            rows = self._db.execute("SELECT * FROM assets ORDER BY asset_id").fetchall()
         else:
-            rows = self._connection.execute("SELECT * FROM assets WHERE asset_type=? ORDER BY asset_id", (asset_type,)).fetchall()
+            rows = self._db.execute("SELECT * FROM assets WHERE asset_type=? ORDER BY asset_id", (asset_type,)).fetchall()
         return tuple(Asset(row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"])) for row in rows)
 
     def add_relation(self, relation: Relation) -> None:
         if not isinstance(relation, Relation):
             raise TypeError("relation must be a Relation")
-        with self._connection:
-            self._connection.execute(
+        with self._db:
+            self._db.execute(
                 """INSERT INTO relations(source_asset_id, relation_type, target_asset_id, metadata_json)
                    VALUES (?, ?, ?, ?)
                    ON CONFLICT(source_asset_id, relation_type, target_asset_id)
@@ -193,7 +204,7 @@ class SQLiteStore:
             )
 
     def relations_for(self, asset_id: str) -> tuple[Relation, ...]:
-        rows = self._connection.execute(
+        rows = self._db.execute(
             "SELECT * FROM relations WHERE source_asset_id=? OR target_asset_id=? ORDER BY relation_type, source_asset_id, target_asset_id",
             (str(asset_id), str(asset_id)),
         ).fetchall()
@@ -206,7 +217,7 @@ class SQLiteStore:
         with different content, exactly as :meth:`append_batch` would.
         """
         batch_digest = _batch_digest(batch)
-        existing = self._connection.execute(
+        existing = self._db.execute(
             "SELECT batch_digest FROM observation_batches WHERE source_id=? AND batch_id=?",
             (batch.source_id, batch.batch_id),
         ).fetchone()
@@ -219,14 +230,14 @@ class SQLiteStore:
     def append_batch(self, batch: ObservationBatch) -> BatchAppendResult:
         batch_digest = _batch_digest(batch)
         inserted = 0
-        with self._connection:
-            cursor = self._connection.execute(
+        with self._db:
+            cursor = self._db.execute(
                 "INSERT OR IGNORE INTO observation_batches(source_id, batch_id, item_count, batch_digest, received_at) VALUES (?, ?, ?, ?, ?)",
                 (batch.source_id, batch.batch_id, batch.count, batch_digest, _utc_now()),
             )
             is_new = cursor.rowcount == 1
             if not is_new:
-                existing = self._connection.execute(
+                existing = self._db.execute(
                     "SELECT batch_digest FROM observation_batches WHERE source_id=? AND batch_id=?",
                     (batch.source_id, batch.batch_id),
                 ).fetchone()
@@ -234,7 +245,7 @@ class SQLiteStore:
                     raise ValueError("batch_id was already stored with different observation content")
             if is_new:
                 for record_index, observation in enumerate(batch.observations):
-                    self._connection.execute(
+                    self._db.execute(
                         """INSERT INTO observations(
                             source_id, batch_id, record_index, sensor_id, name, unit, value,
                             event_timestamp, quality, asset_id, observation_source_id, metadata_json, ingested_at
@@ -300,7 +311,7 @@ class SQLiteStore:
                 raise ValueError("limit must be positive")
             sql += " LIMIT ?"
             parameters.append(int(limit))
-        rows = self._connection.execute(sql, parameters).fetchall()
+        rows = self._db.execute(sql, parameters).fetchall()
         return tuple(
             Observation(
                 sensor_id=row["sensor_id"],
@@ -338,7 +349,7 @@ class SQLiteStore:
             clauses.append("unit=?")
             parameters.append(str(unit))
         parameters.append(count)
-        rows = self._connection.execute(
+        rows = self._db.execute(
             "SELECT * FROM (SELECT * FROM observations WHERE "
             + " AND ".join(clauses)
             + " ORDER BY event_timestamp DESC, observation_row_id DESC LIMIT ?) "
@@ -361,13 +372,15 @@ class SQLiteStore:
         )
 
     def save_run(self, result: ProjectRunResult, *, run_id: str | None = None) -> str:
+        from .project import ProjectRunResult
+
         if not isinstance(result, ProjectRunResult):
             raise TypeError("result must be a ProjectRunResult")
         identifier = str(run_id or uuid.uuid4()).strip()
         if not identifier:
             raise ValueError("run_id must be non-empty")
-        with self._connection:
-            self._connection.execute(
+        with self._db:
+            self._db.execute(
                 """INSERT INTO analysis_runs(
                      run_id, project_id, method, source_sha256, manifest_sha256, created_at, result_json
                    ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -384,16 +397,16 @@ class SQLiteStore:
         return identifier
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
-        row = self._connection.execute("SELECT result_json FROM analysis_runs WHERE run_id=?", (str(run_id),)).fetchone()
+        row = self._db.execute("SELECT result_json FROM analysis_runs WHERE run_id=?", (str(run_id),)).fetchone()
         return None if row is None else json.loads(row["result_json"])
 
     def list_runs(self, *, project_id: str | None = None, limit: int = 100) -> tuple[dict[str, Any], ...]:
         if int(limit) < 1:
             raise ValueError("limit must be positive")
         if project_id is None:
-            rows = self._connection.execute("SELECT result_json FROM analysis_runs ORDER BY created_at DESC, run_id DESC LIMIT ?", (int(limit),)).fetchall()
+            rows = self._db.execute("SELECT result_json FROM analysis_runs ORDER BY created_at DESC, run_id DESC LIMIT ?", (int(limit),)).fetchall()
         else:
-            rows = self._connection.execute(
+            rows = self._db.execute(
                 "SELECT result_json FROM analysis_runs WHERE project_id=? ORDER BY created_at DESC, run_id DESC LIMIT ?",
                 (str(project_id), int(limit)),
             ).fetchall()

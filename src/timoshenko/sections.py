@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+from ._validation import positive as _positive
+# Re-exported so the general polygon helper is also reachable as tm.sections.polygon_section.
+from .polygon import PolygonSectionProperties, polygon_section  # noqa: F401
+
 
 @dataclass(frozen=True)
 class SectionProperties:
@@ -13,13 +17,6 @@ class SectionProperties:
     second_moment_z_m4: float
     section_modulus_y_m3: float
     section_modulus_z_m3: float
-
-
-def _positive(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value) or value <= 0.0:
-        raise ValueError(f"{name} must be finite and greater than zero")
-    return value
 
 
 def rectangle(width_m: float, height_m: float) -> SectionProperties:
@@ -120,8 +117,3 @@ def _checked_properties(area: float, inertia_y: float, inertia_z: float, half_he
     if not math.isfinite(modulus_y) or not math.isfinite(modulus_z):
         raise ValueError("section dimensions produced non-finite section moduli")
     return SectionProperties(area, inertia_y, inertia_z, modulus_y, modulus_z)
-
-
-# Keep the common section entry point discoverable under ``tm.sections`` while
-# the general polygon implementation remains isolated in its own module.
-from .polygon import PolygonSectionProperties, polygon_section  # noqa: E402
