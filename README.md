@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.9.0** builds on the 0.1–0.8 monitoring and calculation/integration foundations. It adds a bounded rolling-window session and self-contained HTML/SVG reports that turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not open live broker connections or provide structural safety certification.
+Release **0.10.0** builds on the 0.1–0.9 monitoring and calculation/integration foundations. It adds a synchronous observation-source contract and context-managed runner that feeds batches into bounded rolling-window analysis and ensures sources are closed on exit. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not ship live broker clients or provide structural safety certification.
 
 ## Install from this checkout
 
@@ -153,6 +153,17 @@ report_path = tm.report.save_html(result, "reports/bridge-analysis.html")
 ```
 
 Reports are standalone HTML with an embedded SVG frequency comparison; no browser framework or plotting dependency is required. They include the method/status, modal table, reference-to-observation differences, evidence summary, and interpretation limitations. Manifest-based runs also include input and manifest SHA-256 values. See [reporting.md](docs/reporting.md).
+
+## Source adapter lifecycle (0.10)
+
+```python
+with tm.SessionRunner(source, session, max_batches=1000) as runner:
+    for ingest_result in runner:
+        for report in ingest_result.reports:
+            consume(report)
+```
+
+Implement `open()`, `read_batch()`, and `close()` on your gateway. `read_batch()` returns a `tm.ObservationBatch`, or `None` at end-of-stream. The runner does not implement transport reconnects or retries. See [adapters.md](docs/adapters.md).
 
 ## Sensor files
 
