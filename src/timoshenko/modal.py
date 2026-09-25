@@ -118,18 +118,26 @@ def identify(
 
 
 def _half_power_damping(spectrum: np.ndarray, frequencies: np.ndarray, peak_idx: int) -> float | None:
-    peak = float(spectrum[peak_idx])
-    if peak <= 0.0:
+    peak_amplitude = float(spectrum[peak_idx])
+    if peak_amplitude <= 0.0:
         return None
-    level = peak / math.sqrt(2.0)
-    left = peak_idx
-    right = peak_idx
-    while left > 0 and float(spectrum[left]) > level:
-        left -= 1
-    while right < len(spectrum) - 1 and float(spectrum[right]) > level:
-        right += 1
+    power = np.asarray(spectrum, dtype=float) ** 2
+    half_power = float(power[peak_idx]) / 2.0
+    f_left: float | None = None
+    for idx in range(peak_idx, 0, -1):
+        p0, p1 = float(power[idx - 1]), float(power[idx])
+        if p0 <= half_power < p1:
+            f0, f1 = float(frequencies[idx - 1]), float(frequencies[idx])
+            f_left = f0 if p1 == p0 else f0 + (half_power - p0) * (f1 - f0) / (p1 - p0)
+            break
+    f_right: float | None = None
+    for idx in range(peak_idx, len(spectrum) - 1):
+        p0, p1 = float(power[idx]), float(power[idx + 1])
+        if p0 > half_power >= p1:
+            f0, f1 = float(frequencies[idx]), float(frequencies[idx + 1])
+            f_right = f0 if p0 == p1 else f0 + (p0 - half_power) * (f1 - f0) / (p0 - p1)
+            break
     f_peak = float(frequencies[peak_idx])
-    bandwidth = float(frequencies[right] - frequencies[left])
-    if f_peak <= 0.0 or bandwidth <= 0.0 or left == 0 or right == len(spectrum) - 1:
+    if f_peak <= 0.0 or f_left is None or f_right is None or f_right <= f_left:
         return None
-    return max(0.0, min(1.0, bandwidth / (2.0 * f_peak)))
+    return max(0.0, min(1.0, (f_right - f_left) / (2.0 * f_peak)))
