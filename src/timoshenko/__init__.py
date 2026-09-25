@@ -54,9 +54,9 @@ from .stability import slenderness_ratio
 from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .uncertainty import UncertaintyError, UncertaintyResult, propagate as propagate_uncertainty
-from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
+from .vibration import RayleighDampingResult, damping_ratio, harmonic_response, natural_frequency_hz, rayleigh_damping_coefficients
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 __all__ = [
     "HealthAssessment",
@@ -97,6 +97,7 @@ __all__ = [
     "Structure",
     "SectionProperties",
     "ThinWallCylinderResult",
+    "RayleighDampingResult",
     "PlaneStressResult",
     "ProjectManifest",
     "ProjectRunResult",
@@ -137,6 +138,7 @@ __all__ = [
     "plugins",
     "report",
     "rectangle_section",
+    "rayleigh_damping_coefficients",
     "rectangular_max_shear_stress",
     "read_manifest",
     "sections",

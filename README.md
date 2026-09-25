@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.6.0** adds scalar uncertainty propagation around any keyword-callable Timoshenko or user equation. The first-order method uses sensitivity coefficients and input covariance; the Monte Carlo method samples a bounded multivariate Gaussian input model. The preceding 1.5 release adds a bounded HTTP reader for scalar OGC SensorThings Observation pages, mapping `phenomenonTime` and `result` into Timoshenko batches and following same-origin `@iot.nextLink` pagination. Earlier releases add long-format CSV replay, SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Equations remain directly callable as `tm.function_name(...)`; Timoshenko does not provide structural safety certification.
+Release **1.7.0** adds a reusable two-mode Rayleigh damping coefficient fit and lets users evaluate its frequency-dependent modal damping curve. The earlier 1.6 release adds scalar uncertainty propagation around any keyword-callable Timoshenko or user equation. The first-order method uses sensitivity coefficients and input covariance; the Monte Carlo method samples a bounded multivariate Gaussian input model. Earlier releases add OGC SensorThings and CSV sources, SQLite session restoration, optional Paho MQTT, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Equations remain directly callable as `tm.function_name(...)`; Timoshenko does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -238,6 +238,21 @@ print(estimate.to_dict())
 ```
 
 Wrap a built-in or user equation to return its estimate, propagated standard uncertainty, coverage interval, and (for first-order propagation) input sensitivities. See [uncertainty.md](docs/uncertainty.md) and [`examples/propagate_uncertainty.py`](examples/propagate_uncertainty.py).
+
+## Rayleigh damping coefficients (1.7)
+
+```python
+damping = tm.rayleigh_damping_coefficients(
+    frequency_1_hz=0.8,
+    damping_ratio_1=0.02,
+    frequency_2_hz=4.0,
+    damping_ratio_2=0.02,
+)
+print(damping.to_dict())
+print(damping.modal_damping_ratio(2.0))
+```
+
+This fits `C = alpha_M M + beta_K K` at two targets; it does not build the damping matrix or select the model for an FEM analysis. See [rayleigh-damping.md](docs/rayleigh-damping.md).
 
 ## Sensor files
 

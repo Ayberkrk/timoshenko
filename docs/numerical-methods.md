@@ -70,3 +70,16 @@ calibration uncertainty, environmental variation, or model discrepancy. The
 normal coverage interval from first-order propagation is an approximation, and
 Monte Carlo is only as appropriate as the caller's Gaussian input model. The
 full limits are in [uncertainty.md](uncertainty.md).
+
+## 1.7 Rayleigh damping
+
+For a classical proportional damping matrix `C = alpha_M M + beta_K K`, a
+modal frequency `omega` has damping ratio
+`zeta = alpha_M/(2 omega) + beta_K omega/2`. The 1.7 helper fits two target
+frequency/damping pairs and evaluates the resulting curve; the host solver
+still owns the mass/stiffness matrices and damping-model choice. See
+[rayleigh-damping.md](rayleigh-damping.md), the [OpenSees command
+definition](https://opensees.github.io/OpenSeesDocumentation/user/manual/model/damping/rayleigh.html),
+and the recorded-building evaluation by [Chopra & McKenna (2017)](https://doi.org/10.1016/j.engstruct.2017.02.001).
+The latter and other work show why a two-target fit must not be interpreted as
+constant damping or assumed valid for nonlinear response.
