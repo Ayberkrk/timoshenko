@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import assets, beams, health, mechanics, modal, observations, oma, pressure, project, sections, session, shafts, stability, storage, strength, vibration
+from . import assets, beams, health, mechanics, modal, observations, oma, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
 from .assets import Asset, Relation
 from .beams import (
     BeamDeflection,
@@ -41,7 +41,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 __all__ = [
     "HealthAssessment",
@@ -95,6 +95,7 @@ __all__ = [
     "plane_stress",
     "pressure",
     "project",
+    "report",
     "rectangle_section",
     "rectangular_max_shear_stress",
     "read_manifest",

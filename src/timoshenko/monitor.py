@@ -38,6 +38,6 @@ class MonitoringResult:
 def monitor(structure: Structure, sensors: SensorData) -> MonitoringResult:
     """Run modal identification, uniform model update, then health comparison."""
     modal_result = identify(sensors)
-    updated_structure = update(structure, modal_result)
+    updated_structure = update(structure, modal_result) if modal_result.modes else structure
     health_result = assess(structure=updated_structure, observations=sensors, modal_result=modal_result)
     return MonitoringResult(structure=updated_structure, modal=modal_result, health=health_result)

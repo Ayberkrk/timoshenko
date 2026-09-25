@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.8.0** builds on the 0.1–0.7 monitoring and calculation/integration foundations. It adds a bounded rolling-window session that accepts timestamped batches from a caller and periodically runs single-channel peak picking or multi-channel Welch FDD. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not open live broker connections or provide structural safety certification.
+Release **0.9.0** builds on the 0.1–0.8 monitoring and calculation/integration foundations. It adds a bounded rolling-window session and self-contained HTML/SVG reports that turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not open live broker connections or provide structural safety certification.
 
 ## Install from this checkout
 
@@ -140,10 +140,19 @@ session = tm.MonitoringSession(
 )
 result = session.ingest(batch)  # timestamped tm.ObservationBatch from your collector
 for report in result.reports:
-    print(report.to_dict())
+    tm.report.save_html(report, "reports/latest.html")
 ```
 
 The session aligns samples to the explicit rate, counts rejected records, waits for a fresh contiguous window after gaps, and returns reports after each configured hop. A source/gateway remains responsible for collecting data and reconnecting. See [live-sessions.md](docs/live-sessions.md) and [examples/live_session.py](examples/live_session.py).
+
+## Readable report output (0.9)
+
+```python
+html = tm.report.to_html(result)
+report_path = tm.report.save_html(result, "reports/bridge-analysis.html")
+```
+
+Reports are standalone HTML with an embedded SVG frequency comparison; no browser framework or plotting dependency is required. They include the method/status, modal table, reference-to-observation differences, evidence summary, and interpretation limitations. Manifest-based runs also include input and manifest SHA-256 values. See [reporting.md](docs/reporting.md).
 
 ## Sensor files
 
