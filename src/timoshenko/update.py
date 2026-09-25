@@ -6,21 +6,23 @@ import math
 import statistics
 
 from .modal import ModalResult
+from .oma import FDDResult
 from .structure import Structure
 
 
-def update(structure: Structure, modal: ModalResult) -> Structure:
+def update(structure: Structure, modal: ModalResult | FDDResult) -> Structure:
     """Scale all story stiffnesses uniformly to fit identified frequencies.
 
     The scale is the median of ``(measured / analytical frequency) ** 2``
     across the available, ordered modes. This follows the uniform-stiffness
-    relation ``f proportional to sqrt(k/m)``. It cannot localize damage or
-    update stories independently.
+    relation ``f proportional to sqrt(k/m)``. It accepts single-channel FFT
+    or multi-channel FDD modal results. It cannot localize damage or update
+    stories independently.
     """
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a timoshenko.Structure")
-    if not isinstance(modal, ModalResult):
-        raise TypeError("modal must be the result of tm.modal.identify()")
+    if not isinstance(modal, (ModalResult, FDDResult)):
+        raise TypeError("modal must be a result from tm.modal.identify() or tm.modal.identify_fdd()")
     if modal.status != "ok" or not modal.modes:
         raise ValueError(f"cannot update structure from modal result with status {modal.status!r}")
 

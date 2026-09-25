@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.5.0** builds on the 0.1 monitoring and 0.2–0.4 calculation foundations. It adds an optional Cauren interoperability bridge for shared single-channel modal and shear-building calculations. Cauren-specific risk thresholds and interpretations remain in Cauren. Timoshenko also includes aligned multi-channel sensor data and first-pass Welch FDD. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, damage-localization system, continuous monitoring service, or structural safety certification tool.
+Release **0.6.0** builds on the 0.1 monitoring and 0.2–0.5 calculation/integration foundations. It adds a versioned JSON project manifest to load an explicit shear-building model, CSV sensor channels, units, sample rate, and analysis options in one reproducible local workflow. It includes optional Cauren interoperability and aligned multi-channel Welch FDD. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, continuous monitoring service, or structural safety certification tool.
 
 ## Install from this checkout
 
@@ -95,6 +95,16 @@ This first FDD implementation returns candidate frequencies and complex mode sha
 ## Cauren integration (0.5)
 
 Cauren can optionally use Timoshenko's generic single-channel modal calculation and shear-building eigenfrequencies. In a shared development environment, install this library with `python -m pip install -e ./Timoshenko`; Cauren's current physics calls will delegate when it can import `timoshenko`. Cauren remains installable without the package and uses its existing pure-Python implementations as a fallback. See [cauren-integration.md](docs/cauren-integration.md).
+
+## Reproducible project workflow (0.6)
+
+```python
+project = tm.load_project("project/manifest.json")
+result = tm.run_project(project)
+print(result.to_dict())
+```
+
+The manifest specifies, rather than guesses, the model, CSV path, channels, sample rate, method, and options. The output includes input hashes and the resolved paths for traceability. See [project-manifest.md](docs/project-manifest.md) for the schema and runnable synthetic example.
 
 ## Sensor files
 

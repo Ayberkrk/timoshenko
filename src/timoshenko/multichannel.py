@@ -67,6 +67,7 @@ def load_multichannel_csv(
     columns: Sequence[str],
     sampling_hz: float,
     units: Sequence[str] | None = None,
+    channel_ids: Sequence[str] | None = None,
 ) -> MultiChannelData:
     """Read aligned numeric channels from a headered CSV file.
 
@@ -79,6 +80,9 @@ def load_multichannel_csv(
     unit_names = tuple(units) if units is not None else tuple("unknown" for _ in names)
     if len(unit_names) != len(names):
         raise ValueError("units must contain one entry per selected column")
+    ids = tuple(channel_ids) if channel_ids is not None else names
+    if len(ids) != len(names) or any(not str(item).strip() for item in ids) or len(set(ids)) != len(ids):
+        raise ValueError("channel_ids must contain one distinct, non-empty id per selected column")
     data: list[list[float]] = []
     with Path(source).open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -98,4 +102,4 @@ def load_multichannel_csv(
                     raise ValueError(f"CSV row {row_number} has a non-finite value in {name!r}")
                 record.append(value)
             data.append(record)
-    return MultiChannelData(data, sampling_hz=sampling_hz, channel_ids=names, units=unit_names)
+    return MultiChannelData(data, sampling_hz=sampling_hz, channel_ids=ids, units=unit_names)

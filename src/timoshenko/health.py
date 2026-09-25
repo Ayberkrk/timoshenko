@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .modal import ModalResult, identify
+from .multichannel import MultiChannelData
+from .oma import FDDResult, identify_fdd
 from .sensors import SensorData
 from .structure import Structure
 
@@ -22,7 +24,7 @@ class HealthAssessment:
     structure_id: str
     status: str
     mode_changes: tuple[ModeChange, ...]
-    modal_result: ModalResult
+    modal_result: ModalResult | FDDResult
     review_recommended: bool
     evidence_summary: str
     limitations: tuple[str, ...]
@@ -50,8 +52,8 @@ class HealthAssessment:
 def assess(
     *,
     structure: Structure,
-    observations: SensorData,
-    modal_result: ModalResult | None = None,
+    observations: SensorData | MultiChannelData,
+    modal_result: ModalResult | FDDResult | None = None,
 ) -> HealthAssessment:
     """Compare observed frequencies with the structure's preserved baseline.
 
@@ -60,9 +62,16 @@ def assess(
     """
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a timoshenko.Structure")
-    if not isinstance(observations, SensorData):
-        raise TypeError("observations must be a timoshenko.SensorData")
-    result = modal_result or identify(observations)
+    if not isinstance(observations, (SensorData, MultiChannelData)):
+        raise TypeError("observations must be SensorData or MultiChannelData")
+    if modal_result is not None:
+        result = modal_result
+    elif isinstance(observations, SensorData):
+        result = identify(observations)
+    else:
+        result = identify_fdd(observations)
+    if not isinstance(result, (ModalResult, FDDResult)):
+        raise TypeError("modal_result must be a ModalResult or FDDResult")
     reference = structure.baseline_frequencies_hz
     paired = min(len(reference), len(result.modes))
     changes = tuple(
