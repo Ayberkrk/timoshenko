@@ -1,21 +1,28 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "timoshenko-engine"
-version = "2.0.0"
+version = "2.1.0a1"
 description = "Composable structural engineering calculations and analysis primitives for Python applications."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = ["numpy>=1.24"]
-authors = [{ name = "Timoshenko contributors" }]
+authors = [{ name = "Ayberk Korkmaz" }]
+keywords = [
+  "civil engineering",
+  "structural engineering",
+  "structural health monitoring",
+  "modal analysis",
+  "digital twin",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -33,7 +40,10 @@ mqtt = "timoshenko.mqtt:MqttPlugin"
 sensorthings = "timoshenko.sensorthings:SensorThingsPlugin"
 
 [project.urls]
+Homepage = "https://github.com/Ayberkrk/timoshenko"
 Repository = "https://github.com/Ayberkrk/timoshenko"
+Issues = "https://github.com/Ayberkrk/timoshenko/issues"
+Documentation = "https://github.com/Ayberkrk/timoshenko/tree/main/docs"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
