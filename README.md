@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **0.6.0** builds on the 0.1 monitoring and 0.2–0.5 calculation/integration foundations. It adds a versioned JSON project manifest to load an explicit shear-building model, CSV sensor channels, units, sample rate, and analysis options in one reproducible local workflow. It includes optional Cauren interoperability and aligned multi-channel Welch FDD. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is still not a general FEM solver, continuous monitoring service, or structural safety certification tool.
+Release **0.7.0** builds on the 0.1 monitoring and 0.2–0.6 calculation/integration foundations. It adds local SQLite asset/relation, observation, batch-idempotency, and analysis-run history. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability and aligned multi-channel Welch FDD. Selected equations remain available as `tm.function_name(...)` and under focused modules. It is not yet a live broker listener or structural safety certification tool.
 
 ## Install from this checkout
 
@@ -105,6 +105,26 @@ print(result.to_dict())
 ```
 
 The manifest specifies, rather than guesses, the model, CSV path, channels, sample rate, method, and options. The output includes input hashes and the resolved paths for traceability. See [project-manifest.md](docs/project-manifest.md) for the schema and runnable synthetic example.
+
+## Local digital-twin history (0.7)
+
+```python
+from timoshenko import Asset, Observation, ObservationBatch, Relation, SQLiteStore
+
+with SQLiteStore("project/history.sqlite") as store:
+    store.upsert_asset(Asset("bridge-01", "bridge", "Bridge 01"))
+    store.upsert_asset(Asset("accel-01", "sensor", "Deck accelerometer"))
+    store.add_relation(Relation("bridge-01", "has_sensor", "accel-01"))
+    batch = ObservationBatch(
+        [Observation("accel-01", "acceleration", "m/s^2", 0.12, timestamp=1_800_000_000.0, asset_id="bridge-01")],
+        batch_id="collector-7:sequence-42",
+        source_id="collector-7",
+    )
+    receipt = store.append_batch(batch)  # repeating the same batch is idempotent
+    observations = store.observations(sensor_id="accel-01", order_by="event_time")
+```
+
+SQLite is local persistence only. Batch IDs are required; the same ID with changed contents raises an error. The store preserves late/out-of-order observations and lets reads select event-time or arrival ordering. It does not connect to MQTT/OPC UA, resample signals, or execute a live analysis loop. See [storage.md](docs/storage.md).
 
 ## Sensor files
 

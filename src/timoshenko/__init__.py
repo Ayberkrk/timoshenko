@@ -1,6 +1,7 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import beams, health, mechanics, modal, observations, oma, pressure, project, sections, shafts, stability, strength, vibration
+from . import assets, beams, health, mechanics, modal, observations, oma, pressure, project, sections, shafts, stability, storage, strength, vibration
+from .assets import Asset, Relation
 from .beams import (
     BeamDeflection,
     cantilever_tip_load,
@@ -25,6 +26,7 @@ from .multichannel import MultiChannelData, load_multichannel_csv
 from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
 from .project import LoadedProject, ProjectManifest, ProjectRunResult, load_project, read_manifest, run_project
+from .storage import BatchAppendResult, SQLiteStore
 from .sections import SectionProperties
 from .sections import circular_tube as circular_tube_section
 from .sections import rectangle as rectangle_section
@@ -38,10 +40,12 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 __all__ = [
     "HealthAssessment",
+    "Asset",
+    "BatchAppendResult",
     "BeamDeflection",
     "CircularTorsionResult",
     "ModalResult",
@@ -60,6 +64,8 @@ __all__ = [
     "PlaneStressResult",
     "ProjectManifest",
     "ProjectRunResult",
+    "Relation",
+    "SQLiteStore",
     "axial_strain",
     "axial_stress",
     "average_shear_stress",
@@ -100,6 +106,8 @@ __all__ = [
     "thin_wall_cylinder_stress",
     "update",
     "vibration",
+    "assets",
+    "storage",
     "load_project",
     "run_project",
     "youngs_modulus_from_shear",

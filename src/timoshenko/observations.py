@@ -75,8 +75,8 @@ class ObservationBatch:
         if any(not isinstance(item, Observation) for item in items):
             raise TypeError("observations must contain only Observation objects")
         object.__setattr__(self, "observations", items)
-        object.__setattr__(self, "batch_id", str(self.batch_id))
-        object.__setattr__(self, "source_id", str(self.source_id))
+        object.__setattr__(self, "batch_id", str(self.batch_id).strip())
+        object.__setattr__(self, "source_id", str(self.source_id).strip())
 
     @property
     def count(self) -> int:
