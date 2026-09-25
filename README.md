@@ -280,7 +280,9 @@ CSV input requires a header and a numeric column selected by `column`. JSON inpu
 
 - The structural model is a linear, undamped shear building with one lateral degree of freedom per story.
 - Modal identification is a Hann-windowed FFT with local peak picking from one channel. It does not calculate mode shapes and can miss a mode at a sensor node.
-- The damping estimate uses a half-power bandwidth approximation when the peak supports it.
+- Damping is a coarse half-power screening estimate from an averaged (Welch) spectrum with at least eight averages. It is withheld (`None`) when the record is too short to resolve the half-power bandwidth, and it scatters by about a factor of two on ambient data.
+- Observed modes are paired with reference modes by nearest frequency, not by position, so a mode missed at a sensor node or a spurious peak is left unpaired instead of being compared with the wrong mode.
+- `review_recommended` is raised only when the caller passes `review_threshold_pct` and a paired mode drops by at least that percentage by more than the spectral resolution. The engine does not choose the threshold.
 - Model updating applies a single scale to all story stiffnesses; it cannot locate or size local damage.
 - A frequency change is evidence for review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects can also shift measured frequencies.
 - `monitor` analyzes the supplied batch once. `MonitoringSession` adds a bounded caller-fed window loop, but no broker subscription, reconnection, background scheduler, dashboard, or alarm policy.

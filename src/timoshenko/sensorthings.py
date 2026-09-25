@@ -9,7 +9,7 @@ import math
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .observations import Observation, ObservationBatch
 from .plugins import PLUGIN_API_VERSION
@@ -19,7 +19,10 @@ class SensorThingsSourceError(RuntimeError):
     """Raised for SensorThings transport, pagination, or mapping failures."""
 
 
-def _origin(url: str) -> tuple[str, str, int | None]:
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _origin(url: str) -> tuple[str, str, int]:
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
         raise ValueError("SensorThings URLs must be absolute HTTP(S) URLs without embedded credentials or fragments")
@@ -27,7 +30,31 @@ def _origin(url: str) -> tuple[str, str, int | None]:
         port = parsed.port
     except ValueError as error:
         raise ValueError("SensorThings URL contains an invalid port") from error
-    return parsed.scheme.lower(), parsed.hostname.lower(), port
+    scheme = parsed.scheme.lower()
+    return scheme, parsed.hostname.lower(), _DEFAULT_PORTS[scheme] if port is None else port
+
+
+class _SameOriginRedirectHandler(HTTPRedirectHandler):
+    """Follow HTTP redirects only within the configured origin.
+
+    urllib's default handler follows any redirect and copies request headers,
+    including ``Authorization``, to the new location. A redirect to another
+    host, port, or scheme (including an HTTPS to HTTP downgrade) would hand
+    the bearer token to that origin, so it is refused instead.
+    """
+
+    def __init__(self, origin: tuple[str, str, int]):
+        self._allowed_origin = origin
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        try:
+            target = _origin(newurl)
+        except ValueError:
+            target = None
+        if target != self._allowed_origin:
+            fp.close()
+            raise SensorThingsSourceError(f"refusing HTTP {code} redirect away from the configured SensorThings origin")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def _phenomenon_timestamp(value: Any) -> float:
@@ -168,7 +195,8 @@ class SensorThingsObservationSource:
             if self._fetcher is not None:
                 payload = self._fetcher(request, self.timeout_s, self.max_response_bytes)
             else:
-                with urlopen(request, timeout=self.timeout_s) as response:
+                opener = build_opener(_SameOriginRedirectHandler(self._origin))
+                with opener.open(request, timeout=self.timeout_s) as response:
                     status = getattr(response, "status", 200)
                     if not 200 <= int(status) < 300:
                         raise SensorThingsSourceError(f"SensorThings server returned HTTP {status}")

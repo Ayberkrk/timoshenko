@@ -31,6 +31,15 @@ def _json(value: Any) -> str:
         raise ValueError(f"value is not JSON-serializable: {error}") from None
 
 
+def _batch_digest(batch: ObservationBatch) -> str:
+    if not isinstance(batch, ObservationBatch):
+        raise TypeError("batch must be an ObservationBatch")
+    if not batch.batch_id.strip() or not batch.source_id.strip():
+        raise ValueError("batch_id and source_id are required for idempotent persistence")
+    serialized = _json([item.to_dict() for item in batch.observations])
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
 @dataclass(frozen=True)
 class BatchAppendResult:
     batch_id: str
@@ -190,13 +199,25 @@ class SQLiteStore:
         ).fetchall()
         return tuple(Relation(row["source_asset_id"], row["relation_type"], row["target_asset_id"], json.loads(row["metadata_json"])) for row in rows)
 
+    def has_batch(self, batch: ObservationBatch) -> bool:
+        """Return whether this exact batch is already stored.
+
+        Raises ``ValueError`` when the ``(source_id, batch_id)`` pair is stored
+        with different content, exactly as :meth:`append_batch` would.
+        """
+        batch_digest = _batch_digest(batch)
+        existing = self._connection.execute(
+            "SELECT batch_digest FROM observation_batches WHERE source_id=? AND batch_id=?",
+            (batch.source_id, batch.batch_id),
+        ).fetchone()
+        if existing is None:
+            return False
+        if existing["batch_digest"] != batch_digest:
+            raise ValueError("batch_id was already stored with different observation content")
+        return True
+
     def append_batch(self, batch: ObservationBatch) -> BatchAppendResult:
-        if not isinstance(batch, ObservationBatch):
-            raise TypeError("batch must be an ObservationBatch")
-        if not batch.batch_id.strip() or not batch.source_id.strip():
-            raise ValueError("batch_id and source_id are required for idempotent persistence")
-        serialized = _json([item.to_dict() for item in batch.observations])
-        batch_digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        batch_digest = _batch_digest(batch)
         inserted = 0
         with self._connection:
             cursor = self._connection.execute(

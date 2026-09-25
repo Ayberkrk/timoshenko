@@ -31,7 +31,7 @@ def _number(value: float | None, digits: int = 3) -> str:
 
 def _chart_svg(modal: Any, health: Any) -> str:
     modes = list(modal.modes)
-    changes = {int(item.mode_number): item for item in health.mode_changes}
+    changes = {int(item.observed_mode_number): item for item in health.mode_changes}
     width, height, margin = 780, max(230, 84 + 44 * len(modes)), 56
     usable_width = width - 2 * margin
     max_frequency = max(
@@ -51,7 +51,8 @@ def _chart_svg(modal: Any, health: Any) -> str:
     for index, mode in enumerate(modes):
         y = 62 + index * 44
         change = changes.get(index + 1)
-        pieces.append(f'<text x="4" y="{y+4}" class="mode-label">Mode {index+1}</text>')
+        label = f"Mode {change.mode_number}" if change is not None else "Unpaired"
+        pieces.append(f'<text x="4" y="{y+4}" class="mode-label">{label}</text>')
         if change is not None:
             reference_x = margin + float(change.reference_frequency_hz) * scale
             pieces.append(f'<line x1="{margin}" y1="{y-5}" x2="{reference_x:.2f}" y2="{y-5}" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>')
@@ -78,7 +79,7 @@ def to_html(result: Any, *, title: str | None = None) -> str:
     structure, modal, health, default_title, method = _result_parts(result)
     display_title = escape(str(title or default_title))
     modes = list(modal.modes)
-    changes = {int(item.mode_number): item for item in health.mode_changes}
+    changes = {int(item.observed_mode_number): item for item in health.mode_changes}
     rows: list[str] = []
     for index, mode in enumerate(modes, start=1):
         change = changes.get(index)
@@ -87,7 +88,7 @@ def to_html(result: Any, *, title: str | None = None) -> str:
         damping = getattr(mode, "damping_ratio", None)
         rows.append(
             "<tr>"
-            f"<th scope=\"row\">{index}</th>"
+            f"<th scope=\"row\">{change.mode_number if change is not None else 'unpaired'}</th>"
             f"<td>{_number(reference)}</td>"
             f"<td>{_number(float(mode.frequency_hz))}</td>"
             f"<td>{_number(shift, 2)}{'%' if shift is not None else ''}</td>"
@@ -111,7 +112,13 @@ def to_html(result: Any, *, title: str | None = None) -> str:
     limitations = "".join(f"<li>{escape(str(item))}</li>" for item in health.limitations)
     notes = "".join(f"<li>{escape(str(item))}</li>" for item in getattr(modal, "notes", ()))
     summary = escape(str(health.evidence_summary))
-    review = "Review recommended" if health.review_recommended else "No review flag from this comparison"
+    threshold = getattr(health, "review_threshold_pct", None)
+    if health.review_recommended:
+        review = f"Review recommended (frequency drop of at least {_number(threshold, 2)}%)"
+    elif threshold is None:
+        review = "No review threshold supplied; no review flag evaluated"
+    else:
+        review = f"No paired mode dropped by {_number(threshold, 2)}% or more"
     chart = _chart_svg(modal, health)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

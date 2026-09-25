@@ -39,9 +39,10 @@ so the two targets do not imply a constant damping ratio for other modes.
 This helper returns coefficients only; a host solver determines which mass and
 stiffness matrices those coefficients multiply. It does not build `C`, identify
 material damping, or select initial/current/committed stiffness. Literature
-shows material limits: an evaluation using recorded earthquake responses from
-24 buildings reported response overestimation under Rayleigh damping
-([Chopra & McKenna, 2017](https://doi.org/10.1016/j.engstruct.2017.02.001));
+shows material limits: damping ratios identified from recorded earthquake
+responses of 24 instrumented buildings increased roughly linearly with modal
+frequency and gave no support for a mass-proportional term
+([Cruz & Miranda, 2017](https://doi.org/10.1016/j.engstruct.2017.02.001));
 OpenSees also warns about use with nonlinear concentrated-plasticity time
 history analysis. Alternatives have been proposed for matching damping ratios
 over a broader frequency range ([2020 study](https://doi.org/10.1016/j.engstruct.2020.110178)).

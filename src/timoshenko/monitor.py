@@ -35,9 +35,14 @@ class MonitoringResult:
         }
 
 
-def monitor(structure: Structure, sensors: SensorData) -> MonitoringResult:
+def monitor(structure: Structure, sensors: SensorData, *, review_threshold_pct: float | None = None) -> MonitoringResult:
     """Run modal identification, uniform model update, then health comparison."""
     modal_result = identify(sensors)
     updated_structure = update(structure, modal_result) if modal_result.modes else structure
-    health_result = assess(structure=updated_structure, observations=sensors, modal_result=modal_result)
+    health_result = assess(
+        structure=updated_structure,
+        observations=sensors,
+        modal_result=modal_result,
+        review_threshold_pct=review_threshold_pct,
+    )
     return MonitoringResult(structure=updated_structure, modal=modal_result, health=health_result)

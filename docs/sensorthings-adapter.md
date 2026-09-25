@@ -50,6 +50,11 @@ retained as metadata when present and participates in the stable page batch ID.
 | `@iot.nextLink` | Opaque pagination cursor; followed without query changes |
 | Optional boolean in `parameters`, selected by caller | `Observation.quality` |
 
+HTTP redirects are followed only within the configured origin (scheme, host
+and port, with default ports normalized). A redirect elsewhere, including an
+HTTPS to HTTP downgrade, raises `SensorThingsSourceError` before any request
+is sent, because following it would forward the bearer token to that origin.
+
 Each response has a byte limit and an observation-count limit. Only same-origin
 pagination URLs are followed. Requests use JSON `Accept`, a finite timeout, and
 an optional bearer authorization header. TLS certificate validation follows

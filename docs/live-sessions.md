@@ -51,15 +51,17 @@ Restoration is bounded to the rolling-window size plus a small configurable hist
 - Timestamps are Unix seconds and must be within the configured tolerance of the explicit sample grid (`sampling_hz`). The default tolerance is one quarter of a sample interval.
 - Every configured channel must have one good-quality value for a grid point. A missing, rejected, late, or invalid point breaks continuity; the session waits for a fresh full contiguous window and never interpolates.
 - Samples not in the configured sensor set, bad-quality samples, missing timestamps, off-grid times, non-monotonic per-sensor times, and unit mismatches are excluded and counted in `SessionIngestResult`.
-- Optional `SQLiteStore` persistence uses source and batch IDs for idempotency. A replayed identical batch is ignored by the session; a reused batch ID with changed contents raises through the store's integrity check.
+- Optional `SQLiteStore` persistence uses source and batch IDs for idempotency. A batch is persisted only after the session has processed it: if processing fails part-way, the batch is not stored, so a redelivery reaches the session and its remaining samples are accepted. A replayed batch that was already processed is ignored; a reused batch ID with changed contents raises through the store's integrity check.
+- Option values in `analysis_options` are validated when the session is created, against the configured window length and sample rate, instead of when the first window completes.
+- Every window updates the model passed to the constructor, so `update_scale_factor` is always relative to that original model. Pass `review_threshold_pct` to enable the health review flag; without it no flag is raised.
 - Maximum configuration is 32 channels and 65,536 samples per channel. FDD itself caps each FFT segment at 4,096 samples. Buffers retain only the rolling window plus bounded timestamp-completion bookkeeping.
 
 ## Limits
 
-This session does not provide MQTT/OPC UA/HTTP clients, reconnection, background scheduling, alert thresholds, safety classifications, automatic clock synchronization, resampling, or persistence-based session restoration. The process host owns those policies. The returned health object is an evidence comparison, not a damage diagnosis or safety decision. See [numerical-methods.md](numerical-methods.md), [data-contract.md](data-contract.md), and [storage.md](storage.md).
+This session does not provide MQTT/OPC UA/HTTP clients, reconnection, background scheduling, alert thresholds, safety classifications, automatic clock synchronization, or resampling. Restoration from a `SQLiteStore` is limited to observation buffers, as described above. The process host owns those policies. The returned health object is an evidence comparison, not a damage diagnosis or safety decision. See [numerical-methods.md](numerical-methods.md), [data-contract.md](data-contract.md), and [storage.md](storage.md).
 
 Run the synthetic example from the repository root with:
 
 ```bash
-PYTHONPATH=Timoshenko/src python Timoshenko/examples/live_session.py
+PYTHONPATH=src python examples/live_session.py
 ```

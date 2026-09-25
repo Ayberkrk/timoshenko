@@ -337,3 +337,89 @@ def test_sensorthings_quality_defaults_to_unknown_false():
     )
     source.open()
     assert [o.quality for o in source.read_batch().observations] == [False, False]
+
+
+class _Server:
+    def __init__(self, handler):
+        from http.server import HTTPServer
+        import threading
+
+        self.server = HTTPServer(("127.0.0.1", 0), handler)
+        self.port = self.server.server_port
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+def _handlers(seen, location):
+    from http.server import BaseHTTPRequestHandler
+
+    class Target(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append((self.path, self.headers.get("Authorization")))
+            body = json.dumps({"value": [{"phenomenonTime": "2024-01-01T00:00:00Z", "result": 1.0}]}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    class Redirect(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.startswith("/moved"):
+                return Target.do_GET(self)
+            self.send_response(302)
+            self.send_header("Location", location())
+            self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    return Target, Redirect
+
+
+def test_sensorthings_refuses_cross_origin_redirect_without_sending_token():
+    seen = []
+    target_handler, _ = _handlers(seen, lambda: "")
+    other = _Server(target_handler)
+    _, redirect_handler = _handlers(seen, lambda: f"http://127.0.0.1:{other.port}/collect")
+    configured = _Server(redirect_handler)
+    try:
+        source = tm.SensorThingsObservationSource(
+            f"http://127.0.0.1:{configured.port}/Observations", sensor_id="s", unit="g", bearer_token="secret"
+        )
+        source.open()
+        with pytest.raises(SensorThingsSourceError, match="redirect"):
+            source.read_batch()
+        assert seen == []
+    finally:
+        other.close()
+        configured.close()
+
+
+def test_sensorthings_follows_same_origin_redirect():
+    seen = []
+    holder = {}
+    _, redirect_handler = _handlers(seen, lambda: f"http://127.0.0.1:{holder['port']}/moved")
+    server = _Server(redirect_handler)
+    holder["port"] = server.port
+    try:
+        source = tm.SensorThingsObservationSource(
+            f"http://127.0.0.1:{server.port}/Observations", sensor_id="s", unit="g", bearer_token="secret", default_quality=True
+        )
+        source.open()
+        assert source.read_batch().count == 1
+        assert seen == [("/moved", "Bearer secret")]
+    finally:
+        server.close()
+
+
+def test_sensorthings_origin_treats_default_port_as_same_origin():
+    from timoshenko.sensorthings import _origin
+
+    assert _origin("https://STA.example.org/a") == _origin("https://sta.example.org:443/b")
+    assert _origin("http://sta.example.org/a") != _origin("https://sta.example.org/a")

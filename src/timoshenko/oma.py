@@ -93,29 +93,20 @@ def identify_fdd(
         raise TypeError("observations must be MultiChannelData; use tm.load_multichannel_csv() or construct it explicitly")
     if len(set(observations.units)) != 1:
         raise ValueError("FDD requires channels with the same measurement unit; calibrate/transform mixed-unit channels first")
-    if max_modes < 1 or max_singular_values < 1:
-        raise ValueError("max_modes and max_singular_values must be positive")
-    if not 0.0 <= min_peak_ratio < 1.0:
-        raise ValueError("min_peak_ratio must be in [0, 1)")
-    if not math.isfinite(float(min_singular_value_ratio)) or not 0.0 <= float(min_singular_value_ratio) <= 1.0:
-        raise ValueError("min_singular_value_ratio must be finite and in [0, 1]")
-    overlap_value = float(overlap)
-    if not math.isfinite(overlap_value) or not 0.0 <= overlap_value <= 0.9:
-        raise ValueError("overlap must be finite and in [0, 0.9]")
-
     sample_count, channel_count = observations.samples.shape
-    if nperseg is None:
-        available = max(8, min(1024, int(sample_count * (1.0 - overlap_value))))
-        nperseg_value = 2 ** int(math.floor(math.log2(available)))
-    else:
-        nperseg_value = int(nperseg)
-    if nperseg_value < 8 or nperseg_value > 4096 or nperseg_value > sample_count:
-        raise ValueError("nperseg must be between 8 and min(sample_count, 4096)")
-    hop = max(1, int(round(nperseg_value * (1.0 - overlap_value))))
+    nperseg_value, hop, segment_count, resolution, low, high = _plan(
+        sample_count,
+        observations.sampling_hz,
+        nperseg=nperseg,
+        overlap=overlap,
+        max_modes=max_modes,
+        max_singular_values=max_singular_values,
+        min_frequency_hz=min_frequency_hz,
+        max_frequency_hz=max_frequency_hz,
+        min_peak_ratio=min_peak_ratio,
+        min_singular_value_ratio=min_singular_value_ratio,
+    )
     starts = range(0, sample_count - nperseg_value + 1, hop)
-    segment_count = len(starts)
-    if segment_count < 2:
-        raise ValueError("at least two overlapping FFT segments are required; lower nperseg or overlap less")
 
     values = observations.samples
     window = np.hanning(nperseg_value)
@@ -143,12 +134,6 @@ def identify_fdd(
         singular[idx, :] = np.maximum(eigenvalues[order].real, 0.0)
         vectors[idx, :, :] = eigenvectors[:, order]
 
-    resolution = observations.sampling_hz / nperseg_value
-    low = float(min_frequency_hz) if min_frequency_hz is not None else resolution
-    high = float(max_frequency_hz) if max_frequency_hz is not None else observations.sampling_hz / 2.0
-    high = min(high, observations.sampling_hz / 2.0)
-    if not math.isfinite(low) or low < 0.0 or not math.isfinite(high) or high <= low:
-        raise ValueError("frequency bounds must be finite and non-negative, with max greater than min")
     in_band = (frequencies >= low) & (frequencies <= high)
     leading_peak = float(np.max(singular[in_band, 0])) if np.any(in_band) else 0.0
     candidates: list[tuple[float, int, int]] = []
@@ -215,3 +200,55 @@ def identify_fdd(
         status="ok" if modes else "no_peaks_found",
         notes=notes,
     )
+
+
+def validate_options(sample_count: int, sampling_hz: float, **options) -> None:
+    """Check ``identify_fdd`` options for a record length without any data.
+
+    Raises the same errors ``identify_fdd`` would raise for these options, so
+    long-running callers can reject a bad configuration up front.
+    """
+    _plan(int(sample_count), float(sampling_hz), **options)
+
+
+def _plan(
+    sample_count: int,
+    sampling_hz: float,
+    *,
+    nperseg: int | None = None,
+    overlap: float = 0.5,
+    max_modes: int = 8,
+    max_singular_values: int = 4,
+    min_frequency_hz: float | None = None,
+    max_frequency_hz: float | None = None,
+    min_peak_ratio: float = 0.05,
+    min_singular_value_ratio: float = 0.05,
+) -> tuple[int, int, int, float, float, float]:
+    """Validate options and return segment length, hop, count, resolution and band."""
+    if max_modes < 1 or max_singular_values < 1:
+        raise ValueError("max_modes and max_singular_values must be positive")
+    if not 0.0 <= min_peak_ratio < 1.0:
+        raise ValueError("min_peak_ratio must be in [0, 1)")
+    if not math.isfinite(float(min_singular_value_ratio)) or not 0.0 <= float(min_singular_value_ratio) <= 1.0:
+        raise ValueError("min_singular_value_ratio must be finite and in [0, 1]")
+    overlap_value = float(overlap)
+    if not math.isfinite(overlap_value) or not 0.0 <= overlap_value <= 0.9:
+        raise ValueError("overlap must be finite and in [0, 0.9]")
+    if nperseg is None:
+        available = max(8, min(1024, int(sample_count * (1.0 - overlap_value))))
+        nperseg_value = 2 ** int(math.floor(math.log2(available)))
+    else:
+        nperseg_value = int(nperseg)
+    if nperseg_value < 8 or nperseg_value > 4096 or nperseg_value > sample_count:
+        raise ValueError("nperseg must be between 8 and min(sample_count, 4096)")
+    hop = max(1, int(round(nperseg_value * (1.0 - overlap_value))))
+    segment_count = len(range(0, sample_count - nperseg_value + 1, hop))
+    if segment_count < 2:
+        raise ValueError("at least two overlapping FFT segments are required; lower nperseg or overlap less")
+    resolution = sampling_hz / nperseg_value
+    low = float(min_frequency_hz) if min_frequency_hz is not None else resolution
+    high = float(max_frequency_hz) if max_frequency_hz is not None else sampling_hz / 2.0
+    high = min(high, sampling_hz / 2.0)
+    if not math.isfinite(low) or low < 0.0 or not math.isfinite(high) or high <= low:
+        raise ValueError("frequency bounds must be finite and non-negative, with max greater than min")
+    return nperseg_value, hop, segment_count, resolution, low, high

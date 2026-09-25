@@ -10,6 +10,8 @@
 - Same pair and same content: no rows are inserted; `duplicate_batch=True` is returned.
 - Same pair but changed content: a `ValueError` is raised and the transaction does not rewrite prior data.
 
+`has_batch(batch)` answers the same question without writing: it returns whether this exact batch is stored and raises the same `ValueError` for changed content. `MonitoringSession` uses it to skip processed batches, then calls `append_batch` only after processing succeeds.
+
 Repeated identical observations *within* one batch are preserved by their record index. The store does not use value/time-based deduplication because two equal readings can be legitimate sensor samples.
 
 ## Event-time and arrival-time reads

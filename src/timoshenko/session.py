@@ -4,16 +4,19 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+import heapq
 import math
 from typing import Any, Sequence
 
 import numpy as np
 
-from .health import HealthAssessment, assess
+from .health import HealthAssessment, assess, validate_review_threshold
 from .modal import ModalResult, identify
+from .modal import validate_options as validate_peak_picking_options
 from .multichannel import MultiChannelData
 from .observations import ObservationBatch
 from .oma import FDDResult, identify_fdd
+from .oma import validate_options as validate_fdd_options
 from .sensors import SensorData
 from .storage import SQLiteStore
 from .structure import Structure
@@ -101,6 +104,12 @@ class MonitoringSession:
     counted and excluded from the active buffer. If a sample is missing, the
     session waits until a new contiguous full window is available; it never
     interpolates or bridges a gap.
+
+    Each analysis updates the model supplied at construction, so the reported
+    ``update_scale_factor`` is always relative to that original model. With a
+    store, a batch is persisted only after it has been processed: a batch that
+    fails part-way can be redelivered and its remaining samples still reach
+    the session, while an already processed batch is skipped as a duplicate.
     """
 
     def __init__(
@@ -115,6 +124,7 @@ class MonitoringSession:
         timestamp_tolerance_s: float | None = None,
         analysis_options: dict[str, Any] | None = None,
         store: SQLiteStore | None = None,
+        review_threshold_pct: float | None = None,
     ):
         if not isinstance(structure, Structure):
             raise TypeError("structure must be a timoshenko.Structure")
@@ -161,10 +171,19 @@ class MonitoringSession:
         unexpected = set(self._options) - allowed
         if unexpected:
             raise ValueError(f"unsupported analysis option(s) for this session: {', '.join(sorted(unexpected))}")
+        # Check option values now; otherwise a bad value surfaces only when the
+        # first full window arrives, possibly hours into a live stream.
+        validate = validate_peak_picking_options if len(ids) == 1 else validate_fdd_options
+        validate(window, hz, **self._options)
+        self._review_threshold_pct = validate_review_threshold(review_threshold_pct)
+        self._baseline_structure = structure
         self._store = store
         self._buffers = {sensor_id: deque(maxlen=window) for sensor_id in ids}
         self._last_key: dict[str, int] = {}
         self._seen_by_key: dict[int, set[str]] = {}
+        self._seen_key_heap: list[int] = []
+        self._last_complete_key: int | None = None
+        self._complete_run = 0
         self._last_analysis_key: int | None = None
         self._sequence = 0
 
@@ -229,6 +248,9 @@ class MonitoringSession:
                 buffer.append((key, values[key]))
         for key in restored_keys:
             self._seen_by_key[key] = set(self._sensor_ids)
+        self._seen_key_heap = list(restored_keys)
+        self._last_complete_key = restored_keys[-1] if restored_keys else None
+        self._complete_run = len(restored_keys)
         self._last_key = last_keys
         self._last_analysis_key = restored_keys[-1] if len(restored_keys) >= self._window_samples else None
         last_time = None if not restored_keys else restored_keys[-1] / self._sampling_hz
@@ -242,12 +264,8 @@ class MonitoringSession:
     def ingest(self, batch: ObservationBatch) -> SessionIngestResult:
         if not isinstance(batch, ObservationBatch):
             raise TypeError("batch must be an ObservationBatch")
-        duplicate_batch = False
-        if self._store is not None:
-            receipt = self._store.append_batch(batch)
-            if receipt.was_duplicate:
-                return SessionIngestResult(0, 0, 0, 0, 0, 0, 0, True, ())
-            duplicate_batch = receipt.was_duplicate
+        if self._store is not None and self._store.has_batch(batch):
+            return SessionIngestResult(0, 0, 0, 0, 0, 0, 0, True, ())
 
         accepted = rejected_quality = unknown = missing_time = invalid_time = out_of_order = unit_mismatch = 0
         reports: list[SessionReport] = []
@@ -277,18 +295,29 @@ class MonitoringSession:
                 continue
             self._last_key[observation.sensor_id] = key
             self._buffers[observation.sensor_id].append((key, observation.value))
-            self._seen_by_key.setdefault(key, set()).add(observation.sensor_id)
+            if key not in self._seen_by_key:
+                self._seen_by_key[key] = set()
+                heapq.heappush(self._seen_key_heap, key)
+            self._seen_by_key[key].add(observation.sensor_id)
             accepted += 1
             if len(self._seen_by_key[key]) == len(self._sensor_ids):
-                report = self._maybe_analyze(key)
-                if report is not None:
-                    reports.append(report)
+                # Keys complete in increasing order because every sensor's keys
+                # increase, so a run counter tells cheaply whether a full
+                # contiguous window can exist before scanning the buffers.
+                contiguous = self._last_complete_key is not None and key == self._last_complete_key + 1
+                self._complete_run = self._complete_run + 1 if contiguous else 1
+                self._last_complete_key = key
+                if self._complete_run >= self._window_samples:
+                    report = self._maybe_analyze(key)
+                    if report is not None:
+                        reports.append(report)
             cutoff = key - 2 * self._window_samples
-            for old_key in tuple(self._seen_by_key):
-                if old_key < cutoff:
-                    del self._seen_by_key[old_key]
+            while self._seen_key_heap and self._seen_key_heap[0] < cutoff:
+                self._seen_by_key.pop(heapq.heappop(self._seen_key_heap), None)
 
-        return SessionIngestResult(accepted, rejected_quality, unknown, missing_time, invalid_time, out_of_order, unit_mismatch, duplicate_batch, tuple(reports))
+        if self._store is not None:
+            self._store.append_batch(batch)
+        return SessionIngestResult(accepted, rejected_quality, unknown, missing_time, invalid_time, out_of_order, unit_mismatch, False, tuple(reports))
 
     def _latest_contiguous_window(self) -> tuple[list[int], np.ndarray] | None:
         values_by_sensor = {
@@ -340,8 +369,13 @@ class MonitoringSession:
             modal = identify_fdd(observations, **self._options)
             method = "fdd"
         if modal.modes:
-            self._structure = update(self._structure, modal)
-        health = assess(structure=self._structure, observations=observations, modal_result=modal)
+            self._structure = update(self._baseline_structure, modal)
+        health = assess(
+            structure=self._structure,
+            observations=observations,
+            modal_result=modal,
+            review_threshold_pct=self._review_threshold_pct,
+        )
         self._sequence += 1
         self._last_analysis_key = keys[-1]
         return SessionReport(

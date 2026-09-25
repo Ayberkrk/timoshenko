@@ -54,7 +54,7 @@ For a one-channel run, the 0.1 flow applies the documented uniform-stiffness upd
 From the repository root, run:
 
 ```bash
-PYTHONPATH=Timoshenko/src python3 Timoshenko/examples/project_manifest.py
+PYTHONPATH=src python3 examples/project_manifest.py
 ```
 
 The script writes temporary CSV/JSON inputs, runs the manifest, prints a compact human-readable summary plus the structured report, and removes the temporary files when it exits.

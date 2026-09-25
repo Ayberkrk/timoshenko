@@ -30,3 +30,5 @@ Without installation, the same calls remain on the dependency-free Cauren implem
 ## Compatibility checks performed
 
 The bridge was exercised with Timoshenko source/wheel paths and with no Timoshenko import path. On a deterministic two-frequency input, the delegated Cauren output preserved peak frequency, half-power damping, power-scaled amplitude, confidence, result method string, and frequency resolution relative to the legacy implementation. The fallback path also remained callable without the engine. This is a targeted smoke comparison, not the full Cauren test suite.
+
+Since the audit fixes, damping is no longer numerically identical between the two paths. Timoshenko now estimates damping from an averaged spectrum and withholds it when the half-power bandwidth is not resolved, while Cauren's fallback still uses the single-periodogram estimate. Frequencies, amplitudes, confidence and resolution are unchanged. Cauren's OMA damping is informational (its risk path uses frequency drift), and aligning the fallback is a Cauren-side change.

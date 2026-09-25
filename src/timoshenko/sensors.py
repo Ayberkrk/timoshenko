@@ -60,7 +60,8 @@ def load_sensors(
     CSV files need a header matching ``column``. JSON may be a numeric array,
     an object with ``samples``, or an array of objects containing ``column``.
     Sampling frequency must be supplied because 0.1 does not infer time from
-    arbitrary file metadata.
+    arbitrary file metadata. Blank or non-numeric samples are rejected rather
+    than skipped or interpolated.
     """
     if isinstance(source, SensorData):
         if sampling_hz is not None and not math.isclose(float(sampling_hz), source.sampling_hz):
@@ -76,10 +77,19 @@ def load_sensors(
         suffix = path.suffix.lower()
         if suffix == ".csv":
             with path.open("r", encoding="utf-8-sig", newline="") as handle:
-                reader = csv.DictReader(handle)
-                if column not in (reader.fieldnames or []):
-                    raise ValueError(f"CSV column {column!r} not found; columns are {reader.fieldnames}")
-                values = [_parse_numeric(row.get(column), line_no) for line_no, row in enumerate(reader, 2) if row.get(column) not in (None, "")]
+                # csv.reader rather than DictReader: DictReader silently skips
+                # blank lines, which in a one-column file are missing samples.
+                # Dropping them would shorten a regularly sampled record and
+                # shift every later sample in time.
+                reader = csv.reader(handle)
+                header = next(reader, [])
+                if column not in header:
+                    raise ValueError(f"CSV column {column!r} not found; columns are {header}")
+                position = header.index(column)
+                values = [
+                    _parse_numeric(row[position] if position < len(row) else None, reader.line_num)
+                    for row in reader
+                ]
         elif suffix in {".json", ".jsonl"}:
             text = path.read_text(encoding="utf-8")
             if suffix == ".jsonl":

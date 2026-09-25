@@ -152,3 +152,96 @@ def test_multichannel_data_is_read_only_copy():
     assert data.samples[0, 0] == 0.0
     with pytest.raises(ValueError):
         data.samples[0, 0] = 1.0
+
+
+def test_load_sensors_rejects_blank_samples_instead_of_dropping_them(tmp_path):
+    path = tmp_path / "gappy.csv"
+    path.write_text("value\n" + "".join(("" if 30 <= i < 40 else f"{math.sin(i)}") + "\n" for i in range(100)))
+    with pytest.raises(ValueError, match="line 32"):
+        tm.load_sensors(path, sampling_hz=100.0)
+    wide = tmp_path / "wide.csv"
+    wide.write_text("t,value\n0,1.0\n1,\n2,3.0\n" + "".join(f"{i},{i}\n" for i in range(3, 10)))
+    with pytest.raises(ValueError):
+        tm.load_sensors(wide, sampling_hz=10.0)
+
+
+def test_pair_modes_uses_nearest_frequency():
+    reference = [3.0, 9.0, 13.0]
+    assert tm.modal.pair_modes(reference, [3.1, 12.8]) == ((0, 0), (2, 1))
+    assert tm.modal.pair_modes(reference, [0.4, 3.0, 9.2, 13.1]) == ((0, 1), (1, 2), (2, 3))
+    assert tm.modal.pair_modes(reference, [2.9, 3.05]) == ((0, 1),)
+    assert tm.modal.pair_modes([], [1.0]) == ()
+
+
+def test_missed_mode_does_not_invent_stiffness_change():
+    structure = tm.Structure([1e5] * 3, [2e8] * 3)
+    f1, _, f3 = structure.natural_frequencies_hz
+    result = tm.monitor(structure, sine_record([f1, f3], [1.0, 0.5], n=20000))
+    assert result.structure.update_scale_factor == pytest.approx(1.0, abs=0.01)
+    assert result.structure.update_status == "updated_partial_modes"
+    assert [c.mode_number for c in result.health.mode_changes] == [1, 3]
+    assert [c.observed_mode_number for c in result.health.mode_changes] == [1, 2]
+    assert all(abs(c.change_pct) < 0.5 for c in result.health.mode_changes)
+
+
+def test_undamped_sine_is_not_reported_as_damped():
+    for n in (1000, 100_000):
+        result = tm.modal.identify(tm.SensorData(np.sin(2 * np.pi * 5.0 * np.arange(n) / 100.0), 100.0))
+        assert result.modes[0].damping_ratio is None
+        assert any("withheld" in note for note in result.notes)
+
+
+def ambient_sdof(zeta, fn, fs, duration_s, seed):
+    wn, dt = 2 * math.pi * fn, 1 / fs
+    force = np.random.default_rng(seed).standard_normal(int(duration_s * fs))
+    x = v = 0.0
+    response = np.empty_like(force)
+    for i, f in enumerate(force):
+        for _ in range(10):
+            v += (f - 2 * zeta * wn * v - wn * wn * x) * dt / 10
+            x += v * dt / 10
+        response[i] = x
+    return tm.SensorData(response, fs)
+
+
+def test_ambient_damping_is_a_factor_of_two_screening_estimate():
+    result = tm.modal.identify(ambient_sdof(0.02, 2.0, 50.0, 600, seed=0), max_modes=1)
+    assert 0.01 <= result.modes[0].damping_ratio <= 0.04
+    assert any("screening" in note for note in result.notes)
+
+
+def test_short_record_withholds_damping():
+    result = tm.modal.identify(ambient_sdof(0.02, 2.0, 50.0, 20, seed=0), max_modes=1)
+    assert result.modes[0].damping_ratio is None
+
+
+def test_review_flag_needs_a_threshold():
+    structure = tm.Structure([1e5], [2e8])
+    damaged = structure.natural_frequencies_hz[0] * 0.9
+    health = tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0], n=16384))
+    assert health.mode_changes[0].change_pct == pytest.approx(-10.0, abs=0.1)
+    assert not health.review_recommended and health.review_threshold_pct is None
+    assert any("No review threshold" in note for note in health.limitations)
+    flagged = tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0], n=16384), review_threshold_pct=5.0)
+    assert flagged.review_recommended
+    assert flagged.to_dict()["review_threshold_pct"] == 5.0
+    with pytest.raises(ValueError):
+        tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0]), review_threshold_pct=0.0)
+
+
+def test_unchanged_structure_is_not_flagged_by_bin_quantization():
+    structure = tm.Structure([1e5], [2e8])
+    f0 = structure.natural_frequencies_hz[0]
+    flagged = 0
+    for n in range(4000, 4100):
+        health = tm.health.assess(structure=structure, observations=sine_record([f0], [1.0], n=n), review_threshold_pct=0.1)
+        assert all(change.resolution_limited for change in health.mode_changes)
+        flagged += health.review_recommended
+    assert flagged == 0
+
+
+def test_monitor_passes_review_threshold():
+    structure = tm.Structure([1e5], [2e8])
+    record = sine_record([structure.natural_frequencies_hz[0] * 0.8], [1.0], n=16384)
+    assert tm.monitor(structure, record, review_threshold_pct=5.0).health.review_recommended
+    assert not tm.monitor(structure, record).health.review_recommended

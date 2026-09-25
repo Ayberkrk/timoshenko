@@ -157,3 +157,74 @@ def test_observation_validation():
     with pytest.raises(TypeError):
         tm.ObservationBatch([1.0])
     assert np.isfinite(tm.Observation("a", "a", "g", 1, timestamp=0).value)
+
+
+def test_has_batch_is_read_only_and_detects_conflicts(tmp_path):
+    with tm.SQLiteStore(tmp_path / "h.db") as store:
+        first = batch(0, 4, batch_id="b1", source_id="s")
+        assert not store.has_batch(first)
+        assert not store.has_batch(first)
+        store.append_batch(first)
+        assert store.has_batch(first)
+        with pytest.raises(ValueError):
+            store.has_batch(batch(0, 5, batch_id="b1", source_id="s"))
+
+
+def test_invalid_analysis_option_values_fail_at_construction():
+    with pytest.raises(ValueError):
+        make_session(analysis_options={"max_frequency_hz": 0.1})
+    with pytest.raises(ValueError):
+        make_session(sensor_ids=["a", "b"], units=["g", "g"], analysis_options={"nperseg": 256})
+    with pytest.raises(ValueError):
+        make_session(review_threshold_pct=-1.0)
+
+
+def test_redelivered_batch_after_mid_batch_failure_reaches_the_session(tmp_path, monkeypatch):
+    real_identify = tm.session.identify
+    calls = {"count": 0}
+
+    def fail_once(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("transient analysis failure")
+        return real_identify(*args, **kwargs)
+
+    monkeypatch.setattr(tm.session, "identify", fail_once)
+    with tm.SQLiteStore(tmp_path / "h.db") as store:
+        session = make_session(window_samples=64, hop_samples=64, store=store)
+        delivery = batch(0, 128, batch_id="b1", source_id="s")
+        with pytest.raises(RuntimeError):
+            session.ingest(delivery)
+        assert store.observations(sensor_id="a") == ()
+        retry = session.ingest(delivery)
+        assert session._buffers["a"][-1][0] == 127
+        assert retry.out_of_order_count == 64 and retry.accepted_count == 64
+        assert len(store.observations(sensor_id="a")) == 128
+        assert session.ingest(delivery).duplicate_batch
+
+
+def test_session_scale_factor_stays_relative_to_original_model():
+    structure = tm.Structure([1e5], [2e8])
+    frequency = structure.natural_frequencies_hz[0] * math.sqrt(0.9)
+    session = make_session(window_samples=2048, hop_samples=2048)
+    reports = session.ingest(batch(0, 4096, frequency=frequency)).reports
+    assert [round(r.structure.update_scale_factor, 2) for r in reports] == [0.9, 0.9]
+    assert session.structure.story_stiffness_n_m[0] == pytest.approx(2e8 * reports[-1].structure.update_scale_factor)
+
+
+def test_session_review_threshold_reaches_health():
+    structure = tm.Structure([1e5], [2e8])
+    frequency = structure.natural_frequencies_hz[0] * 0.8
+    session = make_session(window_samples=2048, hop_samples=2048, review_threshold_pct=5.0)
+    report = session.ingest(batch(0, 2048, frequency=frequency)).reports[0]
+    assert report.health.review_recommended
+
+
+def test_ingest_cost_does_not_grow_with_window_size():
+    import time
+
+    session = make_session(window_samples=65536, hop_samples=65536)
+    session.ingest(batch(0, 60000, frequency=3.0))
+    start = time.perf_counter()
+    session.ingest(batch(60000, 4000, frequency=3.0))
+    assert time.perf_counter() - start < 2.0
