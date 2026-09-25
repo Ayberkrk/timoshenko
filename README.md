@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.3.0** continues from the 0.1–0.10 foundation and 1.1–1.2 plugin/adapter layers. It adds explicit restoration of the newest common contiguous observation window from SQLite so a new monitoring session can resume analysis after process restart. The optional Paho MQTT source uses a bounded queue, validated JSON batches, retained-message policy, and post-ingestion QoS acknowledgement through `SessionRunner`. Additional source factories can be discovered through versioned Python entry points. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. SQLite stores idempotent batches and local analysis history. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
+Release **1.4.0** continues from the 0.1–0.10 foundation and 1.1–1.3 plugin, adapter, and session layers. It adds a bounded-memory long-format CSV observation source that replays historical sensor data through the same `SessionRunner` and monitoring session used by live adapters. It supports explicit column mapping, Unix or timezone-aware ISO-8601 event times, stable replay batch IDs, and quality values. Earlier releases add SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -192,6 +192,21 @@ python -m pip install './Timoshenko[mqtt]'
 ```
 
 After installing the optional Paho client, discover the built-in `mqtt` source plugin and pass it to `SessionRunner`. It validates each JSON publication as a timestamped `ObservationBatch` and acknowledges QoS 1/2 only after successful ingestion. After publishing, install with `python -m pip install 'timoshenko-engine[mqtt]'`. See [mqtt-adapter.md](docs/mqtt-adapter.md).
+
+## Historical CSV replay (1.4)
+
+```python
+source = tm.CSVObservationSource(
+    "measurements.csv",
+    source_id="bridge-01:inspection-2026-09",
+    batch_size=128,
+)
+with tm.SessionRunner(source, session) as runner:
+    for result in runner:
+        print(result.to_dict())
+```
+
+The source reads a long-format CSV incrementally and preserves the declared units and row order. Column names can be mapped explicitly. It does not infer units, interpolate gaps, or tail a changing file. See [csv-source.md](docs/csv-source.md) and [`examples/replay_csv.py`](examples/replay_csv.py).
 
 ## Sensor files
 
