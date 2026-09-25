@@ -1,0 +1,33 @@
+# Engineering engine and SHM literature notes
+
+This is a curated starting bibliography for architectural and calculation choices. It spans foundational mechanics, established SHM methods, and newer digital-twin and automated-identification work. A paper's existence does not mean its algorithm is implemented or validated by Timoshenko.
+
+## Mechanics and beam formulations
+
+- Timoshenko's historical shear-deformation beam work established a correction to elementary beam theory; historical record: [On the Correction for Shear of the Differential Equation for Transverse Vibrations of Prismatic Bars (1921)](https://doi.org/10.1080/14786442108636264).
+- Cowper examined accuracy/definitions for Timoshenko beam theory ([1966](https://doi.org/10.1061/JMCEA3.0001048)). This supports treating shear correction and deflection conventions explicitly rather than presenting a universal coefficient as exact.
+- Closed-form relationships between Timoshenko and Euler–Bernoulli beam solutions were presented for single-span cases ([1995](https://doi.org/10.1061/%28ASCE%290733-9399%281995%29121%3A6%28763%29)).
+- A later unified treatment discusses shear-coefficient formulations ([2017](https://doi.org/10.1061/%28ASCE%29EM.1943-7889.0001297)).
+
+## Structural health monitoring and modal identification
+
+- Farrar and Worden frame SHM as a statistical pattern-recognition problem and discuss operational/environmental variability ([2007](https://doi.org/10.1098/rsta.2006.1928)). This motivates returning evidence and quality rather than equating one changed frequency with damage.
+- Brincker, Zhang and Andersen introduced frequency-domain decomposition as output-only modal identification ([2001](https://doi.org/10.1088/0964-1726/10/3/303)).
+- Mottershead and Friswell survey structural dynamic model updating and its parameterization/identification challenges ([1993](https://doi.org/10.1006/jsvi.1993.1340)). A one-factor stiffness scaling is therefore documented as a narrow baseline, not general model updating.
+- A 2024 review summarizes modal parameter recognition and damage identification under environmental excitation ([DOI: 10.32604/sdhm.2024.053662](https://doi.org/10.32604/sdhm.2024.053662)).
+- A 2024 automated output-only identification paper combines frequency-domain methods with MAC to identify frequencies and mode shapes ([Engineering Structures, DOI: 10.1016/j.engstruct.2024.119210](https://doi.org/10.1016/j.engstruct.2024.119210)). This is a possible 0.3+ direction; the package's 0.1 FFT peak picker does not implement it.
+
+## Digital twins and infrastructure interoperability
+
+- A civil-infrastructure digital-twin review surveys work from 2005–2024, including sensing, data/model integration, platforms, use cases, and persistent challenges ([2024 review, PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC11723349/)). The practical architectural implication is to make the asset model, observations, and integrations explicit and separate rather than hiding project-specific assumptions in the analysis core.
+- The [OGC SensorThings API standard](https://www.ogc.org/standards/sensorthings/) provides an interoperable vocabulary for things, sensors, datastreams, and observations. Timoshenko does not claim conformance in 0.2; it remains a candidate adapter target.
+- The [buildingSMART IFC standards](https://standards.buildingsmart.org/) and [OPC Foundation specifications](https://reference.opcfoundation.org/) are candidate exchange/streaming boundaries for future optional adapters, not core dependencies.
+
+## Time-varying environmental effects
+
+- SHM on real bridges requires separating operational/environmental effects from structural change. A recent 2026 bridge study models temperature-dependent frequencies for a particular sample of prestressed concrete bridges ([Pivetta et al., Engineering Structures, DOI: 10.1016/j.engstruct.2026.122664](https://doi.org/10.1016/j.engstruct.2026.122664)). Its bridge type, data range, and calibration are specific; it is not a universal temperature-correction equation to put in a general engine.
+- Environmental/operational variability normalization and statistical treatment remain an active area; methods should be selected and calibrated against the asset and its operating regime. Timoshenko therefore exposes generic thermal strain as an elementary mechanics calculation, while leaving frequency-vs-temperature baselines to a later calibrated SHM layer.
+
+## Engine architecture patterns consulted
+
+The roadmap's architecture comparison links the official Godot engine architecture and lifecycle, Unreal subsystems, FastAPI modular routers, Temporal workflow/worker separation, Azure Digital Twins graph/model concepts, OGC observation vocabulary, OPC UA PubSub, IFC, and Python packaging/entry-point specifications. These references informed narrow module boundaries, optional adapters, explicit lifecycle and package import conventions. Timoshenko is not copying the runtime model of any one engine.
