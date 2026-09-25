@@ -4,10 +4,11 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
-## Unreleased
+## 2.0.2
 
 - Example and documentation page that verify PyNite shear-deformable members
   against closed-form Timoshenko results (`examples/pynite_shear_beam.py`).
+- First release archived on Zenodo, giving the software a citable DOI.
 
 ## 2.0.1
 

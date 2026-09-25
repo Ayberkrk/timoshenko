@@ -73,12 +73,15 @@ by these repository files.
 
 ## Current state
 
-- Version `2.0.1` is published on PyPI as `timoshenko-engine` through the
-  trusted publisher for `Ayberkrk/timoshenko`, workflow `publish.yml`,
-  environment `pypi`. Each GitHub Release now triggers a tested upload.
+- Releases are published on PyPI as `timoshenko-engine` through the trusted
+  publisher for `Ayberkrk/timoshenko`, workflow `publish.yml`, environment
+  `pypi`. Each GitHub Release triggers a tested upload, so every release needs
+  a new version number.
+- Once the Zenodo GitHub integration is enabled, each GitHub Release is also
+  archived on Zenodo with its own DOI. Releases made before the integration
+  was enabled are not archived retroactively.
 - Before the first public push, internal planning notes were removed from the
   Git history, so commit hashes differ from earlier local copies. The `v2.0.0`
   tag points at the rewritten commit with the same source.
 - Repository-side PyPI, Read the Docs, and Zenodo configuration is present.
-- No Read the Docs project, Zenodo repository connection, or DOI has been
-  created yet.
+- No Read the Docs project has been created yet.

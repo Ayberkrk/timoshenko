@@ -59,7 +59,7 @@ from .update import update
 from .uncertainty import UncertaintyError, UncertaintyResult, propagate as propagate_uncertainty
 from .vibration import RayleighDampingResult, damping_ratio, harmonic_response, natural_frequency_hz, rayleigh_damping_coefficients
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 __all__ = [
     "HealthAssessment",
