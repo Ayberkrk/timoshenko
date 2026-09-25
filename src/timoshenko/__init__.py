@@ -1,8 +1,8 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, health, mechanics, modal, observations, oma, plugins, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
+from . import adapters, assets, beams, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
 from .assets import Asset, Relation
-from .adapters import ObservationSource, SessionRunner
+from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
 from .plugins import (
     ENTRY_POINT_GROUP,
     PLUGIN_API_VERSION,
@@ -31,6 +31,7 @@ from .mechanics import (
     youngs_modulus_from_shear,
 )
 from .modal import ModalResult, Mode
+from .mqtt import MQTTSourceError, MqttObservationSource
 from .monitor import MonitoringResult, monitor
 from .observations import Observation, ObservationBatch
 from .multichannel import MultiChannelData, load_multichannel_csv
@@ -52,7 +53,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 __all__ = [
     "HealthAssessment",
@@ -63,6 +64,8 @@ __all__ = [
     "ModalResult",
     "Mode",
     "MonitoringSession",
+    "MqttObservationSource",
+    "MQTTSourceError",
     "FDDMode",
     "FDDResult",
     "LoadedProject",
@@ -71,6 +74,7 @@ __all__ = [
     "Observation",
     "ObservationBatch",
     "ObservationSource",
+    "AcknowledgingObservationSource",
     "EnginePlugin",
     "ENTRY_POINT_GROUP",
     "PLUGIN_API_VERSION",
@@ -108,6 +112,7 @@ __all__ = [
     "load_multichannel_csv",
     "mechanics",
     "modal",
+    "mqtt",
     "monitor",
     "natural_frequency_hz",
     "identify_fdd",

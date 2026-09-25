@@ -27,6 +27,13 @@ This is a curated starting bibliography for architectural and calculation choice
 - The [OGC SensorThings API standard](https://www.ogc.org/standards/sensorthings/) provides an interoperable vocabulary for things, sensors, datastreams, and observations. Timoshenko does not claim conformance in 0.4; it remains a candidate adapter target.
 - The [buildingSMART IFC standards](https://standards.buildingsmart.org/) and [OPC Foundation specifications](https://reference.opcfoundation.org/) are candidate exchange/streaming boundaries for future optional adapters, not core dependencies.
 
+## Message transport and Python extension packaging
+
+- The [OASIS MQTT 5.0 standard](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html) defines QoS delivery levels, retained publications, session expiry, and packet acknowledgement. Timoshenko's MQTT adapter uses application-level source/batch IDs because transport message IDs are not durable project provenance; it defaults to skipping retained samples and acknowledges QoS 1/2 only after session ingestion.
+- The [Eclipse Paho Python client API](https://eclipse.dev/paho/files/paho.mqtt.python/html/client.html) separates the connection, network loop, subscriptions, callbacks, and disconnect lifecycle. Its [callback migration guide](https://eclipse.dev/paho/files/paho.mqtt.python/html/migrations.html) documents the callback API versioning introduced in Paho 2.x. The optional adapter uses API v2 and keeps the Paho import outside the core import path.
+- Paho's published [known limitations](https://pypi.org/project/paho-mqtt/) state that client-side session state is in memory rather than restored after process restart. Persistent broker sessions therefore do not alone guarantee process-restart recovery; SQLite batch history and explicit operational replay remain necessary.
+- The [Python Packaging User Guide](https://packaging.python.org/en/latest/specifications/declaring-project-metadata/) specifies `optional-dependencies` as per-extra PEP 508 requirements. Timoshenko uses the `mqtt` extra to avoid making Paho a core dependency.
+
 ## Time-varying environmental effects
 
 - SHM on real bridges requires separating operational/environmental effects from structural change. A recent 2026 bridge study models temperature-dependent frequencies for a particular sample of prestressed concrete bridges ([Pivetta et al., Engineering Structures, DOI: 10.1016/j.engstruct.2026.122664](https://doi.org/10.1016/j.engstruct.2026.122664)). Its bridge type, data range, and calibration are specific; it is not a universal temperature-correction equation to put in a general engine.

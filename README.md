@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.1.0** continues from the 0.1–0.10 foundation. It adds explicit plugin registration and opt-in Python entry-point discovery for optional observation-source factories, with API version checks and atomic per-plugin registration. A synchronous source contract and context-managed runner feed batches into bounded rolling-window analysis and close sources on exit. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not ship live broker clients or provide structural safety certification.
+Release **1.2.0** continues from the 0.1–0.10 foundation and 1.1 plugin registry. It adds an optional Paho MQTT observation source with a bounded queue, validated JSON batches, retained-message policy, and post-ingestion QoS acknowledgement through `SessionRunner`. Additional source factories can be discovered through versioned Python entry points. A synchronous source contract and context-managed runner feed batches into bounded rolling-window analysis. Self-contained HTML/SVG reports turn results into a readable summary with frequency comparisons, provenance and method limits. Local SQLite history supports idempotent batch storage. A versioned JSON project manifest loads an explicit shear-building model, CSV channels, units, sample rate, and analysis options. It includes optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -173,6 +173,14 @@ source = registry.create_source("my-gateway", endpoint="gateway.local")
 ```
 
 Plugins declare `name`, `api_version`, and `register(registry)`. Discovery is opt-in and installed code runs in-process. See [plugin-contract.md](docs/plugin-contract.md).
+
+## Optional MQTT ingestion (1.2)
+
+```bash
+python -m pip install './Timoshenko[mqtt]'
+```
+
+After installing the optional Paho client, discover the built-in `mqtt` source plugin and pass it to `SessionRunner`. It validates each JSON publication as a timestamped `ObservationBatch` and acknowledges QoS 1/2 only after successful ingestion. After publishing, install with `python -m pip install 'timoshenko-engine[mqtt]'`. See [mqtt-adapter.md](docs/mqtt-adapter.md).
 
 ## Sensor files
 

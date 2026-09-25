@@ -24,6 +24,13 @@ class ObservationSource(Protocol):
     def close(self) -> None: ...
 
 
+@runtime_checkable
+class AcknowledgingObservationSource(ObservationSource, Protocol):
+    """Optional extension for sources that acknowledge only after ingestion."""
+
+    def acknowledge(self, batch: ObservationBatch, result: SessionIngestResult) -> None: ...
+
+
 class SessionRunner:
     """Drive one monitoring session from a source with explicit cleanup.
 
@@ -92,9 +99,13 @@ class SessionRunner:
                 if not isinstance(batch, ObservationBatch):
                     raise TypeError("ObservationSource.read_batch() must return ObservationBatch or None")
                 read_count += 1
-                yield self.session.ingest(batch)
+                result = self.session.ingest(batch)
+                acknowledge = getattr(self.source, "acknowledge", None)
+                if callable(acknowledge):
+                    acknowledge(batch, result)
+                yield result
         finally:
             self._consuming = False
 
 
-__all__ = ["ObservationSource", "SessionRunner"]
+__all__ = ["AcknowledgingObservationSource", "ObservationSource", "SessionRunner"]
