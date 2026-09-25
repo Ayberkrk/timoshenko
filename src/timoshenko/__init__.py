@@ -1,8 +1,18 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, health, mechanics, modal, observations, oma, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
+from . import adapters, assets, beams, health, mechanics, modal, observations, oma, plugins, pressure, project, report, sections, session, shafts, stability, storage, strength, vibration
 from .assets import Asset, Relation
 from .adapters import ObservationSource, SessionRunner
+from .plugins import (
+    ENTRY_POINT_GROUP,
+    PLUGIN_API_VERSION,
+    EnginePlugin,
+    PluginCompatibilityError,
+    PluginContributions,
+    PluginError,
+    PluginLoadError,
+    PluginRegistry,
+)
 from .beams import (
     BeamDeflection,
     cantilever_tip_load,
@@ -42,7 +52,7 @@ from .strength import PlaneStressResult, plane_stress
 from .update import update
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 __all__ = [
     "HealthAssessment",
@@ -61,6 +71,14 @@ __all__ = [
     "Observation",
     "ObservationBatch",
     "ObservationSource",
+    "EnginePlugin",
+    "ENTRY_POINT_GROUP",
+    "PLUGIN_API_VERSION",
+    "PluginCompatibilityError",
+    "PluginContributions",
+    "PluginError",
+    "PluginLoadError",
+    "PluginRegistry",
     "SensorData",
     "Structure",
     "SectionProperties",
@@ -98,6 +116,7 @@ __all__ = [
     "plane_stress",
     "pressure",
     "project",
+    "plugins",
     "report",
     "rectangle_section",
     "rectangular_max_shear_stress",
