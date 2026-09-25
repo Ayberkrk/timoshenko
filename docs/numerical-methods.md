@@ -52,3 +52,21 @@ FDD expects synchronized channels measuring the same physical quantity in the sa
 Measured modal parameters vary with environmental and operational conditions. A frequency shift alone is not a damage diagnosis. The 2024 review of modal identification under environmental excitation summarizes method and interpretation issues ([DOI: 10.32604/sdhm.2024.053662](https://doi.org/10.32604/sdhm.2024.053662)); bridge SHM literature likewise documents environmental variability as a confounder. Timoshenko reports calculation inputs and outputs without asserting a project-specific safety conclusion.
 
 This note documents equations, not code approval. Before safety-critical use, compare against a trusted engineering reference, verify units/sign conventions/boundary conditions, and obtain qualified engineering review.
+
+## 1.6 scalar uncertainty propagation
+
+`tm.uncertainty.propagate` accepts caller-supplied input estimates and either
+independent standard uncertainties or a full covariance matrix. The
+`first_order` method estimates local sensitivity coefficients by finite
+differences and applies the GUM covariance law. The `monte_carlo` method
+propagates a multivariate Gaussian input model using up to 100,000 draws. This
+follows the general methods documented in [JCGM GUM 100 and its 2026
+nonlinearity amendment](https://www.bipm.org/en/web/guest/publications/guides),
+[JCGM 101](https://doi.org/10.59161/JCGM101-2008), and [NIST TN 1297 Appendix
+A](https://www.nist.gov/pml/nist-technical-note-1297/nist-tn-1297-appendix-law-propagation-uncertainty).
+
+The package propagates uncertainty; it does not estimate measurement errors,
+calibration uncertainty, environmental variation, or model discrepancy. The
+normal coverage interval from first-order propagation is an approximation, and
+Monte Carlo is only as appropriate as the caller's Gaussian input model. The
+full limits are in [uncertainty.md](uncertainty.md).

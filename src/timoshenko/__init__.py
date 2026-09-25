@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, vibration
+from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, uncertainty, vibration
 from .assets import Asset, Relation
 from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
 from .csv_source import CSVObservationSource, CSVSourceError
@@ -53,9 +53,10 @@ from .stability import euler_critical_load
 from .stability import slenderness_ratio
 from .strength import PlaneStressResult, plane_stress
 from .update import update
+from .uncertainty import UncertaintyError, UncertaintyResult, propagate as propagate_uncertainty
 from .vibration import damping_ratio, harmonic_response, natural_frequency_hz
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 __all__ = [
     "HealthAssessment",
@@ -63,6 +64,8 @@ __all__ = [
     "BatchAppendResult",
     "CSVObservationSource",
     "CSVSourceError",
+    "UncertaintyError",
+    "UncertaintyResult",
     "SensorThingsObservationSource",
     "SensorThingsPlugin",
     "SensorThingsSourceError",
@@ -128,6 +131,7 @@ __all__ = [
     "oma",
     "observations",
     "plane_stress",
+    "propagate_uncertainty",
     "pressure",
     "project",
     "plugins",
@@ -152,6 +156,7 @@ __all__ = [
     "assets",
     "adapters",
     "storage",
+    "uncertainty",
     "load_project",
     "run_project",
     "youngs_modulus_from_shear",

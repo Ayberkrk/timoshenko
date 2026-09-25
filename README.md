@@ -2,7 +2,7 @@
 
 Timoshenko is a Python library for structural engineering work that project teams often implement repeatedly: representing a simple structure, loading sensor observations, estimating modal frequencies, comparing them with a reference model, and returning evidence in a common format.
 
-Release **1.5.0** continues from the 0.1–0.10 foundation and 1.1–1.4 plugin, source, and session layers. It adds a bounded HTTP reader for scalar OGC SensorThings Observation pages, mapping `phenomenonTime` and `result` into Timoshenko batches and following same-origin `@iot.nextLink` pagination. Endpoint, sensor ID, and unit are explicitly supplied; no metadata discovery or unit inference is performed. Earlier releases add long-format CSV replay, SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Selected equations remain available as `tm.function_name(...)` and under focused modules. It does not provide structural safety certification.
+Release **1.6.0** adds scalar uncertainty propagation around any keyword-callable Timoshenko or user equation. The first-order method uses sensitivity coefficients and input covariance; the Monte Carlo method samples a bounded multivariate Gaussian input model. The preceding 1.5 release adds a bounded HTTP reader for scalar OGC SensorThings Observation pages, mapping `phenomenonTime` and `result` into Timoshenko batches and following same-origin `@iot.nextLink` pagination. Earlier releases add long-format CSV replay, SQLite session restoration, an optional Paho MQTT source, versioned source plugins, HTML/SVG reports, idempotent local history, project manifests, and optional Cauren interoperability. Equations remain directly callable as `tm.function_name(...)`; Timoshenko does not provide structural safety certification.
 
 ## Install from this checkout
 
@@ -226,6 +226,19 @@ with tm.SessionRunner(source, session) as runner:
 
 The adapter requests the configured collection as JSON and follows each server page link without modifying its query. It accepts scalar numeric results with timezone-aware instant `phenomenonTime`; the caller provides the sensor identity and unit. See [sensorthings-adapter.md](docs/sensorthings-adapter.md).
 
+## Equation uncertainty (1.6)
+
+```python
+estimate = tm.uncertainty.propagate(
+    tm.natural_frequency_hz,
+    {"mass_kg": 120_000.0, "stiffness_n_m": 85_000_000.0},
+    standard_uncertainties={"mass_kg": 600.0, "stiffness_n_m": 4_250_000.0},
+)
+print(estimate.to_dict())
+```
+
+Wrap a built-in or user equation to return its estimate, propagated standard uncertainty, coverage interval, and (for first-order propagation) input sensitivities. See [uncertainty.md](docs/uncertainty.md) and [`examples/propagate_uncertainty.py`](examples/propagate_uncertainty.py).
+
 ## Sensor files
 
 CSV input requires a header and a numeric column selected by `column`. JSON input may be a numeric array, an object with a `samples` array, or an array of objects with the selected column. Sampling frequency is required and is never guessed from the filename. A series must contain at least eight finite values. Timestamps/irregularly sampled series are not resampled in 0.1.
@@ -240,6 +253,7 @@ CSV input requires a header and a numeric column selected by `column`. JSON inpu
 - `monitor` analyzes the supplied batch once. `MonitoringSession` adds a bounded caller-fed window loop, but no broker subscription, reconnection, background scheduler, dashboard, or alarm policy.
 - The 0.2 mechanics and beam functions use idealized linear formulas and SI units; they are not a general-purpose solver or code-compliance engine.
 - The 0.3 column, shaft, stress-transformation, and pressure-vessel formulas have narrowly stated ideal assumptions. They do not check slenderness applicability, material yield, local instability, pressure-vessel codes, stress concentrations, or combined loading outside the documented plane-stress calculation.
+- `tm.uncertainty.propagate` (1.6) propagates user-provided input uncertainty; it does not infer sensor/model uncertainty, identify distributions, or estimate reliability. First-order propagation can be inaccurate for nonlinear models; Monte Carlo assumes a multivariate Gaussian input distribution and fails explicitly if sampled inputs leave the equation's valid domain. See [uncertainty.md](docs/uncertainty.md).
 
 ## Roadmap
 
