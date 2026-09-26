@@ -77,9 +77,10 @@ by these repository files.
   publisher for `Ayberkrk/timoshenko`, workflow `publish.yml`, environment
   `pypi`. Each GitHub Release triggers a tested upload, so every release needs
   a new version number.
-- Once the Zenodo GitHub integration is enabled, each GitHub Release is also
-  archived on Zenodo with its own DOI. Releases made before the integration
-  was enabled are not archived retroactively.
+- The Zenodo GitHub integration is enabled. Each GitHub Release is archived
+  with its own DOI; the concept DOI 10.5281/zenodo.22968739 always resolves to
+  the latest release. Version 2.0.2 is the first archived release
+  (10.5281/zenodo.22968740); earlier releases are not archived retroactively.
 - Before the first public push, internal planning notes were removed from the
   Git history, so commit hashes differ from earlier local copies. The `v2.0.0`
   tag points at the rewritten commit with the same source.

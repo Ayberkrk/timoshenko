@@ -13,6 +13,7 @@
   <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/timoshenko-engine?style=for-the-badge">
   <img alt="Alpha" src="https://img.shields.io/badge/stage-alpha-orange?style=for-the-badge">
   <img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge">
+  <a href="https://doi.org/10.5281/zenodo.22968739"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.22968739-blue?style=for-the-badge"></a>
   <a href="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml/badge.svg"></a>
 </p>
 
@@ -192,9 +193,12 @@ Bug reports and pull requests are welcome in the
 
 ## Citation
 
-If you use Timoshenko in research, please cite it using the metadata in
-[`CITATION.cff`](https://github.com/Ayberkrk/timoshenko/blob/main/CITATION.cff)
-(GitHub's "Cite this repository" button reads the same file).
+If you use Timoshenko in research, please cite it with its DOI,
+[10.5281/zenodo.22968739](https://doi.org/10.5281/zenodo.22968739), which
+always resolves to the latest release; each release also has its own DOI on
+[Zenodo](https://zenodo.org/records/22968740). The metadata is in
+[`CITATION.cff`](https://github.com/Ayberkrk/timoshenko/blob/main/CITATION.cff),
+which GitHub's "Cite this repository" button reads.
 
 ## License
 

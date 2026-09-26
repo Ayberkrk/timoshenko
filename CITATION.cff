@@ -5,6 +5,7 @@ type: software
 version: 2.0.2
 date-released: 2026-09-25
 license: Apache-2.0
+doi: 10.5281/zenodo.22968739
 repository-code: "https://github.com/Ayberkrk/timoshenko"
 abstract: >-
   Timoshenko Engine is an embeddable Python library with reusable structural
