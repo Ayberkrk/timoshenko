@@ -34,6 +34,28 @@ class PolygonSectionProperties:
     section_modulus_y_positive_m3: float
     section_modulus_y_negative_m3: float
 
+    @property
+    def principal_second_moment_max_m4(self) -> float:
+        return (self.second_moment_x_m4 + self.second_moment_y_m4) / 2.0 + math.hypot(
+            (self.second_moment_x_m4 - self.second_moment_y_m4) / 2.0,
+            self.product_moment_xy_m4,
+        )
+
+    @property
+    def principal_second_moment_min_m4(self) -> float:
+        return (self.second_moment_x_m4 + self.second_moment_y_m4) / 2.0 - math.hypot(
+            (self.second_moment_x_m4 - self.second_moment_y_m4) / 2.0,
+            self.product_moment_xy_m4,
+        )
+
+    @property
+    def principal_axis_angle_rad(self) -> float:
+        """Angle in [0, pi) to the axis associated with the larger moment."""
+        return (0.5 * math.atan2(
+            -2.0 * self.product_moment_xy_m4,
+            self.second_moment_x_m4 - self.second_moment_y_m4,
+        )) % math.pi
+
 
 def polygon_section(
     outer: Ring,
@@ -122,6 +144,64 @@ def polygon_section(
     if not all(math.isfinite(value) for value in result_values):
         raise ValueError("polygon dimensions produced non-finite section properties")
     return PolygonSectionProperties(*result_values)
+
+
+def polygon_bending_stress_pa(
+    section: PolygonSectionProperties,
+    points_xy_m: Iterable[Point2D],
+    *,
+    axial_force_n: float = 0.0,
+    moment_x_n_m: float = 0.0,
+    moment_y_n_m: float = 0.0,
+) -> tuple[float, ...]:
+    """Return elastic normal stress at sample points for axial load and biaxial bending.
+
+    Points use the same absolute ``(x, y)`` coordinates as the polygon passed
+    to :func:`polygon_section`. Positive stress is tension. Positive ``M_x``
+    gives tension at positive y when ``Ixy`` is zero; positive ``M_y`` gives
+    tension at negative x. This is geometric linear-elastic response only and
+    does not estimate capacity or find extreme fibres beyond the supplied points.
+    """
+    if not isinstance(section, PolygonSectionProperties):
+        raise TypeError("section must be a PolygonSectionProperties")
+    force = float(axial_force_n)
+    moment_x, moment_y = float(moment_x_n_m), float(moment_y_n_m)
+    if not all(math.isfinite(value) for value in (force, moment_x, moment_y)):
+        raise ValueError("force and moments must be finite")
+    denominator = section.second_moment_x_m4 * section.second_moment_y_m4 - section.product_moment_xy_m4**2
+    if not math.isfinite(denominator) or denominator <= 0.0:
+        raise ValueError("section inertia tensor must be positive definite")
+    # sigma = N/A + a*x + b*y, with Mx = integral(sigma*y) and
+    # My = -integral(sigma*x). Solve the coupled centroidal equilibrium.
+    coefficient_x = (
+        -section.product_moment_xy_m4 * moment_x
+        - section.second_moment_x_m4 * moment_y
+    ) / denominator
+    coefficient_y = (
+        section.second_moment_y_m4 * moment_x
+        + section.product_moment_xy_m4 * moment_y
+    ) / denominator
+    stress_values = []
+    try:
+        points = tuple(points_xy_m)
+        for point in points:
+            if len(point) != 2:
+                raise ValueError("stress sample points must have exactly two coordinates")
+            x, y = float(point[0]), float(point[1])
+            if not math.isfinite(x) or not math.isfinite(y):
+                raise ValueError("stress sample point coordinates must be finite")
+            stress_values.append(
+                force / section.area_m2
+                + coefficient_x * (x - section.centroid_x_m)
+                + coefficient_y * (y - section.centroid_y_m)
+            )
+    except (TypeError, IndexError) as exc:
+        raise ValueError("points_xy_m must contain finite (x, y) coordinate pairs") from exc
+    if not stress_values:
+        raise ValueError("at least one stress sample point is required")
+    if not all(math.isfinite(value) for value in stress_values):
+        raise ValueError("section loads produced non-finite stresses")
+    return tuple(stress_values)
 
 
 def _normalize_ring(ring: Ring, name: str) -> list[Point2D]:

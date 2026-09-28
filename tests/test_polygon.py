@@ -33,6 +33,7 @@ def test_right_triangle_centroid_and_product_moment():
     assert result.product_moment_xy_m4 == pytest.approx(-(b**2) * h**2 / 72)
     assert result.section_modulus_x_positive_m3 == pytest.approx(result.second_moment_x_m4 / (2 * h / 3))
     assert result.section_modulus_x_negative_m3 == pytest.approx(result.second_moment_x_m4 / (h / 3))
+    assert result.principal_second_moment_max_m4 >= result.principal_second_moment_min_m4 > 0.0
 
 
 def test_winding_and_explicit_closure_do_not_change_result():
@@ -68,10 +69,33 @@ def test_rotation_preserves_principal_moments():
     theta = math.radians(27.0)
     c, s = math.cos(theta), math.sin(theta)
     rotated = tm.polygon_section([(c * x - s * y, s * x + c * y) for x, y in rectangle(0, 0, 0.5, 0.1)])
-    tensor = np.array([[rotated.second_moment_x_m4, rotated.product_moment_xy_m4],
-                       [rotated.product_moment_xy_m4, rotated.second_moment_y_m4]])
+    tensor = np.array([[rotated.second_moment_x_m4, -rotated.product_moment_xy_m4],
+                       [-rotated.product_moment_xy_m4, rotated.second_moment_y_m4]])
     principal = sorted(np.linalg.eigvalsh(tensor))
     assert principal == pytest.approx(sorted([base.second_moment_x_m4, base.second_moment_y_m4]), rel=1e-9)
+    assert rotated.principal_second_moment_min_m4 == pytest.approx(principal[0], rel=1e-9)
+    assert rotated.principal_second_moment_max_m4 == pytest.approx(principal[1], rel=1e-9)
+    major_axis = np.array([math.cos(rotated.principal_axis_angle_rad), math.sin(rotated.principal_axis_angle_rad)])
+    major_inertia = major_axis @ tensor @ major_axis
+    assert major_inertia == pytest.approx(rotated.principal_second_moment_max_m4, rel=1e-9)
+
+
+def test_polygon_bending_stress_includes_axial_and_biaxial_terms():
+    width, height = 0.4, 0.2
+    section = tm.polygon_section(rectangle(0.0, 0.0, width, height))
+    axial, moment_x, moment_y = 120e3, 18e3, 9e3
+    points = [(0.0, 0.0), (width, 0.0), (width, height), (0.0, height)]
+    stresses = tm.polygon_bending_stress_pa(
+        section, points, axial_force_n=axial, moment_x_n_m=moment_x, moment_y_n_m=moment_y
+    )
+    expected = [
+        axial / section.area_m2
+        - moment_y * (x - width / 2) / section.second_moment_y_m4
+        + moment_x * (y - height / 2) / section.second_moment_x_m4
+        for x, y in points
+    ]
+    assert stresses == pytest.approx(expected)
+    assert tm.polygon_bending_stress_pa(section, [(section.centroid_x_m, section.centroid_y_m)], axial_force_n=axial) == pytest.approx((axial / section.area_m2,))
 
 
 def test_regular_polygon_converges_to_circle():

@@ -4,6 +4,22 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
+## Unreleased
+
+- Added a linear elastic planar frame model with supports, nodal loads,
+  point and uniform local member loads, end releases, prescribed support
+  movements, reactions, member end actions and optional normal stresses.
+- Added an iterative P-delta tangent stiffness option for second-order
+  screening under axial force.
+- Added planar axial bars for truss assembly.
+- Added frame natural frequencies, modal participation and effective modal
+  masses using explicit lumped and member mass inputs.
+- Added MAC comparison for mapped mode shapes and system eigenvalue buckling
+  factors for an explicit proportional reference load pattern.
+- Added principal inertias and elastic coupled bending stress for polygon
+  sections.
+- Added verification examples and documented analysis assumptions and scope.
+
 ## 2.0.3
 
 - The package ships a `py.typed` marker, so type checkers use its annotations.

@@ -103,12 +103,17 @@ frequency = tm.propagate_uncertainty(
 print(frequency.estimate, frequency.standard_uncertainty)  # 6.366 Hz ± 0.090 Hz
 ```
 
+Planar members can also be assembled into a small-displacement linear frame
+model. Supports, nodal loads, local uniform loads and member masses are
+explicit model inputs. See [2D frame analysis](docs/structural-analysis.md)
+for the stiffness, mass and scope assumptions.
+
 ## What it provides
 
 | Area | Components |
 |---|---|
 | Engineering calculations | Section properties (including polygons with holes), beam deflection with shear, torsion, Euler buckling, plane stress, thin-wall pressure, SDOF vibration, Rayleigh damping, and GUM / Monte Carlo uncertainty |
-| Structural models | Lumped-mass shear-building models and their natural frequencies |
+| Structural models | Lumped-mass shear buildings and linear elastic planar trusses and frames with static, modal, P-delta and buckling analysis |
 | Modal analysis | Single-channel peak picking with resolution-checked damping, and multi-channel FDD with complex mode shapes |
 | Model comparison | Nearest-frequency mode pairing, global stiffness updating, and evidence-oriented health assessment |
 | Monitoring | Bounded rolling-window sessions, restart from local history, and source adapters for CSV, MQTT, and OGC SensorThings |

@@ -7,11 +7,26 @@ for equations, assumptions and limits.
 
 ## Structural model and analysis
 
-Build a reference model, identify modes from measurements, update the model and compare evidence.
+Build a lumped-mass shear-building reference model, or analyze a prismatic 2D frame with nodal supports and loads. The frame routines are linear elastic and small displacement.
 
 | Name | Description |
 |---|---|
 | `tm.Structure` | A shear-building model with one lateral degree of freedom per floor. |
+| `tm.StructuralModel` | A planar truss/frame with nodes, prismatic members, restraints, prescribed support displacements, nodal loads and optional lumped masses. |
+| `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
+| `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
+| `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
+| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and optional local-y elastic section moduli. |
+| `tm.FrameMember` | A two-node prismatic frame member with optional local point and uniform loads, rotational end releases and mass per length. |
+| `tm.FramePointLoad` | A local point force and/or moment at a specified distance along a member. |
+| `tm.analyze_linear_static` | Assemble and solve one linear static planar load case; return displacements, reactions, member end actions and selected end stresses. |
+| `tm.analyze_p_delta` | Iterate an approximate axial-force geometric stiffness for small-displacement 2D frame response. |
+| `tm.FrameAnalysisResult` | Frame displacements, reactions, member end actions, selected normal stresses, strain energy and local and global equilibrium residuals. |
+| `tm.analyze_modes` | Solve an undamped generalized eigenproblem for a planar model using supplied member and nodal mass. |
+| `tm.ModalAnalysisResult` | Natural frequencies, peak-normalized mode shapes, generalized and effective modal masses, and directional participation ratios. |
+| `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
+| `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
+| `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
 | `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
@@ -111,9 +126,16 @@ Ideal geometric properties in SI units.
 | `tm.circular_tube_section` | Return centroidal properties for a concentric circular hollow section. |
 | `tm.i_section` | Return centroidal properties of an ideal symmetric sharp-corner I-section. |
 | `tm.rectangular_tube_section` | Return centroidal properties of an ideal uniform-wall rectangular tube. |
-| `tm.SectionProperties` | Area, second moments and elastic section moduli about the centroidal axes. |
+| `tm.SectionProperties` | Area, second moments, elastic section moduli and principal inertias for standard shape axes. |
 | `tm.polygon_section` | Calculate area, centroid, second moments, product moment and moduli. |
-| `tm.PolygonSectionProperties` | Geometric properties of a uniform polygonal section (SI units). |
+| `tm.PolygonSectionProperties` | Geometric properties, principal second moments and principal-axis orientation of a uniform polygonal section (SI units). |
+| `tm.polygon_bending_stress_pa` | Calculate elastic axial and coupled biaxial bending stress at caller-supplied polygon coordinates. |
+
+For frame bending in the global x-y plane, pass the section's second moment
+about the local z axis as ``FrameSection.second_moment_local_z_m4``. Effective
+shear area, section moduli and member mass are explicit inputs; the engine
+does not infer them from an arbitrary outline or density. Modal analysis does
+not yet support frame-member end releases.
 
 ## Mechanics, beams and members
 
@@ -163,4 +185,3 @@ First-order (GUM) and Monte Carlo propagation through scalar equations.
 | `tm.propagate_uncertainty` | Propagate input standard uncertainties through a scalar callable. |
 | `tm.UncertaintyResult` | Scalar estimate and propagated uncertainty with method provenance. |
 | `tm.UncertaintyError` | Raised when uncertainty inputs or equation evaluations are invalid. |
-

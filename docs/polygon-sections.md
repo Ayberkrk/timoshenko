@@ -36,6 +36,15 @@ normalizing their winding direction, so input ring orientation does not alter
 the physical result. Directional elastic moduli are `Ixx / c` or `Iyy / c`
 using separate extreme-fibre distances on each side of each centroidal axis.
 
+The principal moments are the eigenvalues of the centroidal inertia tensor
+`[[Ixx, -Ixy], [-Ixy, Iyy]]`. `principal_axis_angle_rad` is the angle from
+positive x to the axis associated with the larger eigenvalue. For elastic
+normal stress, `tm.polygon_bending_stress_pa` solves
+`sigma = N/A + a (x-Cx) + b (y-Cy)` so that `Mx = integral(sigma*y)` and
+`My = -integral(sigma*x)`. It returns stresses only at the coordinates the
+caller supplies. Include the section boundary vertices when sampling linear
+stress over a polygon; it does not apply strength limits or code rules.
+
 The implementation rejects non-finite/repeated adjacent coordinates,
 self-intersecting rings, holes that touch or leave the outer boundary,
 overlapping/nested holes, zero-area rings, and non-positive resulting material
@@ -43,11 +52,10 @@ area. Coordinates are translated close to the section before integration to
 reduce cancellation for sections specified far from the origin.
 
 This is a 2D geometric integration, not a structural resistance calculation.
-It does not compute principal axes, stress under unsymmetric/coupled bending,
-plastic section moduli, shear area, torsion constant, local buckling, material
-regions, or code checks. A general polygon's product moment may be non-zero;
-using either axis inertia alone in an uncoupled bending formula may therefore
-be inappropriate. The equations are based on Green's theorem / shoelace
+It does not compute plastic section moduli, shear area, torsion constant,
+local buckling, material regions, or code checks. A general polygon's product
+moment may be non-zero; using either axis inertia alone in an uncoupled
+bending formula may therefore be inappropriate. The equations are based on Green's theorem / shoelace
 polygon integrals ([Bourke, 1988](https://paulbourke.net/geometry/polygonmesh/));
 composite section subtraction and parallel-axis context is summarized in
 [Engineering Statics](https://engineeringstatics.org/Chapter_10-moment-of-inertia-of-composite-shapes.html).
