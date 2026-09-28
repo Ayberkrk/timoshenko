@@ -1,6 +1,6 @@
 """Timoshenko: composable structural engineering primitives."""
 
-from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, polygon, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, strength, uncertainty, vibration
+from . import adapters, assets, beams, csv_source, health, mechanics, modal, mqtt, observations, oma, plugins, polygon, pressure, project, report, sections, sensorthings, session, shafts, stability, storage, structural, strength, uncertainty, vibration
 from .assets import Asset, Relation
 from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
 from .csv_source import CSVObservationSource, CSVSourceError
@@ -39,7 +39,7 @@ from .observations import Observation, ObservationBatch
 from .multichannel import MultiChannelData, load_multichannel_csv
 from .oma import FDDMode, FDDResult, identify_fdd
 from .pressure import ThinWallCylinderResult, thin_wall_cylinder_stress
-from .polygon import PolygonSectionProperties, polygon_section
+from .polygon import PolygonSectionProperties, polygon_bending_stress_pa, polygon_section
 from .project import LoadedProject, ProjectManifest, ProjectRunResult, load_project, read_manifest, run_project
 from .storage import BatchAppendResult, SQLiteStore
 from .session import MonitoringSession, SessionIngestResult, SessionReport, SessionRestoreResult
@@ -52,6 +52,18 @@ from .sections import solid_circle as solid_circle_section
 from .sensors import SensorData, load_sensors
 from .shafts import CircularTorsionResult, circular_shaft_torsion
 from .structure import Structure
+from .structural import (
+    FrameAnalysisResult,
+    FrameMaterial,
+    FrameMember,
+    FrameNode,
+    FrameSection,
+    ModalAnalysisResult,
+    StructuralModel,
+    analyze_linear_static,
+    analyze_modes,
+    analyze_p_delta,
+)
 from .stability import euler_critical_load
 from .stability import slenderness_ratio
 from .strength import PlaneStressResult, plane_stress
@@ -98,6 +110,13 @@ __all__ = [
     "PluginRegistry",
     "SensorData",
     "Structure",
+    "StructuralModel",
+    "FrameNode",
+    "FrameMaterial",
+    "FrameSection",
+    "FrameMember",
+    "FrameAnalysisResult",
+    "ModalAnalysisResult",
     "SectionProperties",
     "ThinWallCylinderResult",
     "RayleighDampingResult",
@@ -143,6 +162,7 @@ __all__ = [
     "plugins",
     "polygon",
     "polygon_section",
+    "polygon_bending_stress_pa",
     "report",
     "rectangle_section",
     "rectangular_tube_section",
@@ -165,6 +185,10 @@ __all__ = [
     "vibration",
     "assets",
     "adapters",
+    "structural",
+    "analyze_linear_static",
+    "analyze_modes",
+    "analyze_p_delta",
     "storage",
     "uncertainty",
     "load_project",

@@ -18,6 +18,21 @@ class SectionProperties:
     section_modulus_y_m3: float
     section_modulus_z_m3: float
 
+    @property
+    def principal_second_moment_max_m4(self) -> float:
+        """Larger principal second moment; the standard shape axes are principal."""
+        return max(self.second_moment_y_m4, self.second_moment_z_m4)
+
+    @property
+    def principal_second_moment_min_m4(self) -> float:
+        """Smaller principal second moment; the standard shape axes are principal."""
+        return min(self.second_moment_y_m4, self.second_moment_z_m4)
+
+    @property
+    def principal_axis_angle_rad(self) -> float:
+        """Angle of the larger-moment axis from +y toward +z, in radians."""
+        return 0.0 if self.second_moment_y_m4 >= self.second_moment_z_m4 else math.pi / 2.0
+
 
 def rectangle(width_m: float, height_m: float) -> SectionProperties:
     """Return centroidal properties; y is the width axis, z the height axis."""

@@ -39,6 +39,7 @@ nav:
   - Engineering calculations:
       - Section properties: section-properties.md
       - Polygon sections: polygon-sections.md
+      - 2D frame analysis: structural-analysis.md
       - Rayleigh damping: rayleigh-damping.md
       - Uncertainty: uncertainty.md
   - Project:

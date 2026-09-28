@@ -33,6 +33,30 @@ For a solid or concentric hollow circular shaft, the polar area moment is `J = p
 
 For a selected buckling axis, ideal Euler critical force is `P_cr = pi^2 E I/(K L)^2`; geometric slenderness is `K L/sqrt(I/A)`. `K` must be provided or deliberately defaulted to one (ideal pin-pin). Initial crookedness, residual stress, eccentric load, inelastic behavior, frame sway, interaction, and design-code resistance are not modeled. This is a bifurcation estimate for an ideal elastic column, not a column capacity check.
 
+## Planar frame assembly
+
+`tm.analyze_linear_static` assembles a direct-stiffness 2D frame with three
+degrees of freedom per node. A member's axial stiffness is `EA/L`; its
+in-plane bending stiffness is the cubic beam matrix, with the Timoshenko
+shear parameter `phi = 12 E I/(G A_v L^2)` when an effective shear area
+`A_v` is supplied. Member uniform loads use consistent nodal forces in local
+coordinates. Linear static equilibrium is solved on unrestrained degrees of
+freedom, and reactions are the residual at restrained degrees.
+
+`tm.analyze_modes` solves `K phi = omega^2 M phi` after removing restrained
+degrees. Member mass uses the standard Euler-Bernoulli consistent mass
+interpolation; nodal lumped mass contributes to translations. Rotary inertia
+and damping are omitted. The modal analysis therefore uses a translational
+mass model even when static stiffness includes Timoshenko shear flexibility.
+Both frame methods assume prismatic linear-elastic members, ideal supports,
+small displacement, and one explicit load case. The optional `tm.analyze_p_delta`
+iterates an approximate Euler-Bernoulli geometric stiffness from average
+member axial force; its tangent formulation is suitable for screening, not a
+nonlinear equilibrium path. These methods do not calculate connection
+flexibility, stress recovery for frame
+members, section resistance, load combinations, or code compliance. Full
+equations and worked usage are in [2D frame analysis](structural-analysis.md).
+
 For plane stress `(sigma_x, sigma_y, tau_xy)`, the in-plane principal values are `(sigma_x+sigma_y)/2 +/- sqrt(((sigma_x-sigma_y)/2)^2+tau_xy^2)`. In-plane maximum shear is the square-root term; von Mises equivalent stress assumes zero out-of-plane normal/shear components and is `sqrt(sigma_x^2-sigma_x sigma_y+sigma_y^2+3 tau_xy^2)`. It is an equivalent stress only; no yield limit is applied. The equivalent stress follows von Mises (1913), *Mechanik der festen Körper im plastisch-deformablen Zustand*, Nachrichten der Gesellschaft der Wissenschaften zu Göttingen, Mathematisch-Physikalische Klasse, 582-592.
 
 For a closed-end thin cylindrical wall under net pressure `p`, membrane estimates are `sigma_hoop=p r/t` and `sigma_longitudinal=p r/(2t)`. The API reports `t/r` so the caller can judge the thin-wall approximation; it does not enforce a universal cutoff. Local discontinuities, heads/nozzles, thick-wall radial stress, external-pressure collapse, code factors, and fatigue are excluded. A 2022 ultrasonic measurement study of thin-walled pressure vessels discusses these membrane assumptions and their stress measurements ([Materials Research, DOI: 10.1590/1980-5373-MR-2021-0495](https://doi.org/10.1590/1980-5373-MR-2021-0495)); a review of simple elastic hoop-stress formulas emphasizes their scope limits ([Sinclair & Helms, 2015, International Journal of Pressure Vessels and Piping](https://doi.org/10.1016/j.ijpvp.2015.01.006)).
@@ -115,6 +139,7 @@ specified in [polygon-sections.md](polygon-sections.md), based on Green's
 theorem / shoelace polygon sums ([Bourke, 1988](https://paulbourke.net/geometry/polygonmesh/)).
 
 Only simple, uniform-material planar polygons with non-overlapping holes are
-supported. The result preserves `Ixy`; it does not transform to principal axes
-or calculate stress for coupled bending. It also omits material interfaces,
-plasticity, shear/torsion properties and design checks.
+supported. The result preserves `Ixy`, returns both principal moments and the
+larger-moment axis angle, and can calculate elastic normal stress for axial
+force and coupled biaxial bending at supplied sample points. It omits material
+interfaces, plasticity, shear/torsion properties and design checks.

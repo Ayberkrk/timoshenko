@@ -4,6 +4,17 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
+## Unreleased
+
+- Added a linear elastic planar frame model with supports, nodal loads,
+  uniform local member loads, reactions, member end actions and strain energy.
+- Added an iterative P-delta tangent stiffness option for second-order
+  screening under axial force.
+- Added frame natural frequencies using explicit lumped and member mass inputs.
+- Added principal inertias and elastic coupled bending stress for polygon
+  sections.
+- Added verification examples and documented analysis assumptions and scope.
+
 ## 2.0.2
 
 - Example and documentation page that verify PyNite shear-deformable members
