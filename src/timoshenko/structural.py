@@ -235,7 +235,7 @@ class StructuralModel:
                 raise ValueError("prescribed_displacements must have one (x_m, y_m, rotation_rad) row per node")
             normalized_prescribed = []
             for node_index, row in enumerate(prescribed):
-                values = []
+                values: list[float | None] = []
                 for dof, value in enumerate(row):
                     if restraints[node_index][dof]:
                         values.append(0.0 if value is None else _finite("prescribed displacement", value))
@@ -339,12 +339,12 @@ def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:
     if residual_norm > 1e-8 * scale:
         raise ValueError("frame solution did not satisfy free-degree equilibrium within tolerance")
     reactions = residual
-    member_forces = []
+    member_forces: list[tuple[float, float, float, float, float, float]] = []
     for member_index, member in enumerate(model.members):
         dofs, transform, local_stiffness, equivalent_load, _, _, _ = element_data[member_index]
         local_displacement = transform @ displacements[dofs]
         end_force = local_stiffness @ local_displacement - equivalent_load
-        member_forces.append(tuple(float(value) for value in end_force))
+        member_forces.append(_end_actions(end_force))
     member_stresses = tuple(
         _member_end_normal_stress(member, end_force)
         for member, end_force in zip(model.members, member_forces)
@@ -429,7 +429,7 @@ def analyze_p_delta(
     scale = max(1.0, float(np.linalg.norm(load, ord=np.inf)))
     if residual_norm > max(1e-8, tolerance * 10.0) * scale:
         raise ValueError("P-delta solution did not satisfy free-degree equilibrium within tolerance")
-    member_forces = []
+    member_forces: list[tuple[float, float, float, float, float, float]] = []
     for member, data, axial_tension in zip(model.members, element_data, axial_forces):
         dofs, transform, local_stiffness, equivalent_load, length, _, _ = data
         local_displacement = transform @ displacement[dofs]
@@ -439,7 +439,7 @@ def analyze_p_delta(
             geometric, _ = _condense_rotational_releases(member, geometric, np.zeros(6))
         end_force += geometric @ local_displacement
         end_force -= equivalent_load
-        member_forces.append(tuple(float(value) for value in end_force))
+        member_forces.append(_end_actions(end_force))
     member_stresses = tuple(
         _member_end_normal_stress(member, end_force)
         for member, end_force in zip(model.members, member_forces)
@@ -850,7 +850,12 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
 
 
 def _node_rows(values: np.ndarray) -> tuple[tuple[float, float, float], ...]:
-    return tuple(tuple(float(value) for value in row) for row in values.reshape((-1, 3)))
+    return tuple((float(x), float(y), float(rotation)) for x, y, rotation in values.reshape((-1, 3)))
+
+
+def _end_actions(values: np.ndarray) -> tuple[float, float, float, float, float, float]:
+    axial_i, shear_i, moment_i, axial_j, shear_j, moment_j = (float(value) for value in values)
+    return axial_i, shear_i, moment_i, axial_j, shear_j, moment_j
 
 
 def _global_equilibrium_residual(

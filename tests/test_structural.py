@@ -219,8 +219,9 @@ def test_frame_end_stress_recovery_uses_selected_section_moduli():
     )
     result = tm.analyze_linear_static(model)
     expected_stress = abs(force) * length / section.section_modulus_z_m3
+    # The free-end stresses are zero up to round-off, which differs between BLAS builds.
     assert result.member_end_normal_stresses_pa[0] == pytest.approx(
-        (expected_stress, -expected_stress, 0.0, 0.0)
+        (expected_stress, -expected_stress, 0.0, 0.0), abs=1e-9 * expected_stress
     )
 
 
