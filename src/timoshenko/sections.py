@@ -94,7 +94,6 @@ def rectangular_tube(
     if 2.0 * thickness >= min(width, height):
         raise ValueError("twice wall_thickness_m must be smaller than both outer dimensions")
     inner_height = height - 2.0 * thickness
-    inner_width = width - 2.0 * thickness
     horizontal_plate_offset = (height - thickness) / 2.0
     vertical_plate_offset = (width - thickness) / 2.0
     area = 2.0 * width * thickness + 2.0 * thickness * inner_height

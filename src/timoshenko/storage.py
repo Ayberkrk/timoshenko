@@ -75,7 +75,7 @@ class SQLiteStore:
         timeout = float(timeout_seconds)
         if not math.isfinite(timeout) or timeout <= 0.0:
             raise ValueError("timeout_seconds must be finite and positive")
-        self._connection = sqlite3.connect(self.path, timeout=timeout)
+        self._connection: sqlite3.Connection | None = sqlite3.connect(self.path, timeout=timeout)
         self._connection.row_factory = sqlite3.Row
         self._db.execute("PRAGMA foreign_keys = ON")
         self._initialize()
@@ -154,8 +154,9 @@ class SQLiteStore:
         return connection
 
     def close(self) -> None:
-        if getattr(self, "_connection", None) is not None:
-            self._connection.close()
+        connection = getattr(self, "_connection", None)
+        if connection is not None:
+            connection.close()
             self._connection = None
 
     def __enter__(self) -> "SQLiteStore":

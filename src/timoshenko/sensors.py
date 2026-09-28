@@ -16,7 +16,7 @@ import numpy as np
 class SensorData:
     """A single regularly sampled sensor channel."""
 
-    samples: tuple[float, ...] | Sequence[float]
+    samples: Sequence[float] | np.ndarray
     sampling_hz: float
     unit: str = "m/s^2"
     channel: str = "sensor"

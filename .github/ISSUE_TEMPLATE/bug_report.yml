@@ -1,0 +1,42 @@
+name: Bug report
+description: A crash, a wrong result, or behavior that contradicts the documentation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. A minimal script that reproduces the problem is the most useful thing you can include.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: Describe the problem in a few sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: A short, self-contained script. Use synthetic data rather than private sensor records.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+      description: For a numerical discrepancy, give the reference value and its source (closed-form solution, textbook, other software).
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `python -c "import sys, numpy, timoshenko; print(timoshenko.__version__, sys.version, numpy.__version__)"`
+    validations:
+      required: true

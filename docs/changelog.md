@@ -4,6 +4,17 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
+## Unreleased
+
+- The package ships a `py.typed` marker, so type checkers use its annotations.
+  `SensorData.samples` is annotated to accept NumPy arrays, which it always did
+  at runtime.
+- Continuous integration runs `ruff` and `mypy` and publishes a coverage badge.
+- Documentation is hosted on Read the Docs, and the package `Documentation`
+  link points there.
+- Contribution guide, issue and pull request templates, and a README figure of
+  the quick start result.
+
 ## 2.0.2
 
 - Example and documentation page that verify PyNite shear-deformable members

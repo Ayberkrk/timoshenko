@@ -8,7 +8,7 @@ import math
 import numpy as np
 
 from .sensors import SensorData
-from .oma import FDDMode, FDDResult, identify_fdd
+from .oma import FDDMode as FDDMode, FDDResult as FDDResult, identify_fdd as identify_fdd
 
 
 @dataclass(frozen=True)
@@ -105,7 +105,7 @@ def identify(
         )
         for idx in selected
     )
-    notes = ["Frequency spacing is limited by the record duration."] if resolution > 0.25 else []
+    notes: list[str] = ["Frequency spacing is limited by the record duration."] if resolution > 0.25 else []
     if any(mode.damping_ratio is not None for mode in modes):
         notes.append(
             "Damping ratios are coarse half-power screening estimates from an averaged spectrum; "
@@ -116,7 +116,6 @@ def identify(
             "Damping is withheld where the record is too short to resolve the half-power bandwidth "
             f"with {_MIN_DAMPING_AVERAGES} averages and at least {_MIN_DAMPING_BINS:g} frequency bins."
         )
-    notes = tuple(notes)
     return ModalResult(
         modes=modes,
         sampling_hz=sensor_data.sampling_hz,
@@ -124,7 +123,7 @@ def identify(
         resolution_hz=resolution,
         channel=sensor_data.channel,
         status="ok" if modes else "no_peaks_found",
-        notes=notes,
+        notes=tuple(notes),
     )
 
 

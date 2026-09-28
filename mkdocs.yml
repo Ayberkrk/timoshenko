@@ -1,5 +1,6 @@
 site_name: Timoshenko Engine
 site_description: Reusable structural engineering building blocks for Python applications.
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, "https://timoshenko-engine.readthedocs.io/"]
 repo_url: https://github.com/Ayberkrk/timoshenko
 edit_uri: edit/main/docs/
 

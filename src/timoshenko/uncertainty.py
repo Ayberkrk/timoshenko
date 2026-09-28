@@ -227,7 +227,7 @@ def _finite_scalar(value: Any, label: str) -> float:
     if isinstance(value, (bool, np.bool_)) or not np.isscalar(value):
         raise UncertaintyError(f"{label} must be a finite real number")
     try:
-        result = float(value)
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError) as error:
         raise UncertaintyError(f"{label} must be a finite real number") from error
     if not math.isfinite(result):
@@ -235,7 +235,7 @@ def _finite_scalar(value: Any, label: str) -> float:
     return result
 
 
-def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float], label: str) -> float:
+def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray, label: str) -> float:
     try:
         result = function(**dict(zip(names, values)))
     except Exception as error:
@@ -243,7 +243,7 @@ def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Se
     if isinstance(result, (bool, np.bool_)) or not np.isscalar(result):
         raise UncertaintyError(f"equation output for {label} must be a finite scalar number")
     try:
-        output = float(result)
+        output = float(result)  # type: ignore[arg-type]
     except (TypeError, ValueError) as error:
         raise UncertaintyError(f"equation output for {label} must be a finite scalar number") from error
     if not math.isfinite(output):
@@ -251,7 +251,7 @@ def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Se
     return output
 
 
-def _try_evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float]) -> float | None:
+def _try_evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray) -> float | None:
     try:
         return _evaluate(function, names, values, "finite difference input")
     except UncertaintyError:

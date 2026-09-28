@@ -15,6 +15,8 @@
   <img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-green?style=for-the-badge">
   <a href="https://doi.org/10.5281/zenodo.22968739"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.22968739-blue?style=for-the-badge"></a>
   <a href="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml/badge.svg"></a>
+  <a href="https://github.com/Ayberkrk/timoshenko/tree/python-coverage-comment-action-data"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FAyberkrk%2Ftimoshenko%2Fpython-coverage-comment-action-data%2Fendpoint.json&style=for-the-badge"></a>
+  <a href="https://timoshenko-engine.readthedocs.io/en/latest/"><img alt="Documentation" src="https://img.shields.io/readthedocs/timoshenko-engine?style=for-the-badge"></a>
 </p>
 
 Timoshenko packages common structural calculations, modal analysis, sensor
@@ -24,7 +26,7 @@ Python library, not a hosted monitoring service or a general finite-element
 solver.
 
 > **Alpha:** the API may still change between releases. Every behavior change
-> is listed in the [changelog](https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md).
+> is listed in the [changelog](https://timoshenko-engine.readthedocs.io/en/latest/changelog/).
 
 ## Install
 
@@ -67,6 +69,10 @@ for change in result.health.mode_changes:
     print(change.mode_number, change.change_pct)  # 1 -5.0, then 2 -5.0
 print(result.health.review_recommended)          # True
 ```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Ayberkrk/timoshenko/main/assets/modal-comparison.svg" alt="Both identified modes plot 5% below the reference model, past the 3% review threshold" width="800">
+</p>
 
 Real records load from CSV or JSON with
 `tm.load_sensors("acceleration.csv", sampling_hz=100.0, column="acc")`. The
@@ -156,13 +162,15 @@ The session does not open network connections or run in the background. Use
 
 ## Documentation
 
-- [Documentation home](https://github.com/Ayberkrk/timoshenko/blob/main/docs/index.md)
-- [API reference](https://github.com/Ayberkrk/timoshenko/blob/main/docs/api.md)
-- [Numerical methods and limits](https://github.com/Ayberkrk/timoshenko/blob/main/docs/numerical-methods.md)
-- [Architecture](https://github.com/Ayberkrk/timoshenko/blob/main/docs/architecture.md)
-- [Monitoring sessions](https://github.com/Ayberkrk/timoshenko/blob/main/docs/live-sessions.md) and [source adapters](https://github.com/Ayberkrk/timoshenko/blob/main/docs/adapters.md)
-- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples), including a [cross-check of PyNite shear-deformable beams](https://github.com/Ayberkrk/timoshenko/blob/main/docs/pynite-verification.md)
-- [Changelog](https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md)
+The full documentation is at
+[timoshenko-engine.readthedocs.io](https://timoshenko-engine.readthedocs.io/en/latest/). Good places to start:
+
+- [API reference](https://timoshenko-engine.readthedocs.io/en/latest/api/)
+- [Numerical methods and limits](https://timoshenko-engine.readthedocs.io/en/latest/numerical-methods/)
+- [Architecture](https://timoshenko-engine.readthedocs.io/en/latest/architecture/)
+- [Monitoring sessions](https://timoshenko-engine.readthedocs.io/en/latest/live-sessions/) and [source adapters](https://timoshenko-engine.readthedocs.io/en/latest/adapters/)
+- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples), including a [cross-check of PyNite shear-deformable beams](https://timoshenko-engine.readthedocs.io/en/latest/pynite-verification/)
+- [Changelog](https://timoshenko-engine.readthedocs.io/en/latest/changelog/)
 
 ## Limits and engineering posture
 
@@ -177,8 +185,10 @@ The session does not open network connections or run in the background. Use
 ## Development
 
 ```bash
-python -m pip install -e ".[test]"
-python -m pytest
+python -m pip install -e ".[test,lint]"
+python -m pytest --cov
+python -m ruff check .
+python -m mypy
 ```
 
 To preview the documentation site:
@@ -189,7 +199,11 @@ python -m mkdocs serve
 ```
 
 Bug reports and pull requests are welcome in the
-[issue tracker](https://github.com/Ayberkrk/timoshenko/issues).
+[issue tracker](https://github.com/Ayberkrk/timoshenko/issues). See
+[`CONTRIBUTING.md`](https://github.com/Ayberkrk/timoshenko/blob/main/CONTRIBUTING.md)
+for the checks a pull request needs to pass; issues labelled
+[good first issue](https://github.com/Ayberkrk/timoshenko/labels/good%20first%20issue)
+are small, self-contained starting points.
 
 ## Citation
 

@@ -93,7 +93,7 @@ def identify_fdd(
         raise TypeError("observations must be MultiChannelData; use tm.load_multichannel_csv() or construct it explicitly")
     if len(set(observations.units)) != 1:
         raise ValueError("FDD requires channels with the same measurement unit; calibrate/transform mixed-unit channels first")
-    sample_count, channel_count = observations.samples.shape
+    sample_count, channel_count = np.shape(observations.samples)
     nperseg_value, hop, segment_count, resolution, low, high = _plan(
         sample_count,
         observations.sampling_hz,
