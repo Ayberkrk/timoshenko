@@ -46,7 +46,7 @@ sensorthings = "timoshenko.sensorthings:SensorThingsPlugin"
 Homepage = "https://github.com/Ayberkrk/timoshenko"
 Repository = "https://github.com/Ayberkrk/timoshenko"
 Issues = "https://github.com/Ayberkrk/timoshenko/issues"
-Documentation = "https://timoshenko-engine.readthedocs.io/"
+Documentation = "https://timoshenko.readthedocs.io/"
 Changelog = "https://github.com/Ayberkrk/timoshenko/blob/main/docs/changelog.md"
 
 [tool.setuptools]

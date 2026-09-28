@@ -16,7 +16,7 @@
   <a href="https://doi.org/10.5281/zenodo.22968739"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.22968739-blue?style=for-the-badge"></a>
   <a href="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Ayberkrk/timoshenko/actions/workflows/tests.yml/badge.svg"></a>
   <a href="https://github.com/Ayberkrk/timoshenko/tree/python-coverage-comment-action-data"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FAyberkrk%2Ftimoshenko%2Fpython-coverage-comment-action-data%2Fendpoint.json&style=for-the-badge"></a>
-  <a href="https://timoshenko-engine.readthedocs.io/en/latest/"><img alt="Documentation" src="https://img.shields.io/readthedocs/timoshenko-engine?style=for-the-badge"></a>
+  <a href="https://timoshenko.readthedocs.io/en/latest/"><img alt="Documentation" src="https://img.shields.io/readthedocs/timoshenko?style=for-the-badge"></a>
 </p>
 
 Timoshenko packages common structural calculations, modal analysis, sensor
@@ -26,7 +26,7 @@ Python library, not a hosted monitoring service or a general finite-element
 solver.
 
 > **Alpha:** the API may still change between releases. Every behavior change
-> is listed in the [changelog](https://timoshenko-engine.readthedocs.io/en/latest/changelog/).
+> is listed in the [changelog](https://timoshenko.readthedocs.io/en/latest/changelog/).
 
 ## Install
 
@@ -163,14 +163,14 @@ The session does not open network connections or run in the background. Use
 ## Documentation
 
 The full documentation is at
-[timoshenko-engine.readthedocs.io](https://timoshenko-engine.readthedocs.io/en/latest/). Good places to start:
+[timoshenko.readthedocs.io](https://timoshenko.readthedocs.io/en/latest/). Good places to start:
 
-- [API reference](https://timoshenko-engine.readthedocs.io/en/latest/api/)
-- [Numerical methods and limits](https://timoshenko-engine.readthedocs.io/en/latest/numerical-methods/)
-- [Architecture](https://timoshenko-engine.readthedocs.io/en/latest/architecture/)
-- [Monitoring sessions](https://timoshenko-engine.readthedocs.io/en/latest/live-sessions/) and [source adapters](https://timoshenko-engine.readthedocs.io/en/latest/adapters/)
-- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples), including a [cross-check of PyNite shear-deformable beams](https://timoshenko-engine.readthedocs.io/en/latest/pynite-verification/)
-- [Changelog](https://timoshenko-engine.readthedocs.io/en/latest/changelog/)
+- [API reference](https://timoshenko.readthedocs.io/en/latest/api/)
+- [Numerical methods and limits](https://timoshenko.readthedocs.io/en/latest/numerical-methods/)
+- [Architecture](https://timoshenko.readthedocs.io/en/latest/architecture/)
+- [Monitoring sessions](https://timoshenko.readthedocs.io/en/latest/live-sessions/) and [source adapters](https://timoshenko.readthedocs.io/en/latest/adapters/)
+- [Runnable examples](https://github.com/Ayberkrk/timoshenko/tree/main/examples), including a [cross-check of PyNite shear-deformable beams](https://timoshenko.readthedocs.io/en/latest/pynite-verification/)
+- [Changelog](https://timoshenko.readthedocs.io/en/latest/changelog/)
 
 ## Limits and engineering posture
 
