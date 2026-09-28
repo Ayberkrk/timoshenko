@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a new calculation, analysis method, adapter, or API change.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and why is it hard with the current API?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The function or class you have in mind, with its inputs and outputs in SI units.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference for verification
+      description: For a new calculation, the closed-form solution, standard, paper, or tool its results can be checked against.
+  - type: textarea
+    id: limits
+    attributes:
+      label: Assumptions and limits
+      description: Ideal assumptions and cases the method does not cover.

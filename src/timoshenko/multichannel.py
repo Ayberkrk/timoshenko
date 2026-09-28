@@ -54,11 +54,11 @@ class MultiChannelData:
 
     @property
     def sample_count(self) -> int:
-        return int(self.samples.shape[0])
+        return int(np.shape(self.samples)[0])
 
     @property
     def channel_count(self) -> int:
-        return int(self.samples.shape[1])
+        return int(np.shape(self.samples)[1])
 
 
 def load_multichannel_csv(
@@ -93,7 +93,7 @@ def load_multichannel_csv(
         for row_number, row in enumerate(reader, start=2):
             record: list[float] = []
             for name in names:
-                raw = row.get(name)
+                raw = row.get(name) or ""
                 try:
                     value = float(raw)
                 except (TypeError, ValueError):

@@ -20,6 +20,17 @@ change is listed here.
   sections.
 - Added verification examples and documented analysis assumptions and scope.
 
+## 2.0.3
+
+- The package ships a `py.typed` marker, so type checkers use its annotations.
+  `SensorData.samples` is annotated to accept NumPy arrays, which it always did
+  at runtime.
+- Continuous integration runs `ruff` and `mypy` and publishes a coverage badge.
+- Documentation is hosted on Read the Docs, and the package `Documentation`
+  link points there.
+- Contribution guide, issue and pull request templates, and a README figure of
+  the quick start result.
+
 ## 2.0.2
 
 - Example and documentation page that verify PyNite shear-deformable members

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Protocol, runtime_checkable
+from typing import Iterator, Literal, Protocol, runtime_checkable
 
 from .observations import ObservationBatch
 from .session import MonitoringSession, SessionIngestResult
@@ -73,7 +73,7 @@ class SessionRunner:
         self._consuming = False
         return self
 
-    def __exit__(self, exc_type, exc, traceback) -> bool:
+    def __exit__(self, exc_type, exc, traceback) -> Literal[False]:
         self._active = False
         try:
             self.source.close()

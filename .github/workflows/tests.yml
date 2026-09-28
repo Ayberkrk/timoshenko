@@ -4,7 +4,22 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[lint]"
+      - run: python -m ruff check .
+      - run: python -m mypy
+
   pytest:
     runs-on: ubuntu-latest
     strategy:
@@ -19,3 +34,23 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[test]"
       - run: python -m pytest
+
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest --cov --cov-report=term
+      # Stores the badge on the python-coverage-comment-action-data branch.
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: py-cov-action/python-coverage-comment-action@v4.5
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 85
+          MINIMUM_ORANGE: 70

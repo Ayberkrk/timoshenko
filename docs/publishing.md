@@ -46,15 +46,15 @@ python -m mkdocs serve
 ```
 
 After pushing the configuration, import `Ayberkrk/timoshenko` into Read the
-Docs and set its project slug to `timoshenko-engine`. Keep the `latest` branch
+Docs and set its project slug to `timoshenko`. Keep the `latest` branch
 version enabled and activate release tags as documentation versions. Mark the
 latest stable release as `stable`. Pre-release tags can be enabled when their
 documentation should be public. Read the Docs reads the repository
 configuration and builds these versions separately.
 
-The hosted URL and PyPI `Documentation` metadata link should be updated to the
-confirmed Read the Docs URL after the project has been created and its first
-build succeeds. Until then, the GitHub documentation links remain canonical.
+`mkdocs.yml` reads the canonical URL from the `READTHEDOCS_CANONICAL_URL`
+variable that Read the Docs sets for each build, so every version links to
+itself.
 
 ## Zenodo archive and citation
 
@@ -85,4 +85,8 @@ by these repository files.
   Git history, so commit hashes differ from earlier local copies. The `v2.0.0`
   tag points at the rewritten commit with the same source.
 - Repository-side PyPI, Read the Docs, and Zenodo configuration is present.
-- No Read the Docs project has been created yet.
+- Documentation is served from Read the Docs at
+  <https://timoshenko.readthedocs.io/> (project slug
+  `timoshenko`). The build is strict: `.readthedocs.yaml` sets
+  `fail_on_warning: true`, so a broken link or missing page fails it. The
+  PyPI `Documentation` link points there from the next release on.

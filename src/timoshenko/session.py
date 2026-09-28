@@ -178,7 +178,7 @@ class MonitoringSession:
         self._review_threshold_pct = validate_review_threshold(review_threshold_pct)
         self._baseline_structure = structure
         self._store = store
-        self._buffers = {sensor_id: deque(maxlen=window) for sensor_id in ids}
+        self._buffers: dict[str, deque[tuple[int, float]]] = {sensor_id: deque(maxlen=window) for sensor_id in ids}
         self._last_key: dict[str, int] = {}
         self._seen_by_key: dict[int, set[str]] = {}
         self._seen_key_heap: list[int] = []
@@ -350,23 +350,25 @@ class MonitoringSession:
         if snapshot is None:
             return None
         keys, matrix = snapshot
+        observations: SensorData | MultiChannelData
+        modal: ModalResult | FDDResult
         if len(self._sensor_ids) == 1:
-            observations: SensorData | MultiChannelData = SensorData(
+            channel = SensorData(
                 samples=matrix[:, 0],
                 sampling_hz=self._sampling_hz,
                 unit=self._units[0],
                 channel=self._sensor_ids[0],
             )
-            modal = identify(observations, **self._options)
+            observations, modal = channel, identify(channel, **self._options)
             method = "peak_picking"
         else:
-            observations = MultiChannelData(
+            channels = MultiChannelData(
                 samples=matrix,
                 sampling_hz=self._sampling_hz,
                 channel_ids=self._sensor_ids,
                 units=self._units,
             )
-            modal = identify_fdd(observations, **self._options)
+            observations, modal = channels, identify_fdd(channels, **self._options)
             method = "fdd"
         if modal.modes:
             self._structure = update(self._baseline_structure, modal)

@@ -223,6 +223,7 @@ def run_project(project: LoadedProject | str | Path) -> ProjectRunResult:
     if not isinstance(loaded, LoadedProject):
         raise TypeError("project must be a manifest path or LoadedProject from tm.load_project()")
     manifest = loaded.manifest
+    modal: ModalResult | FDDResult
     if manifest.method == "peak_picking":
         if not isinstance(loaded.observations, SensorData):
             raise TypeError("peak_picking manifest must load one SensorData channel")
