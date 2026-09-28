@@ -12,16 +12,21 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | Name | Description |
 |---|---|
 | `tm.Structure` | A shear-building model with one lateral degree of freedom per floor. |
-| `tm.StructuralModel` | A 2D frame with nodes, prismatic frame members, restraints, nodal loads and optional lumped masses. |
+| `tm.StructuralModel` | A planar truss/frame with nodes, prismatic members, restraints, prescribed support displacements, nodal loads and optional lumped masses. |
+| `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
-| `tm.FrameMaterial` | Isotropic elastic Young's and shear moduli for frame members. |
-| `tm.FrameSection` | Area, in-plane bending inertia and optional effective shear area for a 2D frame member. |
-| `tm.FrameMember` | A two-node prismatic member with optional local uniform load and mass per length. |
-| `tm.analyze_linear_static` | Assemble and solve one linear static 2D frame load case; return displacement, reactions and local member end actions. |
+| `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
+| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and optional local-y elastic section moduli. |
+| `tm.FrameMember` | A two-node prismatic frame member with optional local point and uniform loads, rotational end releases and mass per length. |
+| `tm.FramePointLoad` | A local point force and/or moment at a specified distance along a member. |
+| `tm.analyze_linear_static` | Assemble and solve one linear static planar load case; return displacements, reactions, member end actions and selected end stresses. |
 | `tm.analyze_p_delta` | Iterate an approximate axial-force geometric stiffness for small-displacement 2D frame response. |
-| `tm.FrameAnalysisResult` | Frame displacements, reactions, member end actions, strain energy, equilibrium residual and solver metadata. |
-| `tm.analyze_modes` | Solve an undamped generalized eigenproblem for a 2D frame using supplied member and nodal mass. |
-| `tm.ModalAnalysisResult` | Frame natural frequencies, peak-normalized mode shapes and generalized masses. |
+| `tm.FrameAnalysisResult` | Frame displacements, reactions, member end actions, selected normal stresses, strain energy and local and global equilibrium residuals. |
+| `tm.analyze_modes` | Solve an undamped generalized eigenproblem for a planar model using supplied member and nodal mass. |
+| `tm.ModalAnalysisResult` | Natural frequencies, peak-normalized mode shapes, generalized and effective modal masses, and directional participation ratios. |
+| `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
+| `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
+| `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
 | `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
@@ -128,8 +133,9 @@ Ideal geometric properties in SI units.
 
 For frame bending in the global x-y plane, pass the section's second moment
 about the local z axis as ``FrameSection.second_moment_local_z_m4``. Effective
-shear area and member mass are explicit inputs; the engine does not infer them
-from a shape or density.
+shear area, section moduli and member mass are explicit inputs; the engine
+does not infer them from an arbitrary outline or density. Modal analysis does
+not yet support frame-member end releases.
 
 ## Mechanics, beams and members
 

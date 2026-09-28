@@ -53,16 +53,21 @@ from .sensors import SensorData, load_sensors
 from .shafts import CircularTorsionResult, circular_shaft_torsion
 from .structure import Structure
 from .structural import (
+    AxialMember,
+    BucklingAnalysisResult,
     FrameAnalysisResult,
     FrameMaterial,
     FrameMember,
     FrameNode,
+    FramePointLoad,
     FrameSection,
     ModalAnalysisResult,
     StructuralModel,
     analyze_linear_static,
     analyze_modes,
     analyze_p_delta,
+    analyze_linear_buckling,
+    modal_assurance_criterion,
 )
 from .stability import euler_critical_load
 from .stability import slenderness_ratio
@@ -111,12 +116,15 @@ __all__ = [
     "SensorData",
     "Structure",
     "StructuralModel",
+    "AxialMember",
     "FrameNode",
     "FrameMaterial",
     "FrameSection",
     "FrameMember",
+    "FramePointLoad",
     "FrameAnalysisResult",
     "ModalAnalysisResult",
+    "BucklingAnalysisResult",
     "SectionProperties",
     "ThinWallCylinderResult",
     "RayleighDampingResult",
@@ -189,6 +197,8 @@ __all__ = [
     "analyze_linear_static",
     "analyze_modes",
     "analyze_p_delta",
+    "analyze_linear_buckling",
+    "modal_assurance_criterion",
     "storage",
     "uncertainty",
     "load_project",

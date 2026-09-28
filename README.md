@@ -107,7 +107,7 @@ for the stiffness, mass and scope assumptions.
 | Area | Components |
 |---|---|
 | Engineering calculations | Section properties (including polygons with holes), beam deflection with shear, torsion, Euler buckling, plane stress, thin-wall pressure, SDOF vibration, Rayleigh damping, and GUM / Monte Carlo uncertainty |
-| Structural models | Lumped-mass shear buildings and linear elastic 2D frames with static and modal analysis |
+| Structural models | Lumped-mass shear buildings and linear elastic planar trusses and frames with static, modal, P-delta and buckling analysis |
 | Modal analysis | Single-channel peak picking with resolution-checked damping, and multi-channel FDD with complex mode shapes |
 | Model comparison | Nearest-frequency mode pairing, global stiffness updating, and evidence-oriented health assessment |
 | Monitoring | Bounded rolling-window sessions, restart from local history, and source adapters for CSV, MQTT, and OGC SensorThings |

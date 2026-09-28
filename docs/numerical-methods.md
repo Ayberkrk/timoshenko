@@ -48,14 +48,21 @@ degrees. Member mass uses the standard Euler-Bernoulli consistent mass
 interpolation; nodal lumped mass contributes to translations. Rotary inertia
 and damping are omitted. The modal analysis therefore uses a translational
 mass model even when static stiffness includes Timoshenko shear flexibility.
+It returns directional participation factors and effective modal mass ratios
+for global x and y excitation. `tm.modal_assurance_criterion` compares mapped
+real or complex mode-shape vectors; sensor-to-node correspondence is supplied
+by the caller.
 Both frame methods assume prismatic linear-elastic members, ideal supports,
 small displacement, and one explicit load case. The optional `tm.analyze_p_delta`
 iterates an approximate Euler-Bernoulli geometric stiffness from average
 member axial force; its tangent formulation is suitable for screening, not a
-nonlinear equilibrium path. These methods do not calculate connection
-flexibility, stress recovery for frame
-members, section resistance, load combinations, or code compliance. Full
-equations and worked usage are in [2D frame analysis](structural-analysis.md).
+nonlinear equilibrium path. `tm.analyze_linear_buckling` uses first-order
+reference axial forces to estimate an ideal proportional system load factor;
+it omits imperfections, yielding and post-buckling. Frame end normal stress
+is available only when both local-y section moduli are explicitly supplied.
+These methods do not calculate connection flexibility, section resistance,
+load combinations, or code compliance. Full equations and worked usage are in
+[2D frame analysis](structural-analysis.md).
 
 For plane stress `(sigma_x, sigma_y, tau_xy)`, the in-plane principal values are `(sigma_x+sigma_y)/2 +/- sqrt(((sigma_x-sigma_y)/2)^2+tau_xy^2)`. In-plane maximum shear is the square-root term; von Mises equivalent stress assumes zero out-of-plane normal/shear components and is `sqrt(sigma_x^2-sigma_x sigma_y+sigma_y^2+3 tau_xy^2)`. It is an equivalent stress only; no yield limit is applied. The equivalent stress follows von Mises (1913), *Mechanik der festen Körper im plastisch-deformablen Zustand*, Nachrichten der Gesellschaft der Wissenschaften zu Göttingen, Mathematisch-Physikalische Klasse, 582-592.
 
