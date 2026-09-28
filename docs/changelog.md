@@ -4,7 +4,7 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
-## Unreleased
+## 2.0.3
 
 - The package ships a `py.typed` marker, so type checkers use its annotations.
   `SensorData.samples` is annotated to accept NumPy arrays, which it always did
