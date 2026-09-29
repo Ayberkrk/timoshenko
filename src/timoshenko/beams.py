@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ._validation import finite as _finite, positive as _positive
+from ._validation import finite as _finite
+from ._validation import positive as _positive
 
 
 @dataclass(frozen=True)

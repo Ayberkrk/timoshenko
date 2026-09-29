@@ -4,7 +4,6 @@ import pytest
 
 import timoshenko as tm
 
-
 E = 200e9
 G = E / (2 * (1 + 0.3))
 AREA = 0.01

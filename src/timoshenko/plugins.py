@@ -9,7 +9,6 @@ from typing import Any, Callable, Protocol, runtime_checkable
 
 from .adapters import ObservationSource
 
-
 PLUGIN_API_VERSION = "1"
 ENTRY_POINT_GROUP = "timoshenko.plugins"
 

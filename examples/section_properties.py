@@ -2,7 +2,6 @@
 
 import timoshenko as tm
 
-
 steel_i = tm.i_section(
     overall_width_m=0.20,
     overall_height_m=0.30,

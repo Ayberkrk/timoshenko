@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import math
 
 from ._validation import positive as _positive
+
 # Re-exported so the general polygon helper is also reachable as tm.sections.polygon_section.
 from .polygon import PolygonSectionProperties, polygon_section  # noqa: F401
 
