@@ -2,7 +2,6 @@
 
 import timoshenko as tm
 
-
 material = tm.FrameMaterial(
     youngs_modulus_pa=200e9,
     shear_modulus_pa=200e9 / (2 * (1 + 0.3)),

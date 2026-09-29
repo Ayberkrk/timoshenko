@@ -6,7 +6,6 @@ import json
 
 import timoshenko as tm
 
-
 inputs = {"mass_kg": 120_000.0, "stiffness_n_m": 85_000_000.0}
 standard_uncertainties = {"mass_kg": 600.0, "stiffness_n_m": 4_250_000.0}
 

@@ -7,8 +7,10 @@ import math
 
 import numpy as np
 
+from .oma import FDDMode as FDDMode
+from .oma import FDDResult as FDDResult
+from .oma import identify_fdd as identify_fdd
 from .sensors import SensorData
-from .oma import FDDMode as FDDMode, FDDResult as FDDResult, identify_fdd as identify_fdd
 
 
 @dataclass(frozen=True)

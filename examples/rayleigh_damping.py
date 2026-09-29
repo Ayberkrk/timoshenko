@@ -6,7 +6,6 @@ import json
 
 import timoshenko as tm
 
-
 fit = tm.rayleigh_damping_coefficients(
     frequency_1_hz=0.8,
     damping_ratio_1=0.02,

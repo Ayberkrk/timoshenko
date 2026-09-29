@@ -2,7 +2,6 @@
 
 import timoshenko as tm
 
-
 # A 200 x 300 mm outer rectangle with a 100 x 180 mm rectangular void.
 section = tm.polygon_section(
     outer=[(0.0, 0.0), (0.20, 0.0), (0.20, 0.30), (0.0, 0.30)],

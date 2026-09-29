@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import math
 
-from ._validation import finite as _finite, positive as _positive
+from ._validation import finite as _finite
+from ._validation import positive as _positive
 
 
 def axial_stress(force_n: float, area_m2: float) -> float:
