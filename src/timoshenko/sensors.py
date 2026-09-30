@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+import itertools
 import json
 import math
 from pathlib import Path
@@ -36,7 +37,7 @@ class SensorData:
             raise ValueError("timestamps must have one entry per sample")
         if any(not math.isfinite(value) for value in timestamps):
             raise ValueError("timestamps must be finite")
-        if timestamps and any(right <= left for left, right in zip(timestamps, timestamps[1:])):
+        if timestamps and any(right <= left for left, right in itertools.pairwise(timestamps)):
             raise ValueError("timestamps must be strictly increasing")
         object.__setattr__(self, "samples", samples)
         object.__setattr__(self, "sampling_hz", hz)

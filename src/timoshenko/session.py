@@ -210,7 +210,7 @@ class MonitoringSession:
         candidate_limit = min(self._window_samples + extra, 262_144)
         values_by_sensor: dict[str, dict[int, float]] = {}
         last_keys: dict[str, int] = {}
-        for sensor_id, unit in zip(self._sensor_ids, self._units):
+        for sensor_id, unit in zip(self._sensor_ids, self._units, strict=True):
             samples: dict[int, float] = {}
             recent = self._store.recent_observations(
                 sensor_id=sensor_id,

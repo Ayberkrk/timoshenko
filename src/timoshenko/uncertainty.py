@@ -75,7 +75,7 @@ def propagate(
     if any(not isinstance(name, str) for name in inputs):
         raise UncertaintyError("input names must be strings")
     names = tuple(name.strip() for name in inputs)
-    if any(not name or name != original for name, original in zip(names, inputs)) or len(set(names)) != len(names):
+    if any(not name or name != original for name, original in zip(names, inputs, strict=True)) or len(set(names)) != len(names):
         raise UncertaintyError("input names must be non-empty and distinct")
     if len(names) > 32:
         raise UncertaintyError("at most 32 uncertain inputs are supported")
@@ -237,7 +237,7 @@ def _finite_scalar(value: Any, label: str) -> float:
 
 def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray, label: str) -> float:
     try:
-        result = function(**dict(zip(names, values)))
+        result = function(**dict(zip(names, values, strict=True)))
     except Exception as error:
         raise UncertaintyError(f"equation evaluation failed for {label}: {error}") from error
     if isinstance(result, (bool, np.bool_)) or not np.isscalar(result):

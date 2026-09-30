@@ -13,6 +13,7 @@ Timoshenko dependency; it is only needed to run this example.
 """
 
 import inspect
+import itertools
 import math
 
 import timoshenko as tm
@@ -43,9 +44,9 @@ def pynite_model(node_positions):
     # PyNite's Iz is the strong axis and ksy pairs with it.
     model.add_section("Rect", section.area_m2, section.second_moment_z_m4, I_STRONG, 3.33e-3, ksy=KAPPA, ksz=KAPPA)
     names = [f"N{index + 1}" for index in range(len(node_positions))]
-    for name, x in zip(names, node_positions):
+    for name, x in zip(names, node_positions, strict=True):
         model.add_node(name, x, 0, 0)
-    for index, (start, end) in enumerate(zip(names, names[1:]), start=1):
+    for index, (start, end) in enumerate(itertools.pairwise(names), start=1):
         model.add_member(f"M{index}", start, end, "Glulam", "Rect", shear_deformable=True)
     return model
 

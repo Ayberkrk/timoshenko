@@ -91,7 +91,7 @@ class FrameSection:
         moduli = (self.section_modulus_at_positive_local_y_m3, self.section_modulus_at_negative_local_y_m3)
         if (moduli[0] is None) != (moduli[1] is None):
             raise ValueError("both local-y section moduli must be supplied together")
-        for name, value in zip(("section_modulus_at_positive_local_y_m3", "section_modulus_at_negative_local_y_m3"), moduli):
+        for name, value in zip(("section_modulus_at_positive_local_y_m3", "section_modulus_at_negative_local_y_m3"), moduli, strict=True):
             if value is not None:
                 object.__setattr__(self, name, _positive(name, value))
 
@@ -340,14 +340,14 @@ def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:
         raise ValueError("frame solution did not satisfy free-degree equilibrium within tolerance")
     reactions = residual
     member_forces: list[tuple[float, float, float, float, float, float]] = []
-    for member_index, member in enumerate(model.members):
+    for member_index, _member in enumerate(model.members):
         dofs, transform, local_stiffness, equivalent_load, _, _, _ = element_data[member_index]
         local_displacement = transform @ displacements[dofs]
         end_force = local_stiffness @ local_displacement - equivalent_load
         member_forces.append(_end_actions(end_force))
     member_stresses = tuple(
         _member_end_normal_stress(member, end_force)
-        for member, end_force in zip(model.members, member_forces)
+        for member, end_force in zip(model.members, member_forces, strict=True)
     )
     energy = 0.5 * float(displacements @ stiffness @ displacements)
     return FrameAnalysisResult(
@@ -430,7 +430,7 @@ def analyze_p_delta(
     if residual_norm > max(1e-8, tolerance * 10.0) * scale:
         raise ValueError("P-delta solution did not satisfy free-degree equilibrium within tolerance")
     member_forces: list[tuple[float, float, float, float, float, float]] = []
-    for member, data, axial_tension in zip(model.members, element_data, axial_forces):
+    for member, data, axial_tension in zip(model.members, element_data, axial_forces, strict=True):
         dofs, transform, local_stiffness, equivalent_load, length, _, _ = data
         local_displacement = transform @ displacement[dofs]
         end_force = local_stiffness @ local_displacement
@@ -442,7 +442,7 @@ def analyze_p_delta(
         member_forces.append(_end_actions(end_force))
     member_stresses = tuple(
         _member_end_normal_stress(member, end_force)
-        for member, end_force in zip(model.members, member_forces)
+        for member, end_force in zip(model.members, member_forces, strict=True)
     )
     strain_energy = 0.5 * float(displacement @ material_stiffness @ displacement)
     return FrameAnalysisResult(
@@ -588,7 +588,7 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
         raise ValueError("the restrained frame stiffness is singular; check supports and connectivity") from exc
     _, axial_forces = _p_delta_tangent(model, stiffness, element_data, displacement)
     geometric = np.zeros_like(stiffness)
-    for member, data, axial_tension in zip(model.members, element_data, axial_forces):
+    for member, data, axial_tension in zip(model.members, element_data, axial_forces, strict=True):
         dofs, transform, _, _, length, _, _ = data
         local = -axial_tension * _geometric_stiffness_unit(length, member)
         if isinstance(member, FrameMember):
@@ -706,7 +706,7 @@ def _constraint_arrays(model: StructuralModel) -> tuple[np.ndarray, np.ndarray]:
 def _p_delta_tangent(model, material_stiffness, element_data, displacement):
     tangent = material_stiffness.copy()
     axial_forces = []
-    for member, data in zip(model.members, element_data):
+    for member, data in zip(model.members, element_data, strict=True):
         dofs, transform, local_stiffness, equivalent_load, length, _, _ = data
         local_displacement = transform @ displacement[dofs]
         material_end_force = local_stiffness @ local_displacement - equivalent_load
@@ -742,7 +742,7 @@ def _condense_rotational_releases(
     stiffness: np.ndarray,
     load: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    released = tuple(index for index, flag in zip((2, 5), (member.release_rotation_i, member.release_rotation_j)) if flag)
+    released = tuple(index for index, flag in zip((2, 5), (member.release_rotation_i, member.release_rotation_j), strict=True) if flag)
     if not released:
         return stiffness, load
     retained = tuple(index for index in range(6) if index not in released)
@@ -870,7 +870,7 @@ def _global_equilibrium_residual(
     force_y = float(np.sum(rows[:, 1]))
     displacement_rows = displacements.reshape((-1, 3))
     moment_z = 0.0
-    for node, row, movement in zip(model.nodes, rows, displacement_rows):
+    for node, row, movement in zip(model.nodes, rows, displacement_rows, strict=True):
         x, y = node.x_m, node.y_m
         if deformed_positions:
             x += movement[0]

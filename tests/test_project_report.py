@@ -2,6 +2,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 
@@ -48,7 +49,7 @@ def test_project_multichannel_uses_fdd_and_can_be_stored(tmp_path):
     with tm.SQLiteStore(tmp_path / "runs.db") as store:
         run_id = store.save_run(result, run_id="r1")
         assert store.get_run(run_id) == json.loads(json.dumps(result.to_dict()))
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.IntegrityError):
             store.save_run(result, run_id="r1")
 
 
