@@ -226,7 +226,7 @@ def _normalize_ring(ring: Ring, name: str) -> list[Point2D]:
 
 def _ring_integrals(ring: Sequence[Point2D]) -> tuple[float, float, float, float, float, float]:
     area2 = first_x6 = first_y6 = inertia_x12 = inertia_y12 = product24 = 0.0
-    for (x0, y0), (x1, y1) in zip(ring, (*ring[1:], ring[0])):
+    for (x0, y0), (x1, y1) in zip(ring, (*ring[1:], ring[0]), strict=True):
         cross = x0 * y1 - x1 * y0
         area2 += cross
         first_x6 += (x0 + x1) * cross
@@ -329,6 +329,6 @@ def _rings_intersect(
 ) -> bool:
     return any(
         _segments_intersect(a, b, c, d, area_tolerance, length_tolerance)
-        for a, b in zip(first, (*first[1:], first[0]))
-        for c, d in zip(second, (*second[1:], second[0]))
+        for a, b in zip(first, (*first[1:], first[0]), strict=True)
+        for c, d in zip(second, (*second[1:], second[0]), strict=True)
     )

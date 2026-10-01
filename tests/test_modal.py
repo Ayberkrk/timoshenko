@@ -43,7 +43,7 @@ def test_structure_validation():
 
 def sine_record(frequencies, amplitudes, fs=100.0, n=8192, noise=0.0, seed=0):
     t = np.arange(n) / fs
-    signal = sum(a * np.sin(2 * np.pi * f * t) for f, a in zip(frequencies, amplitudes))
+    signal = sum(a * np.sin(2 * np.pi * f * t) for f, a in zip(frequencies, amplitudes, strict=True))
     if noise:
         signal = signal + noise * np.random.default_rng(seed).standard_normal(n)
     return tm.SensorData(signal, fs)
@@ -78,7 +78,7 @@ def test_fdd_recovers_frequencies_and_mode_shapes():
     data = tm.MultiChannelData(samples, sampling_hz=fs, channel_ids=["a", "b", "c"], units=["g"] * 3)
     result = tm.identify_fdd(data, max_modes=2, nperseg=1024)
     assert result.frequencies_hz == pytest.approx([3.1, 9.7], abs=result.resolution_hz)
-    for mode, expected in zip(result.modes, (shape_1, shape_2)):
+    for mode, expected in zip(result.modes, (shape_1, shape_2), strict=True):
         estimate = np.array(mode.shape_real) + 1j * np.array(mode.shape_imag)
         mac = abs(np.vdot(estimate, expected)) ** 2 / (np.vdot(estimate, estimate).real * np.dot(expected, expected))
         assert mac > 0.999

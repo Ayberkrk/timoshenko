@@ -29,7 +29,7 @@ class FDDMode:
             "channel_ids": list(self.channel_ids),
             "units": list(self.units),
             "mode_shape": [
-                {"real": real, "imag": imag} for real, imag in zip(self.shape_real, self.shape_imag)
+                {"real": real, "imag": imag} for real, imag in zip(self.shape_real, self.shape_imag, strict=True)
             ],
             "singular_value_ratio": self.singular_value_ratio,
         }

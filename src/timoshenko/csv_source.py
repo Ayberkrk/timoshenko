@@ -26,7 +26,7 @@ def _parse_timestamp(value: str) -> float:
         except ValueError as error:
             raise ValueError("timestamp must be Unix seconds or timezone-aware ISO-8601") from error
         if parsed.tzinfo is None or parsed.utcoffset() is None:
-            raise ValueError("ISO-8601 timestamps must include a timezone")
+            raise ValueError("ISO-8601 timestamps must include a timezone") from None
         result = parsed.timestamp()
     if not math.isfinite(result):
         raise ValueError("timestamp must be finite")
