@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Sequence
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -630,7 +630,10 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
     )
 
 
-def modal_assurance_criterion(reference_shape, observed_shape) -> float:
+def modal_assurance_criterion(
+    reference_shape: Sequence[complex | float] | np.ndarray,
+    observed_shape: Sequence[complex | float] | np.ndarray,
+) -> float:
     """Return MAC for two same-length real or complex shape vectors.
 
     The caller must first map measured channels and model degrees of freedom
@@ -650,7 +653,11 @@ def modal_assurance_criterion(reference_shape, observed_shape) -> float:
     return float(min(1.0, max(0.0, mac)))
 
 
-def _assemble(model: StructuralModel, *, include_member_loads: bool):
+def _assemble(
+    model: StructuralModel,
+    *,
+    include_member_loads: bool,
+) -> tuple[np.ndarray, np.ndarray, list[Any]]:
     dof_count = 3 * len(model.nodes)
     stiffness = np.zeros((dof_count, dof_count), dtype=float)
     load = np.asarray(model.nodal_loads, dtype=float).reshape(-1)
@@ -703,7 +710,12 @@ def _constraint_arrays(model: StructuralModel) -> tuple[np.ndarray, np.ndarray]:
     return restrained, prescribed
 
 
-def _p_delta_tangent(model, material_stiffness, element_data, displacement):
+def _p_delta_tangent(
+    model: StructuralModel,
+    material_stiffness: np.ndarray,
+    element_data: Sequence[Any],
+    displacement: np.ndarray,
+) -> tuple[np.ndarray, list[float]]:
     tangent = material_stiffness.copy()
     axial_forces = []
     for member, data in zip(model.members, element_data, strict=True):

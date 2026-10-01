@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -129,7 +130,7 @@ def identify(
     )
 
 
-def pair_modes(reference_hz, observed_hz) -> tuple[tuple[int, int], ...]:
+def pair_modes(reference_hz: Sequence[float], observed_hz: Sequence[float]) -> tuple[tuple[int, int], ...]:
     """Pair observed with reference frequencies by nearest log-frequency.
 
     Each observed frequency is assigned to the reference mode it is closest
@@ -158,7 +159,7 @@ _MIN_DAMPING_AVERAGES = 8
 _MIN_DAMPING_BINS = 4.0
 
 
-def validate_options(sample_count: int, sampling_hz: float, **options) -> None:
+def validate_options(sample_count: int, sampling_hz: float, **options: Any) -> None:
     """Check ``identify`` options for a record length without any data.
 
     Raises the same errors ``identify`` would raise for these options, so

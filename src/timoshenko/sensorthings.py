@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .observations import Observation, ObservationBatch
-from .plugins import PLUGIN_API_VERSION
+from .plugins import PLUGIN_API_VERSION, PluginContributions
 
 
 class SensorThingsSourceError(RuntimeError):
@@ -46,7 +46,15 @@ class _SameOriginRedirectHandler(HTTPRedirectHandler):
     def __init__(self, origin: tuple[str, str, int]):
         self._allowed_origin = origin
 
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: Any,
+        headers: Any,
+        newurl: str,
+    ) -> Request | None:
         try:
             target = _origin(newurl)
         except ValueError:
@@ -252,7 +260,7 @@ class SensorThingsPlugin:
     name = "timoshenko-sensorthings"
     api_version = PLUGIN_API_VERSION
 
-    def register(self, registry) -> None:
+    def register(self, registry: PluginContributions) -> None:
         registry.register_source("sensorthings", SensorThingsObservationSource)
 
 

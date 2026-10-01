@@ -10,7 +10,7 @@ import threading
 from typing import Any, Callable
 
 from .observations import Observation, ObservationBatch
-from .plugins import PLUGIN_API_VERSION
+from .plugins import PLUGIN_API_VERSION, PluginContributions
 from .session import SessionIngestResult
 
 
@@ -143,7 +143,14 @@ class MqttObservationSource:
             self.close()
             raise
 
-    def _on_connect(self, client, userdata, flags, reason_code, properties=None) -> None:
+    def _on_connect(
+        self,
+        client: Any,
+        userdata: Any,
+        flags: Any,
+        reason_code: Any,
+        properties: Any = None,
+    ) -> None:
         try:
             if int(reason_code) != 0:
                 raise MQTTSourceError(f"MQTT broker rejected the connection: {reason_code}")
@@ -155,7 +162,7 @@ class MqttObservationSource:
         finally:
             self._connected.set()
 
-    def _on_message(self, client, userdata, message) -> None:
+    def _on_message(self, client: Any, userdata: Any, message: Any) -> None:
         with self._state_lock:
             if self._failure is not None:
                 return
@@ -265,7 +272,7 @@ class MqttPlugin:
     name = "timoshenko-mqtt"
     api_version = PLUGIN_API_VERSION
 
-    def register(self, registry) -> None:
+    def register(self, registry: PluginContributions) -> None:
         registry.register_source("mqtt", MqttObservationSource)
 
 
