@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Any
 
 import numpy as np
 
@@ -202,7 +203,7 @@ def identify_fdd(
     )
 
 
-def validate_options(sample_count: int, sampling_hz: float, **options) -> None:
+def validate_options(sample_count: int, sampling_hz: float, **options: Any) -> None:
     """Check ``identify_fdd`` options for a record length without any data.
 
     Raises the same errors ``identify_fdd`` would raise for these options, so

@@ -164,7 +164,12 @@ class SQLiteStore:
             raise RuntimeError("store is closed")
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: object,
+    ) -> None:
         self.close()
 
     def upsert_asset(self, asset: Asset) -> None:

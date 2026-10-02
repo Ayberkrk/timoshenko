@@ -73,7 +73,12 @@ class SessionRunner:
         self._consuming = False
         return self
 
-    def __exit__(self, exc_type, exc, traceback) -> Literal[False]:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: object,
+    ) -> Literal[False]:
         self._active = False
         try:
             self.source.close()
