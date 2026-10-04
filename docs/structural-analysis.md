@@ -42,8 +42,10 @@ The frame section inertia is about a principal local z axis. Coupled bending
 and out-of-plane torsion from an unsymmetric section are not assembled into
 this planar model. ``FrameMaterial.poisson_ratio`` is optional; when supplied,
 the engine checks that E and G agree with isotropic elasticity within 0.2
-percent. Member transverse load equivalents use cubic beam interpolation, so
-verify member-load response independently when shear flexibility is important.
+percent. Member point forces and point moments are converted to nodal loads
+with the shape functions of the member stiffness, including its shear
+parameter when a shear area is supplied, so a loaded member gives the same
+nodal response as the same member split at the load.
 
 The result reports three displacement components per node, support reactions,
 local member end actions ordered as axial force, shear force, moment at node i
