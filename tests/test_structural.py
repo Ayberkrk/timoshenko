@@ -1176,6 +1176,48 @@ def test_structural_model_rejects_invalid_indices_and_singular_supports():
         tm.analyze_linear_static(model)
 
 
+def test_modal_keeps_low_mode_of_wide_spectrum_and_zeroes_rigid_body_modes():
+    def portal(mass_per_length):
+        return tm.StructuralModel(
+            nodes=(
+                tm.FrameNode(0.0, 0.0),
+                tm.FrameNode(0.0, 3.0),
+                tm.FrameNode(4.0, 3.0),
+                tm.FrameNode(4.0, 0.0),
+            ),
+            members=tuple(
+                tm.FrameMember(
+                    index, index + 1, MATERIAL, SECTION, mass_per_length_kg_m=mass_per_length
+                )
+                for index in range(3)
+            ),
+            restraints=(
+                (True, True, True),
+                (False, False, False),
+                (False, False, False),
+                (True, True, True),
+            ),
+            nodal_lumped_masses_kg=(0.0, 1_000.0, 1_000.0, 0.0),
+        )
+
+    # A member mass of 1e-6 kg/m puts the sway eigenvalue about eleven decades
+    # below the largest one. The limit of zero member mass is the reference.
+    reference = tm.analyze_modes(portal(None), mode_count=1).frequencies_hz[0]
+    assert tm.analyze_modes(portal(1e-6), mode_count=1).frequencies_hz[0] == pytest.approx(
+        reference, rel=1e-5
+    )
+
+    free_bar = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(2.0, 0.0)),
+        members=(tm.AxialMember(0, 1, E, AREA, mass_per_length_kg_m=78.5),),
+        restraints=((False, True, False), (False, True, False)),
+    )
+    rigid, elastic = tm.analyze_modes(free_bar, mode_count=2).frequencies_hz
+    assert rigid == 0.0
+    # Free-free bar with a consistent mass matrix: omega^2 = 12 E / (rho L^2).
+    assert elastic == pytest.approx(math.sqrt(12.0 * E * AREA / 78.5) / 2.0 / (2.0 * math.pi))
+
+
 def test_modal_analysis_requires_mass_on_free_degrees():
     model = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(1.0, 0.0)),
