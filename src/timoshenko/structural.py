@@ -886,6 +886,17 @@ def analyze_p_delta(
         for member, end_force in zip(model.members, member_forces, strict=True)
     )
     strain_energy = 0.5 * float(displacement @ material_stiffness @ displacement)
+    # A released end keeps its rotation on an internal degree of freedom, so
+    # the member's fixed-end moment sits there instead of on the joint. Return
+    # it to the owning node, or the moment sum is not self-equilibrated.
+    node_dof_count = 3 * len(model.nodes)
+    resultants = load + residual
+    nodal_resultants = resultants[:node_dof_count].copy()
+    for member, data in zip(model.members, element_data, strict=True):
+        dofs = data[0]
+        for position, node_index in ((2, member.node_i), (5, member.node_j)):
+            if dofs[position] >= node_dof_count:
+                nodal_resultants[3 * node_index + 2] += resultants[dofs[position]]
     return FrameAnalysisResult(
         displacements=_node_rows(displacement[: 3 * len(model.nodes)]),
         reactions=_node_rows(residual[: 3 * len(model.nodes)]),
@@ -897,8 +908,8 @@ def analyze_p_delta(
         member_end_normal_stresses_pa=member_stresses,
         global_equilibrium_residual=_global_equilibrium_residual(
             model,
-            load[: 3 * len(model.nodes)] + residual[: 3 * len(model.nodes)],
-            displacement[: 3 * len(model.nodes)],
+            nodal_resultants,
+            displacement[:node_dof_count],
             deformed_positions=True,
         ),
     )

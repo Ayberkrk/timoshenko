@@ -987,6 +987,34 @@ def test_p_delta_accepts_pinned_base_and_matches_buckling_amplification():
     assert amplification == pytest.approx(1.0 / (1.0 - compression / p_cr), rel=1e-2)
 
 
+@pytest.mark.parametrize(("release_i", "release_j"), [(True, False), (False, True)])
+def test_p_delta_global_equilibrium_includes_released_end_member_loads(release_i, release_j):
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(0.0, 3.0)),
+        members=(
+            tm.FrameMember(
+                0,
+                1,
+                MATERIAL,
+                SECTION,
+                uniform_load_local_y_n_m=500.0,
+                point_loads=(tm.FramePointLoad(1.0, force_local_y_n=200.0),),
+                release_rotation_i=release_i,
+                release_rotation_j=release_j,
+            ),
+        ),
+        restraints=((True, True, not release_i), (False, False, not release_j)),
+        nodal_loads=((0.0, 0.0, 0.0), (0.0, -1_000.0, 0.0)),
+    )
+    first_order = tm.analyze_linear_static(model)
+    second_order = tm.analyze_p_delta(model)
+
+    # The fixed-end moment left off a released end is q L^2 / 12 = 375 N m, far
+    # above the P-delta approximation's own residual of about 1e-3 N m.
+    assert first_order.global_equilibrium_residual == pytest.approx((0.0, 0.0, 0.0), abs=1e-6)
+    assert second_order.global_equilibrium_residual == pytest.approx((0.0, 0.0, 0.0), abs=1e-2)
+
+
 def test_triangular_truss_and_portal_frame_assemble_global_equilibrium():
     truss = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(2.0, 0.0), tm.FrameNode(1.0, 1.0)),
