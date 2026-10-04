@@ -5,6 +5,7 @@ Timoshenko supports explicit source-factory registration and opt-in Python entry
 ```python
 from timoshenko import PLUGIN_API_VERSION
 
+
 class MyGatewayPlugin:
     name = "my-gateway"
     api_version = PLUGIN_API_VERSION

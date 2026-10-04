@@ -5,6 +5,7 @@ Timoshenko separates analysis/session logic from the system that collects sensor
 ```python
 import timoshenko as tm
 
+
 class GatewaySource:
     def open(self):
         self.client.connect()
@@ -21,6 +22,7 @@ class GatewaySource:
 
     def close(self):
         self.client.disconnect()
+
 
 with tm.SessionRunner(GatewaySource(), session, max_batches=1000) as runner:
     for result in runner:

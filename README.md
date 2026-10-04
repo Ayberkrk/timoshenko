@@ -55,7 +55,7 @@ structure = tm.Structure(
     story_masses_kg=[120_000.0, 110_000.0],
     story_stiffness_n_m=[85_000_000.0, 70_000_000.0],
 )
-print(structure.natural_frequencies_hz)          # (2.626, 6.476)
+print(structure.natural_frequencies_hz)  # (2.626, 6.476)
 
 fs = 100.0
 t = np.arange(60_000) / fs
@@ -64,10 +64,10 @@ signal = np.sin(2 * np.pi * f1 * t) + 0.4 * np.sin(2 * np.pi * f2 * t)
 sensors = tm.SensorData(signal, sampling_hz=fs, unit="m/s^2")
 
 result = tm.monitor(structure, sensors, review_threshold_pct=3.0)
-print(result.structure.update_scale_factor)      # 0.903, since stiffness scales with frequency squared
+print(result.structure.update_scale_factor)  # 0.903, since stiffness scales with frequency squared
 for change in result.health.mode_changes:
     print(change.mode_number, change.change_pct)  # 1 -5.0, then 2 -5.0
-print(result.health.review_recommended)          # True
+print(result.health.review_recommended)  # True
 ```
 
 <p align="center">
@@ -90,8 +90,12 @@ import timoshenko as tm
 
 section = tm.rectangle_section(width_m=0.3, height_m=0.6)
 beam = tm.simply_supported_uniform_load(
-    20_000.0, 6.0, 30e9, section.second_moment_y_m4,
-    shear_modulus_pa=12.5e9, area_m2=section.area_m2,
+    20_000.0,
+    6.0,
+    30e9,
+    section.second_moment_y_m4,
+    shear_modulus_pa=12.5e9,
+    area_m2=section.area_m2,
 )
 print(beam.bending_m, beam.shear_m)  # 2.083 mm bending, 0.048 mm shear
 
