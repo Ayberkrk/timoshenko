@@ -943,7 +943,11 @@ def analyze_modes(model: StructuralModel, *, mode_count: int = 6) -> ModalAnalys
     negative_tolerance = 1e-10 * spectral_scale
     if float(np.min(eigenvalues)) < -negative_tolerance:
         raise ValueError("frame stiffness has a negative eigenvalue; the model is unstable")
-    eigenvalues = np.where(eigenvalues < negative_tolerance, 0.0, eigenvalues)
+    # Report rigid-body modes as exactly zero. The threshold is the rounding
+    # error of the eigenvalue solve, not the instability tolerance, so a valid
+    # low mode of a model with a wide spectrum keeps its frequency.
+    zero_tolerance = 64.0 * len(eigenvalues) * np.finfo(float).eps * spectral_scale
+    eigenvalues = np.where(eigenvalues < zero_tolerance, 0.0, eigenvalues)
     selected = np.argsort(eigenvalues)[: min(int(mode_count), len(eigenvalues))]
     frequencies, shapes, generalized_masses = [], [], []
     participation_x, participation_y = [], []

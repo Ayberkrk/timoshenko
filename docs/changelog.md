@@ -42,6 +42,9 @@ change is listed here.
 - Standardized planar structural validation on the shared finite and positive
   value checks.
 - CI now tests and declares support for Python 3.14.
+- Frame modal analysis no longer reports a valid low mode as 0 Hz when the
+  eigenvalues span more than ten decades. Only eigenvalues within rounding
+  error of zero are reported as rigid-body modes.
 
 ### Changed
 
