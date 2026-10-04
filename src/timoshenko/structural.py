@@ -7,7 +7,7 @@ rotation about global z. Models use SI units throughout.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import math
 from typing import Any, Sequence
 
@@ -27,6 +27,14 @@ def _positive(name: str, value: float) -> float:
         raise ValueError(f"{name} must be greater than zero")
     return value
 
+def _json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    return value
 
 @dataclass(frozen=True)
 class FrameNode:
@@ -281,6 +289,8 @@ class FrameAnalysisResult:
     member_end_normal_stresses_pa: tuple[tuple[float, float, float, float] | None, ...] = ()
     global_equilibrium_residual: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _json_ready(asdict(self))
 
 @dataclass(frozen=True)
 class ModalAnalysisResult:
@@ -300,6 +310,9 @@ class ModalAnalysisResult:
     total_participating_mass_x_kg: float = 0.0
     total_participating_mass_y_kg: float = 0.0
 
+    def to_dict(self) -> dict[str, Any]:
+        return _json_ready(asdict(self))
+
 
 @dataclass(frozen=True)
 class BucklingAnalysisResult:
@@ -309,6 +322,9 @@ class BucklingAnalysisResult:
     mode_shapes: tuple[tuple[tuple[float, float, float], ...], ...]
     reference_member_axial_forces_n: tuple[float, ...]
     notes: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return _json_ready(asdict(self))
 
 
 def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:

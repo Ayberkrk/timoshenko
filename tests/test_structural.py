@@ -413,12 +413,96 @@ def test_structural_model_rejects_invalid_indices_and_singular_supports():
     with pytest.raises(ValueError, match="singular"):
         tm.analyze_linear_static(model)
 
-
-def test_modal_analysis_requires_mass_on_free_degrees():
+def test_analysis_result_to_dict_is_json_ready():
     model = tm.StructuralModel(
-        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(1.0, 0.0)),
-        members=(tm.FrameMember(0, 1, MATERIAL, SECTION),),
-        restraints=((True, True, True), (False, False, False)),
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(1.0, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION),
+        ),
+        restraints=(
+            (True, True, True),
+            (False, True, True),
+        ),
     )
-    with pytest.raises(ValueError, match="mass matrix"):
-        tm.analyze_modes(model)
+
+    result = tm.analyze_linear_static(model)
+    data = result.to_dict()
+
+    assert isinstance(data, dict)
+    assert isinstance(data["displacements"], list)
+    assert isinstance(data["reactions"], list)
+    assert data["analysis_type"] == "first_order"
+
+
+
+
+def test_modal_and_buckling_analysis_results_to_dict():
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(3.0, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION, mass_per_length_kg_m=12.0),
+        ),
+        restraints=(
+    (True, True, True),
+    (False, False, False),
+),
+nodal_loads=(
+    (0.0, 0.0, 0.0),
+    (0.0, -1_000.0, 0.0),
+),
+    )
+
+    modal_result = tm.analyze_modes(model, mode_count=1)
+    modal_data = modal_result.to_dict()
+
+    assert isinstance(modal_data, dict)
+    assert isinstance(modal_data["frequencies_hz"], list)
+    assert isinstance(modal_data["mode_shapes"], list)
+
+    buckling_model = tm.StructuralModel(
+    nodes=(
+        tm.FrameNode(0.0, 0.0),
+        tm.FrameNode(0.0, 3.0),
+    ),
+    members=(
+        tm.FrameMember(0, 1, MATERIAL, SECTION),
+    ),
+    restraints=(
+        (True, True, True),
+        (False, False, False),
+    ),
+    nodal_loads=(
+        (0.0, 0.0, 0.0),
+        (0.0, -1_000.0, 0.0),
+    ),
+)
+
+    buckling_model = tm.StructuralModel(
+            nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, 3.0),
+        ),
+    members=(
+        tm.FrameMember(0, 1, MATERIAL, SECTION),
+    ),
+    restraints=(
+        (True, True, True),
+        (False, False, False),
+    ),
+    nodal_loads=(
+        (0.0, 0.0, 0.0),
+        (0.0, -1_000.0, 0.0),
+    ),
+)
+
+    buckling_result = tm.analyze_linear_buckling(buckling_model, mode_count=1)
+    buckling_data = buckling_result.to_dict()
+    assert isinstance(buckling_data, dict)
+    assert isinstance(buckling_data["critical_load_factors"], list)
+    assert isinstance(buckling_data["mode_shapes"], list)

@@ -100,6 +100,19 @@ initial imperfections, material yielding and post-buckling response. The
 reference member axial force output is positive in tension and negative in
 compression.
 
+## Result serialization
+
+Frame, modal and buckling analysis results provide `to_dict()` for convenient
+serialization. The returned dictionary contains the same result fields as the
+dataclass, with tuples converted to lists so the result can be passed to JSON
+serialization.
+
+For example:
+
+```python
+result = tm.analyze_linear_static(model)
+data = result.to_dict()
+`data` can then be serialized with `json.dumps(data)`.
 ## Scope and checks
 
 The initial solver covers small-displacement, linear-elastic, planar trusses
