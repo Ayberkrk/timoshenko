@@ -23,6 +23,10 @@ change is listed here.
   use equivalent nodal loads consistent with the shear-flexible stiffness.
   The cubic Euler-Bernoulli equivalents used before gave wrong displacements,
   reactions and end actions for off-centre loads on such members.
+- Added ``tm.recover_member_response`` to recover frame-member section forces,
+  transverse deflection and moment extrema from a first-order static result.
+- Added ``FramePartialUniformLoad`` for uniform local member loads over a
+  bounded span, integrated with the frame member's stiffness shape functions.
 
 ## 2.0.3
 

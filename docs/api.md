@@ -17,11 +17,14 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
 | `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
 | `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and optional local-y elastic section moduli. |
-| `tm.FrameMember` | A two-node prismatic frame member with optional local point and uniform loads, rotational end releases and mass per length. |
+| `tm.FrameMember` | A two-node prismatic frame member with optional local point, full-span and partial-span uniform loads, rotational end releases and mass per length. |
 | `tm.FramePointLoad` | A local point force and/or moment at a specified distance along a member. |
 | `tm.analyze_linear_static` | Assemble and solve one linear static planar load case; return displacements, reactions, member end actions and selected end stresses. |
 | `tm.analyze_p_delta` | Iterate an approximate axial-force geometric stiffness for small-displacement 2D frame response. |
 | `tm.FrameAnalysisResult` | Frame displacements, reactions, member end actions, selected normal stresses, strain energy and local and global equilibrium residuals. |
+| `tm.recover_member_response` | Recover section forces, transverse deflection and moment extrema along one frame member from a first-order static result. |
+| `tm.FrameMemberResponse` | Stations, axial/shear forces, bending moments, transverse deflections and signed/absolute moment extrema for one frame member. |
+| `tm.FramePartialUniformLoad` | A local x/y uniform load over a start-to-end interval of one frame member. |
 | `tm.analyze_modes` | Solve an undamped generalized eigenproblem for a planar model using supplied member and nodal mass. |
 | `tm.ModalAnalysisResult` | Natural frequencies, peak-normalized mode shapes, generalized and effective modal masses, and directional participation ratios. |
 | `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
