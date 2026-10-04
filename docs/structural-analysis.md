@@ -37,6 +37,10 @@ outline. Uniform load components and ``FramePointLoad`` forces are positive
 along local x and local y. A point moment is positive about local z. Axial bars
 support local axial loads and do not use bending section data. Rotational end
 releases are condensed from frame-member stiffness and load vectors.
+Modal and buckling analyses keep each released member-end rotation as an
+internal degree of freedom, separate from the joint rotation. P-delta analysis
+also solves with internal released-end rotations, then reports only joint
+displacements.
 
 The frame section inertia is about a principal local z axis. Coupled bending
 and out-of-plane torsion from an unsymmetric section are not assembled into
@@ -68,8 +72,9 @@ Timoshenko shear flexibility. It is a first-order P-delta approximation for
 stability screening, not a nonlinear equilibrium path or a design resistance
 calculation.
 
-The P-delta and linear buckling routines do not yet support frame-member end
-releases. Static first-order analysis supports them.
+P-delta and linear buckling analyses support frame-member end releases,
+including pinned-base columns. Released member-end rotations remain independent
+of joint rotations in both analyses.
 
 ## Frame modes
 
@@ -79,11 +84,13 @@ degree of freedom. Its member mass interpolation is Euler-Bernoulli, member
 rotary inertia is omitted, and restraints are removed before solving the
 generalized eigenproblem. It returns frequencies, mode shapes normalized to
 unit peak translation, generalized mass, directional participation factors,
-effective modal mass and effective modal mass ratio in global x and y. Frame
-members with end releases are not yet supported by the modal mass formulation.
-A mode calculation needs positive mass on every free component. Compare
-measured and analytical shapes with ``tm.modal_assurance_criterion`` after
-mapping the measured degrees of freedom into the same order.
+effective modal mass and effective modal mass ratio in global x and y. A
+released member-end rotation is an internal degree of freedom with the member's
+consistent mass; the returned mode shape still contains the three joint
+components at each node. A mode calculation needs positive mass on every free
+component. Compare measured and analytical shapes with
+``tm.modal_assurance_criterion`` after mapping the measured degrees of freedom
+into the same order.
 
 For direction vector ``r``, modal participation is
 ``Gamma = phi.T @ M @ r / (phi.T @ M @ phi)`` and effective modal mass is
@@ -126,7 +133,8 @@ response and does not make a safety finding.
 The frame routines are checked against cantilever closed-form displacement,
 Timoshenko shear deflection, point-load and uniform-load reactions, prescribed
 support movement, released ends, axial-bar response, portal equilibrium,
-modal participation and buckling mesh refinement. For safety-related work,
+modal participation and buckling mesh refinement, including pinned-pinned and
+fixed-pinned columns. For safety-related work,
 verify each model's signs, local axes, boundary conditions, mesh adequacy and
 assumptions against an independent engineering reference.
 
