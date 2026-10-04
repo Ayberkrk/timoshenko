@@ -423,3 +423,187 @@ def test_sensorthings_origin_treats_default_port_as_same_origin():
 
     assert _origin("https://STA.example.org/a") == _origin("https://sta.example.org:443/b")
     assert _origin("http://sta.example.org/a") != _origin("https://sta.example.org/a")
+
+
+@pytest.mark.parametrize(
+    "url, options, message",
+    [
+        ("", {}, "observations_url must be non-empty"),
+        ("/Observations", {}, "must be absolute HTTP"),
+        ("https://user:secret@sta.example.org/Observations", {}, "embedded credentials"),
+        ("https://sta.example.org/Observations#fragment", {}, "fragments"),
+        ("https://sta.example.org:bad/Observations", {}, "invalid port"),
+        ("https://sta.example.org/Observations", {"sensor_id": " "}, "sensor_id and unit"),
+        ("https://sta.example.org/Observations", {"unit": " "}, "sensor_id and unit"),
+        ("https://sta.example.org/Observations", {"timeout_s": 0}, "timeout_s"),
+        ("https://sta.example.org/Observations", {"timeout_s": math.nan}, "timeout_s"),
+        ("https://sta.example.org/Observations", {"max_response_bytes": True}, "max_response_bytes"),
+        ("https://sta.example.org/Observations", {"max_response_bytes": 0}, "max_response_bytes"),
+        ("https://sta.example.org/Observations", {"max_observations_per_page": 1.5}, "max_observations_per_page"),
+        ("https://sta.example.org/Observations", {"max_observations_per_page": 65_537}, "max_observations_per_page"),
+        ("https://sta.example.org/Observations", {"bearer_token": " "}, "bearer_token"),
+        ("https://sta.example.org/Observations", {"default_quality": 1}, "default_quality"),
+        ("https://sta.example.org/Observations", {"quality_parameter": " "}, "quality_parameter"),
+        ("https://sta.example.org/Observations", {"name": " "}, "name must be non-empty"),
+        ("https://sta.example.org/Observations", {"source_id": " "}, "source_id must be non-empty"),
+    ],
+)
+def test_sensorthings_constructor_rejects_invalid_configuration(url, options, message):
+    arguments = {"sensor_id": "s", "unit": "g"}
+    arguments.update(options)
+    with pytest.raises(ValueError, match=message):
+        tm.SensorThingsObservationSource(url, **arguments)
+
+
+@pytest.mark.parametrize(
+    "payload, message",
+    [
+        (b"not json", "invalid SensorThings observation page"),
+        (b"\xff", "invalid SensorThings observation page"),
+        (json.dumps([]).encode(), "response must be a JSON object"),
+        (json.dumps({"value": None}).encode(), "response must be a JSON object"),
+        (json.dumps({"value": [{"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z"}] * 2}).encode(), "more than 1 observations"),
+        (json.dumps({"value": [], "@iot.nextLink": " "}).encode(), "nextLink must be a non-empty"),
+        (json.dumps({"value": [], "@iot.nextLink": 3}).encode(), "nextLink must be a non-empty"),
+        (json.dumps({"value": [], "@iot.nextLink": "/relative"}).encode(), "invalid SensorThings observation page"),
+    ],
+)
+def test_sensorthings_rejects_malformed_or_oversized_pages(payload, message):
+    source = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        max_observations_per_page=1,
+        fetcher=lambda request, timeout, limit: payload,
+    )
+    source.open()
+    with pytest.raises(SensorThingsSourceError, match=message):
+        source.read_batch()
+
+
+@pytest.mark.parametrize(
+    "phenomenon_time, message",
+    [
+        (None, "phenomenonTime"),
+        ("", "phenomenonTime"),
+        ("2024-01-01T00:00:00", "phenomenonTime"),
+        ("2024-01-01/2024-01-02", "phenomenonTime"),
+        ("not-a-time", "invalid SensorThings observation page"),
+    ],
+    ids=["missing", "empty", "timezone-naive", "interval", "malformed"],
+)
+def test_sensorthings_requires_an_instant_with_a_timezone(phenomenon_time, message):
+    payload = json.dumps({"value": [{"result": 2.0, "phenomenonTime": phenomenon_time}]}).encode()
+    source = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: payload,
+    )
+    source.open()
+    with pytest.raises(SensorThingsSourceError, match=message):
+        source.read_batch()
+
+
+@pytest.mark.parametrize(
+    "item, message",
+    [
+        (1, "must be an Observation JSON object"),
+        ({"result": True, "phenomenonTime": "2024-01-01T00:00:00Z"}, "scalar number"),
+        ({"result": math.inf, "phenomenonTime": "2024-01-01T00:00:00Z"}, "finite"),
+        ({"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": []}, "parameters must be an object"),
+        ({"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": {"ok": 1}}, "must be boolean"),
+    ],
+)
+def test_sensorthings_rejects_invalid_observation_fields(item, message):
+    payload = json.dumps({"value": [item]}).encode()
+    source = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        quality_parameter="ok",
+        fetcher=lambda request, timeout, limit: payload,
+    )
+    source.open()
+    with pytest.raises(SensorThingsSourceError, match=message):
+        source.read_batch()
+
+
+@pytest.mark.parametrize("error", [TimeoutError("slow"), OSError("offline")])
+def test_sensorthings_wraps_transport_errors_and_rejects_non_bytes(error):
+    failed = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: (_ for _ in ()).throw(error),
+    )
+    failed.open()
+    with pytest.raises(SensorThingsSourceError, match="request failed") as caught:
+        failed.read_batch()
+    assert caught.value.__cause__ is error
+
+    wrong_type = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: bytearray(b"{}"),
+    )
+    wrong_type.open()
+    with pytest.raises(SensorThingsSourceError, match="must return response bytes"):
+        wrong_type.read_batch()
+
+
+def test_sensorthings_enforces_response_size_and_reports_http_status(monkeypatch):
+    oversized = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        max_response_bytes=2,
+        fetcher=lambda request, timeout, limit: b"long",
+    )
+    oversized.open()
+    with pytest.raises(SensorThingsSourceError, match="exceeded 2 bytes"):
+        oversized.read_batch()
+
+    class Response:
+        status = 503
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    class Opener:
+        def open(self, request, timeout):
+            return Response()
+
+    monkeypatch.setattr("timoshenko.sensorthings.build_opener", lambda *handlers: Opener())
+    unavailable = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations", sensor_id="s", unit="g"
+    )
+    unavailable.open()
+    with pytest.raises(SensorThingsSourceError, match="server returned HTTP 503"):
+        unavailable.read_batch()
+
+
+def test_sensorthings_requires_open_state_and_close_resets_pagination():
+    source = tm.SensorThingsObservationSource(
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: json.dumps({"value": []}).encode(),
+    )
+    with pytest.raises(RuntimeError, match=r"open\(\) must be called"):
+        source.read_batch()
+    source.open()
+    with pytest.raises(RuntimeError, match="already open"):
+        source.open()
+    assert source.read_batch().count == 0
+    assert source.read_batch() is None
+    source.close()
+    with pytest.raises(RuntimeError, match=r"open\(\) must be called"):
+        source.read_batch()
+    source.open()
+    assert source.read_batch().count == 0
+    source.close()
