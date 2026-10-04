@@ -792,6 +792,12 @@ def _condense_massless_dofs(
         raise ValueError(
             "zero-mass degrees of freedom cannot be statically condensed; check for mechanisms"
         ) from exc
+    residual = kzz @ recovery + kzm
+    scale = max(float(np.max(np.abs(kzm), initial=0.0)), float(np.max(np.abs(kzz))), np.finfo(float).tiny)
+    if not np.all(np.isfinite(recovery)) or float(np.max(np.abs(residual), initial=0.0)) > 1e-8 * scale:
+        raise ValueError(
+            "zero-mass degrees of freedom cannot be statically condensed; check for mechanisms"
+        )
     reduced_stiffness = kmm + kmz @ recovery
     reduced_mass = mass[np.ix_(massful, massful)]
     return reduced_stiffness, reduced_mass, massful, massless, recovery
