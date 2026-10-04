@@ -9,18 +9,14 @@ from timoshenko.sensors import SensorData, load_sensors
 
 @pytest.mark.parametrize("sampling_hz", [0.0, -1.0, float("nan"), float("inf")])
 def test_sensor_data_rejects_invalid_sampling_frequency(sampling_hz):
-    with pytest.raises(
-        ValueError, match="sampling_hz must be finite and greater than zero"
-    ):
+    with pytest.raises(ValueError, match="sampling_hz must be finite and greater than zero"):
         SensorData([0.0] * 8, sampling_hz)
 
 
 def test_sensor_data_rejects_short_or_non_finite_samples():
     with pytest.raises(ValueError, match="at least 8 numeric samples are required"):
         SensorData([0.0] * 7, 10.0)
-    with pytest.raises(
-        ValueError, match="sensor samples must all be finite numeric values"
-    ):
+    with pytest.raises(ValueError, match="sensor samples must all be finite numeric values"):
         SensorData([0.0] * 7 + [float("nan")], 10.0)
 
 
@@ -42,17 +38,13 @@ def test_load_sensors_accepts_existing_data_only_with_matching_frequency():
     data = SensorData(range(8), 10.0)
     assert load_sensors(data) is data
     assert load_sensors(data, sampling_hz=10.0) is data
-    with pytest.raises(
-        ValueError, match="sampling_hz conflicts with the supplied SensorData"
-    ):
+    with pytest.raises(ValueError, match="sampling_hz conflicts with the supplied SensorData"):
         load_sensors(data, sampling_hz=20.0)
 
 
 def test_load_sensors_parses_csv_headers_values_and_source_names(tmp_path):
     path = tmp_path / "reading.CSV"
-    path.write_text(
-        "other,value\n0,1\n1,2\n2,3\n3,4\n4,5\n5,6\n6,7\n7,8\n", encoding="utf-8"
-    )
+    path.write_text("other,value\n0,1\n1,2\n2,3\n3,4\n4,5\n5,6\n6,7\n7,8\n", encoding="utf-8")
     data = load_sensors(path, sampling_hz=5.0)
     assert data.samples == tuple(float(i) for i in range(1, 9))
     assert data.channel == "reading"
@@ -83,16 +75,10 @@ def test_load_sensors_reads_json_objects_and_json_lines(tmp_path):
         '[{"value":0},{"value":1},{"value":2},{"value":3},{"value":4},{"value":5},{"value":6},{"value":7}]',
         encoding="utf-8",
     )
-    assert load_sensors(rows_path, sampling_hz=2.0).samples == tuple(
-        float(i) for i in range(8)
-    )
+    assert load_sensors(rows_path, sampling_hz=2.0).samples == tuple(float(i) for i in range(8))
     lines_path = tmp_path / "lines.jsonl"
-    lines_path.write_text(
-        "\n".join('{"value":%d}' % i for i in range(8)), encoding="utf-8"
-    )
-    assert load_sensors(lines_path, sampling_hz=2.0).samples == tuple(
-        float(i) for i in range(8)
-    )
+    lines_path.write_text("\n".join('{"value":%d}' % i for i in range(8)), encoding="utf-8")
+    assert load_sensors(lines_path, sampling_hz=2.0).samples == tuple(float(i) for i in range(8))
 
 
 @pytest.mark.parametrize(
@@ -108,9 +94,7 @@ def test_load_sensors_reads_json_objects_and_json_lines(tmp_path):
         ('[1,2,3,4,5,6,7,"nan"]', "sensor input line 8 is not finite"),
     ],
 )
-def test_load_sensors_rejects_invalid_json_shapes_and_values(
-    tmp_path, payload, message
-):
+def test_load_sensors_rejects_invalid_json_shapes_and_values(tmp_path, payload, message):
     path = tmp_path / "invalid.json"
     path.write_text(payload, encoding="utf-8")
     with pytest.raises(ValueError, match=message):
@@ -120,9 +104,7 @@ def test_load_sensors_rejects_invalid_json_shapes_and_values(
 def test_load_sensors_rejects_unsupported_source_and_missing_frequency(tmp_path):
     unsupported = tmp_path / "sensors.txt"
     unsupported.write_text("0", encoding="utf-8")
-    with pytest.raises(
-        ValueError, match=r"sensor source must be a \.csv, \.json, or \.jsonl file"
-    ):
+    with pytest.raises(ValueError, match=r"sensor source must be a \.csv, \.json, or \.jsonl file"):
         load_sensors(unsupported, sampling_hz=10.0)
     with pytest.raises(ValueError, match="sampling_hz is required for sensor input"):
         load_sensors([0.0] * 8)
@@ -132,18 +114,12 @@ def test_multichannel_data_validates_shape_and_channel_limits():
     args = {"sampling_hz": 10.0, "channel_ids": ["a", "b"], "units": ["g", "g"]}
     with pytest.raises(ValueError, match="samples must be a 2D array shaped"):
         MultiChannelData(np.zeros(8), **args)
-    with pytest.raises(
-        ValueError, match="at least 8 samples and 2 channels are required"
-    ):
+    with pytest.raises(ValueError, match="at least 8 samples and 2 channels are required"):
         MultiChannelData(np.zeros((7, 2)), **args)
-    with pytest.raises(
-        ValueError, match="at least 8 samples and 2 channels are required"
-    ):
+    with pytest.raises(ValueError, match="at least 8 samples and 2 channels are required"):
         MultiChannelData(np.zeros((8, 1)), 10.0, ["a"], ["g"])
     with pytest.raises(ValueError, match="at most 32 channels are accepted"):
-        MultiChannelData(
-            np.zeros((8, 33)), 10.0, [str(i) for i in range(33)], ["g"] * 33
-        )
+        MultiChannelData(np.zeros((8, 33)), 10.0, [str(i) for i in range(33)], ["g"] * 33)
 
 
 @pytest.mark.parametrize(
@@ -163,9 +139,7 @@ def test_multichannel_data_validates_channel_metadata(channel_ids, units, messag
 
 @pytest.mark.parametrize("sampling_hz", [0.0, -1.0, float("nan"), float("inf")])
 def test_multichannel_data_rejects_invalid_frequency(sampling_hz):
-    with pytest.raises(
-        ValueError, match="sampling_hz must be finite and greater than zero"
-    ):
+    with pytest.raises(ValueError, match="sampling_hz must be finite and greater than zero"):
         MultiChannelData(np.zeros((8, 2)), sampling_hz, ["a", "b"], ["g", "g"])
 
 
@@ -178,9 +152,7 @@ def test_multichannel_data_rejects_non_finite_samples():
 
 def test_multichannel_csv_validates_columns_units_ids_and_headers(tmp_path):
     path = tmp_path / "channels.csv"
-    path.write_text(
-        "a,b\n" + "".join(f"{i},{i + 1}\n" for i in range(8)), encoding="utf-8"
-    )
+    path.write_text("a,b\n" + "".join(f"{i},{i + 1}\n" for i in range(8)), encoding="utf-8")
     data = load_multichannel_csv(path, columns=["a", "b"], sampling_hz=10.0)
     assert data.channel_ids == ("a", "b")
     assert data.units == ("unknown", "unknown")
@@ -190,9 +162,7 @@ def test_multichannel_csv_validates_columns_units_ids_and_headers(tmp_path):
         match="columns must contain at least two distinct non-empty CSV headings",
     ):
         load_multichannel_csv(path, columns=["a", "a"], sampling_hz=10.0)
-    with pytest.raises(
-        ValueError, match="units must contain one entry per selected column"
-    ):
+    with pytest.raises(ValueError, match="units must contain one entry per selected column"):
         load_multichannel_csv(path, columns=["a", "b"], sampling_hz=10.0, units=["g"])
     with pytest.raises(
         ValueError,
@@ -213,9 +183,7 @@ def test_multichannel_csv_validates_columns_units_ids_and_headers(tmp_path):
         ("nan", "CSV row 10 has a non-finite value in 'b'"),
     ],
 )
-def test_multichannel_csv_rejects_invalid_cells_with_row_and_column(
-    tmp_path, bad_value, message
-):
+def test_multichannel_csv_rejects_invalid_cells_with_row_and_column(tmp_path, bad_value, message):
     path = tmp_path / "bad.csv"
     path.write_text(
         "a,b\n" + "".join(f"{i},{i}\n" for i in range(8)) + f"8,{bad_value}\n",

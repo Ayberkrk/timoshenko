@@ -59,7 +59,10 @@ def main() -> None:
 
         print(f"Project: {result.project_name}")
         print(f"Method: {result.method}; evidence: {result.health.status}")
-        print("Candidate frequencies (Hz):", ", ".join(f"{hz:.3f}" for hz in result.modal.frequencies_hz))
+        print(
+            "Candidate frequencies (Hz):",
+            ", ".join(f"{hz:.3f}" for hz in result.modal.frequencies_hz),
+        )
         print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
 
 

@@ -7,7 +7,18 @@ import pytest
 import timoshenko as tm
 
 
-def batch(start, count, *, fs=100.0, frequency=7.0, sensors=("a",), batch_id="", source_id="", unit="g", skip=()):
+def batch(
+    start,
+    count,
+    *,
+    fs=100.0,
+    frequency=7.0,
+    sensors=("a",),
+    batch_id="",
+    source_id="",
+    unit="g",
+    skip=(),
+):
     observations = []
     for index in range(start, start + count):
         if index in skip:
@@ -65,7 +76,9 @@ def test_newer_schema_is_refused(tmp_path):
 
 
 def make_session(**kwargs):
-    defaults = dict(sensor_ids=["a"], units=["g"], sampling_hz=100.0, window_samples=256, hop_samples=128)
+    defaults = dict(
+        sensor_ids=["a"], units=["g"], sampling_hz=100.0, window_samples=256, hop_samples=128
+    )
     defaults.update(kwargs)
     return tm.MonitoringSession(tm.Structure([1.0e5], [2.0e8]), **defaults)
 
@@ -99,13 +112,25 @@ def test_session_counts_rejected_observations():
         tm.Observation("zz", "zz", "g", 0.0, timestamp=1.06),
     ]
     result = session.ingest(tm.ObservationBatch(observations))
-    assert (result.accepted_count, result.out_of_order_count, result.unit_mismatch_count, result.invalid_time_count,
-            result.missing_timestamp_count, result.rejected_quality_count, result.unknown_sensor_count) == (1, 1, 1, 1, 1, 1, 1)
+    assert (
+        result.accepted_count,
+        result.out_of_order_count,
+        result.unit_mismatch_count,
+        result.invalid_time_count,
+        result.missing_timestamp_count,
+        result.rejected_quality_count,
+        result.unknown_sensor_count,
+    ) == (1, 1, 1, 1, 1, 1, 1)
 
 
 def test_multichannel_session_uses_fdd():
-    session = make_session(sensor_ids=["a", "b"], units=["g", "g"], window_samples=512, hop_samples=512,
-                           analysis_options={"nperseg": 256})
+    session = make_session(
+        sensor_ids=["a", "b"],
+        units=["g", "g"],
+        window_samples=512,
+        hop_samples=512,
+        analysis_options={"nperseg": 256},
+    )
     result = session.ingest(batch(0, 512, sensors=("a", "b")))
     assert [report.method for report in result.reports] == ["fdd"]
     assert result.reports[0].modal.frequencies_hz[0] == pytest.approx(7.0, abs=100.0 / 256)
@@ -140,7 +165,11 @@ def test_restore_rebuilds_latest_contiguous_window(tmp_path):
         assert restored.last_event_time_s == pytest.approx(2.99)
         result = session.ingest(batch(300, 128, batch_id="b2", source_id="s"))
         assert len(result.reports) == 1
-        stale = session.ingest(tm.ObservationBatch([tm.Observation("a", "a", "g", 0.0, timestamp=1.0)], batch_id="b3", source_id="s"))
+        stale = session.ingest(
+            tm.ObservationBatch(
+                [tm.Observation("a", "a", "g", 0.0, timestamp=1.0)], batch_id="b3", source_id="s"
+            )
+        )
         assert stale.out_of_order_count == 1
 
 
@@ -209,7 +238,9 @@ def test_session_scale_factor_stays_relative_to_original_model():
     session = make_session(window_samples=2048, hop_samples=2048)
     reports = session.ingest(batch(0, 4096, frequency=frequency)).reports
     assert [round(r.structure.update_scale_factor, 2) for r in reports] == [0.9, 0.9]
-    assert session.structure.story_stiffness_n_m[0] == pytest.approx(2e8 * reports[-1].structure.update_scale_factor)
+    assert session.structure.story_stiffness_n_m[0] == pytest.approx(
+        2e8 * reports[-1].structure.update_scale_factor
+    )
 
 
 def test_session_review_threshold_reaches_health():
@@ -285,7 +316,10 @@ def test_store_filters_observations_by_asset_and_time_and_returns_missing_assets
         ({"order_by": "newest"}, "order_by must be"),
         ({"start_timestamp": math.nan}, "start_timestamp must be finite"),
         ({"end_timestamp": math.inf}, "end_timestamp must be finite"),
-        ({"start_timestamp": 2.0, "end_timestamp": 1.0}, "start_timestamp must be less than or equal"),
+        (
+            {"start_timestamp": 2.0, "end_timestamp": 1.0},
+            "start_timestamp must be less than or equal",
+        ),
         ({"limit": 0}, "limit must be positive"),
     ],
 )
@@ -296,7 +330,10 @@ def test_observation_query_rejects_invalid_order_bounds_and_limit(arguments, mes
 
 @pytest.mark.parametrize("limit", [0, -1, 262145])
 def test_recent_observations_rejects_limits_outside_supported_range(limit):
-    with tm.SQLiteStore(":memory:") as store, pytest.raises(ValueError, match="limit must be between 1 and 262144"):
+    with (
+        tm.SQLiteStore(":memory:") as store,
+        pytest.raises(ValueError, match="limit must be between 1 and 262144"),
+    ):
         store.recent_observations(sensor_id="a", limit=limit)
 
 

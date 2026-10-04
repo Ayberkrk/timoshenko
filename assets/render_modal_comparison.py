@@ -72,28 +72,52 @@ text{font-family:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
 ]
 for tick in range(int(low), int(high) + 1, 2):
     tx = x(tick)
-    parts.append(f'<line class="grid" x1="{tx:.1f}" y1="{row_top - 22}" x2="{tx:.1f}" y2="{axis_y}" stroke-width="1"/>')
-    parts.append(f'<text x="{tx:.1f}" y="{axis_y + 18}" text-anchor="middle" class="muted" font-size="11">{tick:+d}%</text>'.replace("+0%", "0%"))
-parts.append(f'<text x="{(left + right) / 2:.1f}" y="{axis_y + 40}" text-anchor="middle" class="muted" font-size="11">'
-             "Frequency change from the reference model</text>")
+    parts.append(
+        f'<line class="grid" x1="{tx:.1f}" y1="{row_top - 22}" x2="{tx:.1f}" y2="{axis_y}" stroke-width="1"/>'
+    )
+    parts.append(
+        f'<text x="{tx:.1f}" y="{axis_y + 18}" text-anchor="middle" class="muted" font-size="11">{tick:+d}%</text>'.replace(
+            "+0%", "0%"
+        )
+    )
+parts.append(
+    f'<text x="{(left + right) / 2:.1f}" y="{axis_y + 40}" text-anchor="middle" class="muted" font-size="11">'
+    "Frequency change from the reference model</text>"
+)
 zero, threshold = x(0.0), x(-REVIEW_THRESHOLD_PCT)
-parts.append(f'<line class="zero" x1="{zero:.1f}" y1="{row_top - 26}" x2="{zero:.1f}" y2="{axis_y}" stroke-width="1.5"/>')
-parts.append(f'<text x="{zero + 6:.1f}" y="{row_top - 18}" class="ink2" font-size="11">model</text>')
-parts.append(f'<line class="threshold" x1="{threshold:.1f}" y1="{row_top - 26}" x2="{threshold:.1f}" y2="{axis_y}" '
-             'stroke-width="1.5" stroke-dasharray="4 4"/>')
-parts.append(f'<text x="{threshold - 6:.1f}" y="{row_top - 18}" text-anchor="end" class="ink2" font-size="11">'
-             "review threshold</text>")
+parts.append(
+    f'<line class="zero" x1="{zero:.1f}" y1="{row_top - 26}" x2="{zero:.1f}" y2="{axis_y}" stroke-width="1.5"/>'
+)
+parts.append(
+    f'<text x="{zero + 6:.1f}" y="{row_top - 18}" class="ink2" font-size="11">model</text>'
+)
+parts.append(
+    f'<line class="threshold" x1="{threshold:.1f}" y1="{row_top - 26}" x2="{threshold:.1f}" y2="{axis_y}" '
+    'stroke-width="1.5" stroke-dasharray="4 4"/>'
+)
+parts.append(
+    f'<text x="{threshold - 6:.1f}" y="{row_top - 18}" text-anchor="end" class="ink2" font-size="11">'
+    "review threshold</text>"
+)
 for row, item in enumerate(changes):
     y = row_top + row * row_step
     observed = result.modal.modes[item.observed_mode_number - 1].frequency_hz
     px = x(item.change_pct)
-    parts.append(f'<text x="24" y="{y - 2}" class="ink" font-size="13" font-weight="600">Mode {item.mode_number}</text>')
-    parts.append(f'<text x="24" y="{y + 15}" class="ink2" font-size="12">'
-                 f"{item.reference_frequency_hz:.3f} Hz model, {observed:.3f} Hz observed</text>")
-    parts.append(f'<line class="stem" x1="{zero:.1f}" y1="{y + 2}" x2="{px:.1f}" y2="{y + 2}" stroke-width="2"/>')
+    parts.append(
+        f'<text x="24" y="{y - 2}" class="ink" font-size="13" font-weight="600">Mode {item.mode_number}</text>'
+    )
+    parts.append(
+        f'<text x="24" y="{y + 15}" class="ink2" font-size="12">'
+        f"{item.reference_frequency_hz:.3f} Hz model, {observed:.3f} Hz observed</text>"
+    )
+    parts.append(
+        f'<line class="stem" x1="{zero:.1f}" y1="{y + 2}" x2="{px:.1f}" y2="{y + 2}" stroke-width="2"/>'
+    )
     parts.append(f'<circle class="dot" cx="{px:.1f}" cy="{y + 2}" r="6" stroke-width="2"/>')
-    parts.append(f'<text x="{px - 12:.1f}" y="{y + 6}" text-anchor="end" class="ink" font-size="12" '
-                 f'font-weight="600">{item.change_pct:.1f}%</text>')
+    parts.append(
+        f'<text x="{px - 12:.1f}" y="{y + 6}" text-anchor="end" class="ink" font-size="12" '
+        f'font-weight="600">{item.change_pct:.1f}%</text>'
+    )
 parts.append("</svg>\n")
 
 destination = Path(__file__).with_name("modal-comparison.svg")

@@ -24,4 +24,8 @@ monte_carlo = tm.uncertainty.propagate(
     seed=42,
 )
 
-print(json.dumps({"first_order": first_order.to_dict(), "monte_carlo": monte_carlo.to_dict()}, indent=2))
+print(
+    json.dumps(
+        {"first_order": first_order.to_dict(), "monte_carlo": monte_carlo.to_dict()}, indent=2
+    )
+)

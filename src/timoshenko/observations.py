@@ -27,7 +27,9 @@ class Observation:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        sensor_id, name, unit = (str(item).strip() for item in (self.sensor_id, self.name, self.unit))
+        sensor_id, name, unit = (
+            str(item).strip() for item in (self.sensor_id, self.name, self.unit)
+        )
         value = float(self.value)
         timestamp = None if self.timestamp is None else float(self.timestamp)
         if not sensor_id or not name or not unit:
@@ -45,7 +47,9 @@ class Observation:
         object.__setattr__(self, "timestamp", timestamp)
         object.__setattr__(self, "quality", bool(self.quality))
         object.__setattr__(self, "asset_id", None if self.asset_id is None else str(self.asset_id))
-        object.__setattr__(self, "source_id", None if self.source_id is None else str(self.source_id))
+        object.__setattr__(
+            self, "source_id", None if self.source_id is None else str(self.source_id)
+        )
         object.__setattr__(self, "metadata", dict(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:

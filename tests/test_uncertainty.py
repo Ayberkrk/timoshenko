@@ -18,7 +18,9 @@ def test_first_order_is_exact_for_linear_function():
     assert result.standard_uncertainty == pytest.approx(expected, rel=1e-8)
     assert result.sensitivity_coefficients == pytest.approx({"a": 2.0, "b": -3.0})
     half_width = NormalDist().inv_cdf(0.975) * expected
-    assert (result.interval_low, result.interval_high) == pytest.approx((8.0 - half_width, 8.0 + half_width))
+    assert (result.interval_low, result.interval_high) == pytest.approx(
+        (8.0 - half_width, 8.0 + half_width)
+    )
 
 
 def test_first_order_correlated_product_matches_gum_law():
@@ -42,9 +44,15 @@ def test_first_order_on_engine_equation_matches_analytic_derivatives():
 
 
 def test_monte_carlo_linear_function_matches_normal_result_and_is_seeded():
-    kwargs = dict(standard_uncertainties={"a": 0.2, "b": 0.1}, method="monte_carlo", samples=50_000, seed=11)
-    first = tm.propagate_uncertainty(lambda a, b: 2.0 * a - 3.0 * b, {"a": 10.0, "b": 4.0}, **kwargs)
-    second = tm.propagate_uncertainty(lambda a, b: 2.0 * a - 3.0 * b, {"a": 10.0, "b": 4.0}, **kwargs)
+    kwargs = dict(
+        standard_uncertainties={"a": 0.2, "b": 0.1}, method="monte_carlo", samples=50_000, seed=11
+    )
+    first = tm.propagate_uncertainty(
+        lambda a, b: 2.0 * a - 3.0 * b, {"a": 10.0, "b": 4.0}, **kwargs
+    )
+    second = tm.propagate_uncertainty(
+        lambda a, b: 2.0 * a - 3.0 * b, {"a": 10.0, "b": 4.0}, **kwargs
+    )
     assert first == second
     expected = math.sqrt((2 * 0.2) ** 2 + (3 * 0.1) ** 2)
     assert first.estimate == pytest.approx(8.0, abs=4 * expected / math.sqrt(50_000))
@@ -72,10 +80,16 @@ def test_invalid_uncertainty_configuration_is_rejected(kwargs):
 
 def test_domain_errors_are_reported():
     with pytest.raises(UncertaintyError, match="equation evaluation failed for nominal inputs"):
-        tm.propagate_uncertainty(lambda x: math.sqrt(x), {"x": -1.0}, standard_uncertainties={"x": 0.1})
+        tm.propagate_uncertainty(
+            lambda x: math.sqrt(x), {"x": -1.0}, standard_uncertainties={"x": 0.1}
+        )
     with pytest.raises(UncertaintyError, match="Monte Carlo evaluation failed"):
         tm.propagate_uncertainty(
-            lambda x: math.sqrt(x), {"x": 0.01}, standard_uncertainties={"x": 1.0}, method="monte_carlo", samples=1000
+            lambda x: math.sqrt(x),
+            {"x": 0.01},
+            standard_uncertainties={"x": 1.0},
+            method="monte_carlo",
+            samples=1000,
         )
 
 
@@ -105,17 +119,41 @@ def test_non_callable_function_raises_type_error():
     [
         ({}, dict(standard_uncertainties={}), "inputs must be a non-empty mapping"),
         ({1: 1.0}, dict(standard_uncertainties={1: 0.1}), "input names must be strings"),
-        ({"": 1.0}, dict(standard_uncertainties={"": 0.1}), "input names must be non-empty and distinct"),
-        ({" x ": 1.0}, dict(standard_uncertainties={" x ": 0.1}), "input names must be non-empty and distinct"),
+        (
+            {"": 1.0},
+            dict(standard_uncertainties={"": 0.1}),
+            "input names must be non-empty and distinct",
+        ),
+        (
+            {" x ": 1.0},
+            dict(standard_uncertainties={" x ": 0.1}),
+            "input names must be non-empty and distinct",
+        ),
         (
             {f"x{i}": 1.0 for i in range(33)},
             dict(standard_uncertainties={f"x{i}": 0.1 for i in range(33)}),
             "at most 32 uncertain inputs are supported",
         ),
-        ({"x": True}, dict(standard_uncertainties={"x": 0.1}), "input 'x' must be a finite real number"),
-        ({"x": [1.0]}, dict(standard_uncertainties={"x": 0.1}), "input 'x' must be a finite real number"),
-        ({"x": "bad"}, dict(standard_uncertainties={"x": 0.1}), "input 'x' must be a finite real number"),
-        ({"x": math.nan}, dict(standard_uncertainties={"x": 0.1}), "input 'x' must be a finite real number"),
+        (
+            {"x": True},
+            dict(standard_uncertainties={"x": 0.1}),
+            "input 'x' must be a finite real number",
+        ),
+        (
+            {"x": [1.0]},
+            dict(standard_uncertainties={"x": 0.1}),
+            "input 'x' must be a finite real number",
+        ),
+        (
+            {"x": "bad"},
+            dict(standard_uncertainties={"x": 0.1}),
+            "input 'x' must be a finite real number",
+        ),
+        (
+            {"x": math.nan},
+            dict(standard_uncertainties={"x": 0.1}),
+            "input 'x' must be a finite real number",
+        ),
         (
             {"x": 1.0},
             dict(standard_uncertainties={"x": 1e200}),
@@ -214,12 +252,16 @@ def test_one_sided_finite_difference_fallbacks_and_failure():
             raise ValueError("undefined away from 1")
         return x * x
 
-    with pytest.raises(UncertaintyError, match="cannot estimate sensitivity for 'x' near the supplied input"):
+    with pytest.raises(
+        UncertaintyError, match="cannot estimate sensitivity for 'x' near the supplied input"
+    ):
         tm.propagate_uncertainty(point_only, {"x": 1.0}, standard_uncertainties={"x": 0.1})
 
 
 def test_zero_input_and_zero_uncertainty_uses_unit_step_scale():
-    result = tm.propagate_uncertainty(lambda x: 5.0 * x, {"x": 0.0}, standard_uncertainties={"x": 0.0})
+    result = tm.propagate_uncertainty(
+        lambda x: 5.0 * x, {"x": 0.0}, standard_uncertainties={"x": 0.0}
+    )
     assert result.estimate == pytest.approx(0.0)
     assert result.standard_uncertainty == pytest.approx(0.0)
     assert result.sensitivity_coefficients["x"] == pytest.approx(5.0)
@@ -243,5 +285,9 @@ def test_non_finite_sensitivity_and_variance_are_rejected():
 
 @pytest.mark.parametrize("bad_output", [[1.0, 2.0], True, "not-a-number", math.nan, math.inf])
 def test_non_scalar_or_non_finite_equation_outputs_are_rejected(bad_output):
-    with pytest.raises(UncertaintyError, match="equation output for nominal inputs must be a finite scalar number"):
-        tm.propagate_uncertainty(lambda x: bad_output, {"x": 1.0}, standard_uncertainties={"x": 0.1})
+    with pytest.raises(
+        UncertaintyError, match="equation output for nominal inputs must be a finite scalar number"
+    ):
+        tm.propagate_uncertainty(
+            lambda x: bad_output, {"x": 1.0}, standard_uncertainties={"x": 0.1}
+        )

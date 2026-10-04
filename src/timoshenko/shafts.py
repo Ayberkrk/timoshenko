@@ -13,8 +13,13 @@ class CircularTorsionResult:
     twist_rad: float
 
 
-def circular_shaft_torsion(torque_nm: float, length_m: float, shear_modulus_pa: float,
-                           outer_diameter_m: float, inner_diameter_m: float = 0.0) -> CircularTorsionResult:
+def circular_shaft_torsion(
+    torque_nm: float,
+    length_m: float,
+    shear_modulus_pa: float,
+    outer_diameter_m: float,
+    inner_diameter_m: float = 0.0,
+) -> CircularTorsionResult:
     """Return elastic outer-fiber shear stress and twist for a round shaft.
 
     The shaft is prismatic and circular, with constant torque and linear
@@ -27,7 +32,9 @@ def circular_shaft_torsion(torque_nm: float, length_m: float, shear_modulus_pa: 
     if not all(math.isfinite(v) for v in (torque, length, shear, outer, inner)):
         raise ValueError("all inputs must be finite")
     if length <= 0.0 or shear <= 0.0 or outer <= 0.0 or inner < 0.0 or inner >= outer:
-        raise ValueError("length, shear modulus, and outer diameter must be positive; inner diameter must be in [0, outer)")
+        raise ValueError(
+            "length, shear modulus, and outer diameter must be positive; inner diameter must be in [0, outer)"
+        )
     polar = math.pi * (outer**4 - inner**4) / 32.0
     return CircularTorsionResult(
         polar_moment_m4=polar,

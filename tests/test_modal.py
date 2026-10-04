@@ -9,7 +9,10 @@ import timoshenko as tm
 def uniform_shear_building_frequencies(stories, mass, stiffness):
     """Closed form for a fixed-base uniform shear building with a free top."""
     return [
-        2.0 * math.sqrt(stiffness / mass) * math.sin((2 * j - 1) * math.pi / (2 * (2 * stories + 1))) / (2 * math.pi)
+        2.0
+        * math.sqrt(stiffness / mass)
+        * math.sin((2 * j - 1) * math.pi / (2 * (2 * stories + 1)))
+        / (2 * math.pi)
         for j in range(1, stories + 1)
     ]
 
@@ -27,9 +30,16 @@ def test_two_story_nonuniform_matches_characteristic_equation():
     a = m1 * m2
     b = -(m1 * k2 + m2 * (k1 + k2))
     c = k1 * k2
-    roots = sorted(((-b - math.sqrt(b * b - 4 * a * c)) / (2 * a), (-b + math.sqrt(b * b - 4 * a * c)) / (2 * a)))
+    roots = sorted(
+        (
+            (-b - math.sqrt(b * b - 4 * a * c)) / (2 * a),
+            (-b + math.sqrt(b * b - 4 * a * c)) / (2 * a),
+        )
+    )
     expected = [math.sqrt(root) / (2 * math.pi) for root in roots]
-    assert tm.Structure([m1, m2], [k1, k2]).natural_frequencies_hz == pytest.approx(expected, rel=1e-12)
+    assert tm.Structure([m1, m2], [k1, k2]).natural_frequencies_hz == pytest.approx(
+        expected, rel=1e-12
+    )
 
 
 def test_structure_validation():
@@ -43,14 +53,18 @@ def test_structure_validation():
 
 def sine_record(frequencies, amplitudes, fs=100.0, n=8192, noise=0.0, seed=0):
     t = np.arange(n) / fs
-    signal = sum(a * np.sin(2 * np.pi * f * t) for f, a in zip(frequencies, amplitudes, strict=True))
+    signal = sum(
+        a * np.sin(2 * np.pi * f * t) for f, a in zip(frequencies, amplitudes, strict=True)
+    )
     if noise:
         signal = signal + noise * np.random.default_rng(seed).standard_normal(n)
     return tm.SensorData(signal, fs)
 
 
 def test_peak_picking_recovers_frequencies_within_resolution():
-    result = tm.modal.identify(sine_record([2.3, 7.1, 13.4], [1.0, 0.6, 0.3], noise=0.02), max_modes=3)
+    result = tm.modal.identify(
+        sine_record([2.3, 7.1, 13.4], [1.0, 0.6, 0.3], noise=0.02), max_modes=3
+    )
     assert result.status == "ok"
     assert result.frequencies_hz == pytest.approx([2.3, 7.1, 13.4], abs=result.resolution_hz)
     assert list(result.frequencies_hz) == sorted(result.frequencies_hz)
@@ -109,12 +123,16 @@ def test_fdd_recovers_frequencies_and_mode_shapes():
     q1 = np.sin(2 * np.pi * 3.1 * t)
     q2 = 0.7 * np.sin(2 * np.pi * 9.7 * t + 0.4)
     samples = np.outer(q1, shape_1) + np.outer(q2, shape_2) + 0.01 * rng.standard_normal((n, 3))
-    data = tm.MultiChannelData(samples, sampling_hz=fs, channel_ids=["a", "b", "c"], units=["g"] * 3)
+    data = tm.MultiChannelData(
+        samples, sampling_hz=fs, channel_ids=["a", "b", "c"], units=["g"] * 3
+    )
     result = tm.identify_fdd(data, max_modes=2, nperseg=1024)
     assert result.frequencies_hz == pytest.approx([3.1, 9.7], abs=result.resolution_hz)
     for mode, expected in zip(result.modes, (shape_1, shape_2), strict=True):
         estimate = np.array(mode.shape_real) + 1j * np.array(mode.shape_imag)
-        mac = abs(np.vdot(estimate, expected)) ** 2 / (np.vdot(estimate, estimate).real * np.dot(expected, expected))
+        mac = abs(np.vdot(estimate, expected)) ** 2 / (
+            np.vdot(estimate, estimate).real * np.dot(expected, expected)
+        )
         assert mac > 0.999
 
 
@@ -123,12 +141,8 @@ def test_fdd_interpolates_a_tone_between_fft_bins():
     time = np.arange(n) / fs
     signal = np.sin(2.0 * np.pi * frequency * time)
     samples = np.column_stack((signal, 0.4 * signal))
-    data = tm.MultiChannelData(
-        samples, sampling_hz=fs, channel_ids=["a", "b"], units=["g", "g"]
-    )
-    result = tm.identify_fdd(
-        data, nperseg=nperseg, max_modes=1, min_frequency_hz=2.0
-    )
+    data = tm.MultiChannelData(samples, sampling_hz=fs, channel_ids=["a", "b"], units=["g", "g"])
+    result = tm.identify_fdd(data, nperseg=nperseg, max_modes=1, min_frequency_hz=2.0)
     assert abs(result.frequencies_hz[0] - frequency) < 0.001
     assert any("parabolic interpolation" in note for note in result.notes)
 
@@ -136,9 +150,18 @@ def test_fdd_interpolates_a_tone_between_fft_bins():
 def test_fdd_rejects_mixed_units_and_single_segment():
     samples = np.random.default_rng(0).standard_normal((64, 2))
     with pytest.raises(ValueError):
-        tm.identify_fdd(tm.MultiChannelData(samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "m/s^2"]))
+        tm.identify_fdd(
+            tm.MultiChannelData(
+                samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "m/s^2"]
+            )
+        )
     with pytest.raises(ValueError):
-        tm.identify_fdd(tm.MultiChannelData(samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "g"]), nperseg=64)
+        tm.identify_fdd(
+            tm.MultiChannelData(
+                samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "g"]
+            ),
+            nperseg=64,
+        )
 
 
 def test_uniform_stiffness_loss_is_recovered_by_update():
@@ -148,7 +171,9 @@ def test_uniform_stiffness_loss_is_recovered_by_update():
     result = tm.monitor(structure, sine_record(damaged, [1.0, 0.5, 0.3], n=65536))
     assert result.structure.update_status == "updated"
     assert result.structure.update_scale_factor == pytest.approx(scale, rel=0.01)
-    assert result.structure.reference_frequencies_hz == pytest.approx(structure.natural_frequencies_hz)
+    assert result.structure.reference_frequencies_hz == pytest.approx(
+        structure.natural_frequencies_hz
+    )
     assert [c.change_pct for c in result.health.mode_changes] == pytest.approx([-10.0] * 3, abs=0.2)
     assert result.health.status == "evidence_available"
 
@@ -241,7 +266,9 @@ def test_multichannel_data_is_read_only_copy():
 
 def test_load_sensors_rejects_blank_samples_instead_of_dropping_them(tmp_path):
     path = tmp_path / "gappy.csv"
-    path.write_text("value\n" + "".join(("" if 30 <= i < 40 else f"{math.sin(i)}") + "\n" for i in range(100)))
+    path.write_text(
+        "value\n" + "".join(("" if 30 <= i < 40 else f"{math.sin(i)}") + "\n" for i in range(100))
+    )
     with pytest.raises(ValueError, match="line 32"):
         tm.load_sensors(path, sampling_hz=100.0)
     wide = tmp_path / "wide.csv"
@@ -271,7 +298,9 @@ def test_missed_mode_does_not_invent_stiffness_change():
 
 def test_undamped_sine_is_not_reported_as_damped():
     for n in (1000, 100_000):
-        result = tm.modal.identify(tm.SensorData(np.sin(2 * np.pi * 5.0 * np.arange(n) / 100.0), 100.0))
+        result = tm.modal.identify(
+            tm.SensorData(np.sin(2 * np.pi * 5.0 * np.arange(n) / 100.0), 100.0)
+        )
         assert result.modes[0].damping_ratio is None
         assert any("withheld" in note for note in result.notes)
 
@@ -303,15 +332,25 @@ def test_short_record_withholds_damping():
 def test_review_flag_needs_a_threshold():
     structure = tm.Structure([1e5], [2e8])
     damaged = structure.natural_frequencies_hz[0] * 0.9
-    health = tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0], n=16384))
+    health = tm.health.assess(
+        structure=structure, observations=sine_record([damaged], [1.0], n=16384)
+    )
     assert health.mode_changes[0].change_pct == pytest.approx(-10.0, abs=0.1)
     assert not health.review_recommended and health.review_threshold_pct is None
     assert any("No review threshold" in note for note in health.limitations)
-    flagged = tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0], n=16384), review_threshold_pct=5.0)
+    flagged = tm.health.assess(
+        structure=structure,
+        observations=sine_record([damaged], [1.0], n=16384),
+        review_threshold_pct=5.0,
+    )
     assert flagged.review_recommended
     assert flagged.to_dict()["review_threshold_pct"] == 5.0
     with pytest.raises(ValueError):
-        tm.health.assess(structure=structure, observations=sine_record([damaged], [1.0]), review_threshold_pct=0.0)
+        tm.health.assess(
+            structure=structure,
+            observations=sine_record([damaged], [1.0]),
+            review_threshold_pct=0.0,
+        )
 
 
 def test_unchanged_structure_is_not_flagged_by_bin_quantization():
@@ -319,7 +358,11 @@ def test_unchanged_structure_is_not_flagged_by_bin_quantization():
     f0 = structure.natural_frequencies_hz[0]
     flagged = 0
     for n in range(4000, 4100):
-        health = tm.health.assess(structure=structure, observations=sine_record([f0], [1.0], n=n), review_threshold_pct=0.1)
+        health = tm.health.assess(
+            structure=structure,
+            observations=sine_record([f0], [1.0], n=n),
+            review_threshold_pct=0.1,
+        )
         assert all(change.resolution_limited for change in health.mode_changes)
         flagged += health.review_recommended
     assert flagged == 0

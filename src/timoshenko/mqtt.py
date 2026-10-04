@@ -58,10 +58,16 @@ class MqttObservationSource:
     ):
         host_value, topic_value = str(host).strip(), str(topic).strip()
         port_value, qos_value = int(port), int(qos)
-        keepalive, capacity, payload_limit = int(keepalive_s), int(queue_capacity), int(max_payload_bytes)
+        keepalive, capacity, payload_limit = (
+            int(keepalive_s),
+            int(queue_capacity),
+            int(max_payload_bytes),
+        )
         timeout = float(connect_timeout_s)
         if not host_value or not topic_value or "+" in topic_value or "#" in topic_value:
-            raise ValueError("host and a concrete subscription topic are required; topic filters are not accepted")
+            raise ValueError(
+                "host and a concrete subscription topic are required; topic filters are not accepted"
+            )
         if not 1 <= port_value <= 65535 or qos_value not in {0, 1, 2}:
             raise ValueError("port must be in 1..65535 and qos must be 0, 1, or 2")
         if keepalive < 1 or capacity < 1 or payload_limit < 1:
@@ -108,7 +114,9 @@ class MqttObservationSource:
             try:
                 mqtt = import_module("paho.mqtt.client")
             except ImportError as error:
-                raise ImportError("MQTT support requires the optional dependency; install timoshenko-engine[mqtt]") from error
+                raise ImportError(
+                    "MQTT support requires the optional dependency; install timoshenko-engine[mqtt]"
+                ) from error
             client = mqtt.Client(
                 callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
                 client_id=self.client_id,
@@ -171,26 +179,45 @@ class MqttObservationSource:
             if int(getattr(message, "qos", 0)) > 0:
                 result_code = client.ack(message.mid, message.qos)
                 if result_code not in (None, 0):
-                    self._set_failure(MQTTSourceError(f"MQTT acknowledgement of retained message failed with code {result_code!r}"))
+                    self._set_failure(
+                        MQTTSourceError(
+                            f"MQTT acknowledgement of retained message failed with code {result_code!r}"
+                        )
+                    )
             return
         payload = message.payload
         if len(payload) > self.max_payload_bytes:
-            self._set_failure(MQTTSourceError(f"MQTT payload exceeded {self.max_payload_bytes} bytes"))
+            self._set_failure(
+                MQTTSourceError(f"MQTT payload exceeded {self.max_payload_bytes} bytes")
+            )
             return
         try:
             decoded = json.loads(payload.decode("utf-8"))
             schema_version = decoded.get("schema_version") if isinstance(decoded, dict) else None
-            valid_schema_version = (type(schema_version) is int and schema_version == 1) or schema_version == "1"
+            valid_schema_version = (
+                type(schema_version) is int and schema_version == 1
+            ) or schema_version == "1"
             if not isinstance(decoded, dict) or not valid_schema_version:
                 raise ValueError("payload must be a JSON object with schema_version=1")
             source_id = decoded.get("source_id", "")
             batch_id = decoded.get("batch_id", "")
             observations = decoded.get("observations")
-            if not isinstance(source_id, str) or not source_id.strip() or not isinstance(batch_id, str) or not batch_id.strip() or not isinstance(observations, list) or not observations:
-                raise ValueError("source_id, batch_id, and a non-empty observations list are required")
+            if (
+                not isinstance(source_id, str)
+                or not source_id.strip()
+                or not isinstance(batch_id, str)
+                or not batch_id.strip()
+                or not isinstance(observations, list)
+                or not observations
+            ):
+                raise ValueError(
+                    "source_id, batch_id, and a non-empty observations list are required"
+                )
             if len(observations) > 4096:
                 raise ValueError("one MQTT batch may contain at most 4096 observations")
-            if any(not isinstance(item, dict) or item.get("timestamp") is None for item in observations):
+            if any(
+                not isinstance(item, dict) or item.get("timestamp") is None for item in observations
+            ):
                 raise ValueError("each MQTT observation must be an object with an event timestamp")
             batch = ObservationBatch(
                 [Observation(**item) for item in observations],
@@ -199,7 +226,11 @@ class MqttObservationSource:
             )
             self._queue.put_nowait(_MqttEnvelope(batch, message.mid, message.qos))
         except Full:
-            self._set_failure(MQTTSourceError("MQTT receive queue is full; ingestion stopped to expose possible message loss"))
+            self._set_failure(
+                MQTTSourceError(
+                    "MQTT receive queue is full; ingestion stopped to expose possible message loss"
+                )
+            )
         except Exception as error:
             self._set_failure(MQTTSourceError(f"invalid MQTT observation payload: {error}"))
 

@@ -30,7 +30,9 @@ def _utc_now() -> str:
 
 def _json(value: Any) -> str:
     try:
-        return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False, separators=(",", ":"))
+        return json.dumps(
+            value, ensure_ascii=False, sort_keys=True, allow_nan=False, separators=(",", ":")
+        )
     except (TypeError, ValueError) as error:
         raise ValueError(f"value is not JSON-serializable: {error}") from None
 
@@ -84,7 +86,9 @@ class SQLiteStore:
         version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
         if version > _SCHEMA_VERSION:
             self.close()
-            raise RuntimeError(f"database schema {version} is newer than supported schema {_SCHEMA_VERSION}")
+            raise RuntimeError(
+                f"database schema {version} is newer than supported schema {_SCHEMA_VERSION}"
+            )
         if version == _SCHEMA_VERSION:
             return
         with self._db:
@@ -188,14 +192,21 @@ class SQLiteStore:
         row = self._db.execute("SELECT * FROM assets WHERE asset_id=?", (str(asset_id),)).fetchone()
         if row is None:
             return None
-        return Asset(row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"]))
+        return Asset(
+            row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"])
+        )
 
     def list_assets(self, *, asset_type: str | None = None) -> tuple[Asset, ...]:
         if asset_type is None:
             rows = self._db.execute("SELECT * FROM assets ORDER BY asset_id").fetchall()
         else:
-            rows = self._db.execute("SELECT * FROM assets WHERE asset_type=? ORDER BY asset_id", (asset_type,)).fetchall()
-        return tuple(Asset(row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"])) for row in rows)
+            rows = self._db.execute(
+                "SELECT * FROM assets WHERE asset_type=? ORDER BY asset_id", (asset_type,)
+            ).fetchall()
+        return tuple(
+            Asset(row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"]))
+            for row in rows
+        )
 
     def add_relation(self, relation: Relation) -> None:
         if not isinstance(relation, Relation):
@@ -206,7 +217,12 @@ class SQLiteStore:
                    VALUES (?, ?, ?, ?)
                    ON CONFLICT(source_asset_id, relation_type, target_asset_id)
                    DO UPDATE SET metadata_json=excluded.metadata_json""",
-                (relation.source_asset_id, relation.relation_type, relation.target_asset_id, _json(relation.metadata)),
+                (
+                    relation.source_asset_id,
+                    relation.relation_type,
+                    relation.target_asset_id,
+                    _json(relation.metadata),
+                ),
             )
 
     def relations_for(self, asset_id: str) -> tuple[Relation, ...]:
@@ -214,7 +230,15 @@ class SQLiteStore:
             "SELECT * FROM relations WHERE source_asset_id=? OR target_asset_id=? ORDER BY relation_type, source_asset_id, target_asset_id",
             (str(asset_id), str(asset_id)),
         ).fetchall()
-        return tuple(Relation(row["source_asset_id"], row["relation_type"], row["target_asset_id"], json.loads(row["metadata_json"])) for row in rows)
+        return tuple(
+            Relation(
+                row["source_asset_id"],
+                row["relation_type"],
+                row["target_asset_id"],
+                json.loads(row["metadata_json"]),
+            )
+            for row in rows
+        )
 
     def has_batch(self, batch: ObservationBatch) -> bool:
         """Return whether this exact batch is already stored.
@@ -248,7 +272,9 @@ class SQLiteStore:
                     (batch.source_id, batch.batch_id),
                 ).fetchone()
                 if existing is None or existing["batch_digest"] != batch_digest:
-                    raise ValueError("batch_id was already stored with different observation content")
+                    raise ValueError(
+                        "batch_id was already stored with different observation content"
+                    )
             if is_new:
                 for record_index, observation in enumerate(batch.observations):
                     self._db.execute(
@@ -310,8 +336,17 @@ class SQLiteStore:
             parameters.append(end)
         if start_timestamp is not None and end_timestamp is not None and start > end:
             raise ValueError("start_timestamp must be less than or equal to end_timestamp")
-        ordering = "event_timestamp IS NULL, event_timestamp, observation_row_id" if order_by == "event_time" else "observation_row_id"
-        sql = "SELECT * FROM observations" + (" WHERE " + " AND ".join(clauses) if clauses else "") + " ORDER BY " + ordering
+        ordering = (
+            "event_timestamp IS NULL, event_timestamp, observation_row_id"
+            if order_by == "event_time"
+            else "observation_row_id"
+        )
+        sql = (
+            "SELECT * FROM observations"
+            + (" WHERE " + " AND ".join(clauses) if clauses else "")
+            + " ORDER BY "
+            + ordering
+        )
         if limit is not None:
             if int(limit) < 1:
                 raise ValueError("limit must be positive")
@@ -403,14 +438,21 @@ class SQLiteStore:
         return identifier
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
-        row = self._db.execute("SELECT result_json FROM analysis_runs WHERE run_id=?", (str(run_id),)).fetchone()
+        row = self._db.execute(
+            "SELECT result_json FROM analysis_runs WHERE run_id=?", (str(run_id),)
+        ).fetchone()
         return None if row is None else json.loads(row["result_json"])
 
-    def list_runs(self, *, project_id: str | None = None, limit: int = 100) -> tuple[dict[str, Any], ...]:
+    def list_runs(
+        self, *, project_id: str | None = None, limit: int = 100
+    ) -> tuple[dict[str, Any], ...]:
         if int(limit) < 1:
             raise ValueError("limit must be positive")
         if project_id is None:
-            rows = self._db.execute("SELECT result_json FROM analysis_runs ORDER BY created_at DESC, run_id DESC LIMIT ?", (int(limit),)).fetchall()
+            rows = self._db.execute(
+                "SELECT result_json FROM analysis_runs ORDER BY created_at DESC, run_id DESC LIMIT ?",
+                (int(limit),),
+            ).fetchall()
         else:
             rows = self._db.execute(
                 "SELECT result_json FROM analysis_runs WHERE project_id=? ORDER BY created_at DESC, run_id DESC LIMIT ?",

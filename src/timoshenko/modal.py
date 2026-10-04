@@ -40,7 +40,11 @@ class ModalResult:
     def to_dict(self) -> dict:
         return {
             "modes": [
-                {"frequency_hz": mode.frequency_hz, "amplitude": mode.amplitude, "damping_ratio": mode.damping_ratio}
+                {
+                    "frequency_hz": mode.frequency_hz,
+                    "amplitude": mode.amplitude,
+                    "damping_ratio": mode.damping_ratio,
+                }
                 for mode in self.modes
             ],
             "sampling_hz": self.sampling_hz,
@@ -82,20 +86,36 @@ def identify(
     values = np.asarray(sensor_data.samples, dtype=float)
     values = values - float(np.mean(values))
     if float(np.max(np.abs(values))) <= np.finfo(float).eps:
-        return ModalResult((), sensor_data.sampling_hz, len(values), resolution, sensor_data.channel, status="insufficient_signal", notes=("The input channel is constant after mean removal.",))
+        return ModalResult(
+            (),
+            sensor_data.sampling_hz,
+            len(values),
+            resolution,
+            sensor_data.channel,
+            status="insufficient_signal",
+            notes=("The input channel is constant after mean removal.",),
+        )
     window = np.hanning(len(values))
     spectrum = np.abs(np.fft.rfft(values * window))
     frequencies = np.fft.rfftfreq(len(values), d=1.0 / sensor_data.sampling_hz)
     in_band = (frequencies >= low) & (frequencies <= high)
     candidates = [
-        idx for idx in range(1, len(spectrum) - 1)
+        idx
+        for idx in range(1, len(spectrum) - 1)
         if in_band[idx] and spectrum[idx] >= spectrum[idx - 1] and spectrum[idx] > spectrum[idx + 1]
     ]
     max_amplitude = float(max((spectrum[idx] for idx in candidates), default=0.0))
-    candidates = [idx for idx in candidates if max_amplitude > 0.0 and spectrum[idx] >= max_amplitude * min_peak_ratio]
+    candidates = [
+        idx
+        for idx in candidates
+        if max_amplitude > 0.0 and spectrum[idx] >= max_amplitude * min_peak_ratio
+    ]
     selected: list[int] = []
     for idx in sorted(candidates, key=lambda item: float(spectrum[item]), reverse=True):
-        if all(abs(float(frequencies[idx] - frequencies[other])) >= 2.0 * resolution for other in selected):
+        if all(
+            abs(float(frequencies[idx] - frequencies[other])) >= 2.0 * resolution
+            for other in selected
+        ):
             selected.append(idx)
         if len(selected) >= max_modes:
             break
@@ -105,11 +125,15 @@ def identify(
         Mode(
             frequency_hz=interpolate_log_peak_frequency(frequencies, spectrum, idx),
             amplitude=float(spectrum[idx]),
-            damping_ratio=None if damping_psd is None else _half_power_damping(*damping_psd, float(frequencies[idx])),
+            damping_ratio=None
+            if damping_psd is None
+            else _half_power_damping(*damping_psd, float(frequencies[idx])),
         )
         for idx in selected
     )
-    notes: list[str] = ["Frequency spacing is limited by the record duration."] if resolution > 0.25 else []
+    notes: list[str] = (
+        ["Frequency spacing is limited by the record duration."] if resolution > 0.25 else []
+    )
     if modes:
         notes.append(
             "Peak frequencies use parabolic interpolation of log spectral magnitude; "
@@ -136,7 +160,9 @@ def identify(
     )
 
 
-def pair_modes(reference_hz: Sequence[float], observed_hz: Sequence[float]) -> tuple[tuple[int, int], ...]:
+def pair_modes(
+    reference_hz: Sequence[float], observed_hz: Sequence[float]
+) -> tuple[tuple[int, int], ...]:
     """Pair observed with reference frequencies by nearest log-frequency.
 
     Each observed frequency is assigned to the reference mode it is closest
@@ -190,9 +216,15 @@ def _plan(
         raise ValueError("min_peak_ratio must be in [0, 1)")
     resolution = sampling_hz / sample_count
     low = float(min_frequency_hz) if min_frequency_hz is not None else resolution
-    high = min(float(max_frequency_hz), sampling_hz / 2.0) if max_frequency_hz is not None else sampling_hz / 2.0
+    high = (
+        min(float(max_frequency_hz), sampling_hz / 2.0)
+        if max_frequency_hz is not None
+        else sampling_hz / 2.0
+    )
     if not math.isfinite(low) or low < 0.0 or not math.isfinite(high) or high <= low:
-        raise ValueError("frequency bounds must be finite, non-negative, and have max greater than min")
+        raise ValueError(
+            "frequency bounds must be finite, non-negative, and have max greater than min"
+        )
     return resolution, low, high
 
 
@@ -217,7 +249,9 @@ def _averaged_psd(values: np.ndarray, sampling_hz: float) -> tuple[np.ndarray, n
     return power / count, np.fft.rfftfreq(nperseg, d=1.0 / sampling_hz)
 
 
-def _half_power_damping(power: np.ndarray, frequencies: np.ndarray, frequency_hz: float) -> float | None:
+def _half_power_damping(
+    power: np.ndarray, frequencies: np.ndarray, frequency_hz: float
+) -> float | None:
     """Half-power bandwidth damping, or ``None`` when it is not resolved.
 
     A Hann window alone gives a half-power width of about 1.44 bins, so a

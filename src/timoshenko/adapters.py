@@ -47,9 +47,15 @@ class SessionRunner:
     ):
         if not isinstance(session, MonitoringSession):
             raise TypeError("session must be a MonitoringSession")
-        if any(not callable(getattr(source, name, None)) for name in ("open", "read_batch", "close")):
-            raise TypeError("source must provide callable open(), read_batch(), and close() methods")
-        if max_batches is not None and (isinstance(max_batches, bool) or int(max_batches) != max_batches or int(max_batches) < 1):
+        if any(
+            not callable(getattr(source, name, None)) for name in ("open", "read_batch", "close")
+        ):
+            raise TypeError(
+                "source must provide callable open(), read_batch(), and close() methods"
+            )
+        if max_batches is not None and (
+            isinstance(max_batches, bool) or int(max_batches) != max_batches or int(max_batches) < 1
+        ):
             raise ValueError("max_batches must be a positive integer or None")
         self.source = source
         self.session = session
@@ -67,7 +73,9 @@ class SessionRunner:
                 self.source.close()
             except BaseException as close_error:
                 if hasattr(open_error, "add_note"):
-                    open_error.add_note(f"Source cleanup after open failure also failed: {close_error!r}")
+                    open_error.add_note(
+                        f"Source cleanup after open failure also failed: {close_error!r}"
+                    )
             raise
         self._active = True
         self._consuming = False
@@ -102,7 +110,9 @@ class SessionRunner:
                 if batch is None:
                     return
                 if not isinstance(batch, ObservationBatch):
-                    raise TypeError("ObservationSource.read_batch() must return ObservationBatch or None")
+                    raise TypeError(
+                        "ObservationSource.read_batch() must return ObservationBatch or None"
+                    )
                 read_count += 1
                 result = self.session.ingest(batch)
                 acknowledge = getattr(self.source, "acknowledge", None)

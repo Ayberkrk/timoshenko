@@ -83,7 +83,12 @@ class ProjectRunResult:
 
 
 _SINGLE_OPTIONS = {"max_modes", "min_frequency_hz", "max_frequency_hz", "min_peak_ratio"}
-_FDD_OPTIONS = _SINGLE_OPTIONS | {"nperseg", "overlap", "max_singular_values", "min_singular_value_ratio"}
+_FDD_OPTIONS = _SINGLE_OPTIONS | {
+    "nperseg",
+    "overlap",
+    "max_singular_values",
+    "min_singular_value_ratio",
+}
 
 
 def read_manifest(path: str | Path) -> ProjectManifest:
@@ -138,7 +143,9 @@ def read_manifest(path: str | Path) -> ProjectManifest:
         channel_id = str(channel.get("id") or column).strip()
         unit = str(channel.get("unit", "unknown")).strip()
         if not column or not channel_id or not unit:
-            raise ValueError(f"observations.channels[{idx - 1}] needs non-empty column, id, and unit")
+            raise ValueError(
+                f"observations.channels[{idx - 1}] needs non-empty column, id, and unit"
+            )
         columns.append(column)
         channel_ids.append(channel_id)
         units.append(unit)

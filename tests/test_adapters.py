@@ -10,8 +10,15 @@ from timoshenko.sensorthings import SensorThingsSourceError
 
 
 def session(window=64, **kwargs):
-    return tm.MonitoringSession(tm.Structure([1.0e5], [2.0e8]), sensor_ids=["a"], units=["g"],
-                                sampling_hz=100.0, window_samples=window, hop_samples=window, **kwargs)
+    return tm.MonitoringSession(
+        tm.Structure([1.0e5], [2.0e8]),
+        sensor_ids=["a"],
+        units=["g"],
+        sampling_hz=100.0,
+        window_samples=window,
+        hop_samples=window,
+        **kwargs,
+    )
 
 
 def write_long_csv(path, rows=40):
@@ -34,7 +41,11 @@ def test_csv_source_batches_with_stable_ids(tmp_path):
         source.close()
         ids.append([b.batch_id for b in batches])
         assert [b.count for b in batches] == [16, 16, 8]
-    assert ids[0] == ids[1] == ["csv:obs.csv:rows:1-16", "csv:obs.csv:rows:17-32", "csv:obs.csv:rows:33-40"]
+    assert (
+        ids[0]
+        == ids[1]
+        == ["csv:obs.csv:rows:1-16", "csv:obs.csv:rows:17-32", "csv:obs.csv:rows:33-40"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -59,7 +70,9 @@ def test_csv_source_rejects_bad_rows(tmp_path, row, message):
 def test_csv_source_accepts_zulu_iso_timestamps(tmp_path):
     path = tmp_path / "iso.csv"
     path.write_text("timestamp,sensor_id,unit,value\n2024-01-01T00:00:00Z,a,g,1.5\n")
-    source = tm.CSVObservationSource(path, name_column=None, quality_column=None, asset_id_column=None)
+    source = tm.CSVObservationSource(
+        path, name_column=None, quality_column=None, asset_id_column=None
+    )
     source.open()
     item = source.read_batch().observations[0]
     assert item.timestamp == 1704067200.0 and item.name == "a"
@@ -89,8 +102,12 @@ class ListSource:
 
 def obs_batch(start, count, batch_id):
     return tm.ObservationBatch(
-        [tm.Observation("a", "a", "g", math.sin(i), timestamp=i / 100.0) for i in range(start, start + count)],
-        batch_id=batch_id, source_id="src",
+        [
+            tm.Observation("a", "a", "g", math.sin(i), timestamp=i / 100.0)
+            for i in range(start, start + count)
+        ],
+        batch_id=batch_id,
+        source_id="src",
     )
 
 
@@ -296,19 +313,29 @@ def mqtt_payload(batch_id, start, count):
         "source_id": "gateway",
         "batch_id": batch_id,
         "observations": [
-            {"sensor_id": "a", "name": "a", "unit": "g", "value": math.sin(i), "timestamp": i / 100.0}
+            {
+                "sensor_id": "a",
+                "name": "a",
+                "unit": "g",
+                "value": math.sin(i),
+                "timestamp": i / 100.0,
+            }
             for i in range(start, start + count)
         ],
     }
 
 
 def test_mqtt_acknowledges_after_ingest_and_skips_retained():
-    client = FakePaho(backlog=[
-        ((1, mqtt_payload("old", 0, 4)), {"retain": True}),
-        ((2, mqtt_payload("b1", 0, 32)), {}),
-        ((3, mqtt_payload("b2", 32, 32)), {}),
-    ])
-    source = tm.MqttObservationSource(host="broker", topic="site/acc", client_id="c1", client_factory=lambda: client)
+    client = FakePaho(
+        backlog=[
+            ((1, mqtt_payload("old", 0, 4)), {"retain": True}),
+            ((2, mqtt_payload("b1", 0, 32)), {}),
+            ((3, mqtt_payload("b2", 32, 32)), {}),
+        ]
+    )
+    source = tm.MqttObservationSource(
+        host="broker", topic="site/acc", client_id="c1", client_factory=lambda: client
+    )
     acks_seen_during_ingest = []
 
     class Watching(tm.MonitoringSession):
@@ -316,7 +343,13 @@ def test_mqtt_acknowledges_after_ingest_and_skips_retained():
             acks_seen_during_ingest.append(list(client.acks))
             return super().ingest(batch)
 
-    watched = Watching(tm.Structure([1e5], [2e8]), sensor_ids=["a"], units=["g"], sampling_hz=100.0, window_samples=64)
+    watched = Watching(
+        tm.Structure([1e5], [2e8]),
+        sensor_ids=["a"],
+        units=["g"],
+        sampling_hz=100.0,
+        window_samples=64,
+    )
     with tm.SessionRunner(source, watched, max_batches=2) as runner:
         results = list(runner)
     assert client.subscriptions == [("site/acc", 1)]
@@ -328,13 +361,23 @@ def test_mqtt_acknowledges_after_ingest_and_skips_retained():
 
 @pytest.mark.parametrize(
     "payload",
-    [b"not json", {"schema_version": 2, "source_id": "g", "batch_id": "b", "observations": [{}]},
-     {"schema_version": 1, "source_id": "g", "batch_id": "b", "observations": [{"sensor_id": "a", "name": "a", "unit": "g", "value": 1}]}],
+    [
+        b"not json",
+        {"schema_version": 2, "source_id": "g", "batch_id": "b", "observations": [{}]},
+        {
+            "schema_version": 1,
+            "source_id": "g",
+            "batch_id": "b",
+            "observations": [{"sensor_id": "a", "name": "a", "unit": "g", "value": 1}],
+        },
+    ],
     ids=["garbage", "schema", "no-timestamp"],
 )
 def test_mqtt_invalid_payload_surfaces_as_error(payload):
     client = FakePaho()
-    source = tm.MqttObservationSource(host="broker", topic="t", client_id="c", client_factory=lambda: client)
+    source = tm.MqttObservationSource(
+        host="broker", topic="t", client_id="c", client_factory=lambda: client
+    )
     source.open()
     client.deliver(1, payload)
     with pytest.raises(tm.MQTTSourceError):
@@ -344,7 +387,9 @@ def test_mqtt_invalid_payload_surfaces_as_error(payload):
 
 def test_mqtt_queue_overflow_is_not_silent():
     client = FakePaho()
-    source = tm.MqttObservationSource(host="b", topic="t", client_id="c", queue_capacity=1, client_factory=lambda: client)
+    source = tm.MqttObservationSource(
+        host="b", topic="t", client_id="c", queue_capacity=1, client_factory=lambda: client
+    )
     source.open()
     client.deliver(1, mqtt_payload("b1", 0, 2))
     client.deliver(2, mqtt_payload("b2", 2, 2))
@@ -364,10 +409,17 @@ def test_mqtt_configuration_validation():
 
 
 def sensorthings_page(start, count, next_link=None):
-    document = {"value": [
-        {"@iot.id": i, "phenomenonTime": f"2024-01-01T00:00:{i:02d}Z", "result": float(i), "parameters": {"ok": i != 3}}
-        for i in range(start, start + count)
-    ]}
+    document = {
+        "value": [
+            {
+                "@iot.id": i,
+                "phenomenonTime": f"2024-01-01T00:00:{i:02d}Z",
+                "result": float(i),
+                "parameters": {"ok": i != 3},
+            }
+            for i in range(start, start + count)
+        ]
+    }
     if next_link:
         document["@iot.nextLink"] = next_link
     return json.dumps(document).encode()
@@ -383,8 +435,9 @@ def test_sensorthings_follows_same_origin_pagination_opaquely():
         requested.append((request.full_url, request.get_header("Authorization")))
         return pages[request.full_url]
 
-    source = tm.SensorThingsObservationSource(base, sensor_id="s", unit="g", bearer_token="t0k",
-                                              quality_parameter="ok", fetcher=fetch)
+    source = tm.SensorThingsObservationSource(
+        base, sensor_id="s", unit="g", bearer_token="t0k", quality_parameter="ok", fetcher=fetch
+    )
     source.open()
     first, second, end = source.read_batch(), source.read_batch(), source.read_batch()
     assert end is None
@@ -398,15 +451,24 @@ def test_sensorthings_follows_same_origin_pagination_opaquely():
 def test_sensorthings_rejects_cross_origin_next_link_and_bad_results():
     base = "https://sta.example.org/Observations"
     source = tm.SensorThingsObservationSource(
-        base, sensor_id="s", unit="g", default_quality=True,
-        fetcher=lambda request, timeout, limit: sensorthings_page(0, 1, "https://evil.example.com/next"),
+        base,
+        sensor_id="s",
+        unit="g",
+        default_quality=True,
+        fetcher=lambda request, timeout, limit: sensorthings_page(
+            0, 1, "https://evil.example.com/next"
+        ),
     )
     source.open()
     with pytest.raises(SensorThingsSourceError, match="origin"):
         source.read_batch()
     bad = tm.SensorThingsObservationSource(
-        base, sensor_id="s", unit="g",
-        fetcher=lambda request, timeout, limit: json.dumps({"value": [{"phenomenonTime": "2024-01-01T00:00:00Z", "result": "7"}]}).encode(),
+        base,
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: json.dumps(
+            {"value": [{"phenomenonTime": "2024-01-01T00:00:00Z", "result": "7"}]}
+        ).encode(),
     )
     bad.open()
     with pytest.raises(SensorThingsSourceError, match="scalar"):
@@ -415,7 +477,9 @@ def test_sensorthings_rejects_cross_origin_next_link_and_bad_results():
 
 def test_sensorthings_quality_defaults_to_unknown_false():
     source = tm.SensorThingsObservationSource(
-        "https://sta.example.org/Observations", sensor_id="s", unit="g",
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
         fetcher=lambda request, timeout, limit: sensorthings_page(0, 2),
     )
     source.open()
@@ -442,7 +506,9 @@ def _handlers(seen, location):
     class Target(BaseHTTPRequestHandler):
         def do_GET(self):
             seen.append((self.path, self.headers.get("Authorization")))
-            body = json.dumps({"value": [{"phenomenonTime": "2024-01-01T00:00:00Z", "result": 1.0}]}).encode()
+            body = json.dumps(
+                {"value": [{"phenomenonTime": "2024-01-01T00:00:00Z", "result": 1.0}]}
+            ).encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -473,7 +539,10 @@ def test_sensorthings_refuses_cross_origin_redirect_without_sending_token():
     configured = _Server(redirect_handler)
     try:
         source = tm.SensorThingsObservationSource(
-            f"http://127.0.0.1:{configured.port}/Observations", sensor_id="s", unit="g", bearer_token="secret"
+            f"http://127.0.0.1:{configured.port}/Observations",
+            sensor_id="s",
+            unit="g",
+            bearer_token="secret",
         )
         source.open()
         with pytest.raises(SensorThingsSourceError, match="redirect"):
@@ -492,7 +561,11 @@ def test_sensorthings_follows_same_origin_redirect():
     holder["port"] = server.port
     try:
         source = tm.SensorThingsObservationSource(
-            f"http://127.0.0.1:{server.port}/Observations", sensor_id="s", unit="g", bearer_token="secret", default_quality=True
+            f"http://127.0.0.1:{server.port}/Observations",
+            sensor_id="s",
+            unit="g",
+            bearer_token="secret",
+            default_quality=True,
         )
         source.open()
         assert source.read_batch().count == 1
@@ -520,10 +593,22 @@ def test_sensorthings_origin_treats_default_port_as_same_origin():
         ("https://sta.example.org/Observations", {"unit": " "}, "sensor_id and unit"),
         ("https://sta.example.org/Observations", {"timeout_s": 0}, "timeout_s"),
         ("https://sta.example.org/Observations", {"timeout_s": math.nan}, "timeout_s"),
-        ("https://sta.example.org/Observations", {"max_response_bytes": True}, "max_response_bytes"),
+        (
+            "https://sta.example.org/Observations",
+            {"max_response_bytes": True},
+            "max_response_bytes",
+        ),
         ("https://sta.example.org/Observations", {"max_response_bytes": 0}, "max_response_bytes"),
-        ("https://sta.example.org/Observations", {"max_observations_per_page": 1.5}, "max_observations_per_page"),
-        ("https://sta.example.org/Observations", {"max_observations_per_page": 65_537}, "max_observations_per_page"),
+        (
+            "https://sta.example.org/Observations",
+            {"max_observations_per_page": 1.5},
+            "max_observations_per_page",
+        ),
+        (
+            "https://sta.example.org/Observations",
+            {"max_observations_per_page": 65_537},
+            "max_observations_per_page",
+        ),
         ("https://sta.example.org/Observations", {"bearer_token": " "}, "bearer_token"),
         ("https://sta.example.org/Observations", {"default_quality": 1}, "default_quality"),
         ("https://sta.example.org/Observations", {"quality_parameter": " "}, "quality_parameter"),
@@ -545,10 +630,18 @@ def test_sensorthings_constructor_rejects_invalid_configuration(url, options, me
         (b"\xff", "invalid SensorThings observation page"),
         (json.dumps([]).encode(), "response must be a JSON object"),
         (json.dumps({"value": None}).encode(), "response must be a JSON object"),
-        (json.dumps({"value": [{"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z"}] * 2}).encode(), "more than 1 observations"),
+        (
+            json.dumps(
+                {"value": [{"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z"}] * 2}
+            ).encode(),
+            "more than 1 observations",
+        ),
         (json.dumps({"value": [], "@iot.nextLink": " "}).encode(), "nextLink must be a non-empty"),
         (json.dumps({"value": [], "@iot.nextLink": 3}).encode(), "nextLink must be a non-empty"),
-        (json.dumps({"value": [], "@iot.nextLink": "/relative"}).encode(), "invalid SensorThings observation page"),
+        (
+            json.dumps({"value": [], "@iot.nextLink": "/relative"}).encode(),
+            "invalid SensorThings observation page",
+        ),
     ],
 )
 def test_sensorthings_rejects_malformed_or_oversized_pages(payload, message):
@@ -594,8 +687,14 @@ def test_sensorthings_requires_an_instant_with_a_timezone(phenomenon_time, messa
         (1, "must be an Observation JSON object"),
         ({"result": True, "phenomenonTime": "2024-01-01T00:00:00Z"}, "scalar number"),
         ({"result": math.inf, "phenomenonTime": "2024-01-01T00:00:00Z"}, "finite"),
-        ({"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": []}, "parameters must be an object"),
-        ({"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": {"ok": 1}}, "must be boolean"),
+        (
+            {"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": []},
+            "parameters must be an object",
+        ),
+        (
+            {"result": 1, "phenomenonTime": "2024-01-01T00:00:00Z", "parameters": {"ok": 1}},
+            "must be boolean",
+        ),
     ],
 )
 def test_sensorthings_rejects_invalid_observation_fields(item, message):

@@ -31,7 +31,9 @@ class UncertaintyResult:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "input_names", tuple(self.input_names))
-        object.__setattr__(self, "sensitivity_coefficients", MappingProxyType(dict(self.sensitivity_coefficients)))
+        object.__setattr__(
+            self, "sensitivity_coefficients", MappingProxyType(dict(self.sensitivity_coefficients))
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,18 +77,29 @@ def propagate(
     if any(not isinstance(name, str) for name in inputs):
         raise UncertaintyError("input names must be strings")
     names = tuple(name.strip() for name in inputs)
-    if any(not name or name != original for name, original in zip(names, inputs, strict=True)) or len(set(names)) != len(names):
+    if any(
+        not name or name != original for name, original in zip(names, inputs, strict=True)
+    ) or len(set(names)) != len(names):
         raise UncertaintyError("input names must be non-empty and distinct")
     if len(names) > 32:
         raise UncertaintyError("at most 32 uncertain inputs are supported")
-    values = np.asarray([_finite_scalar(inputs[key], f"input {key!r}") for key in inputs], dtype=float)
+    values = np.asarray(
+        [_finite_scalar(inputs[key], f"input {key!r}") for key in inputs], dtype=float
+    )
     if (standard_uncertainties is None) == (covariance is None):
         raise UncertaintyError("supply exactly one of standard_uncertainties or covariance")
     if standard_uncertainties is not None:
-        if not isinstance(standard_uncertainties, Mapping) or set(standard_uncertainties) != set(inputs):
-            raise UncertaintyError("standard_uncertainties must provide one value for every input name")
+        if not isinstance(standard_uncertainties, Mapping) or set(standard_uncertainties) != set(
+            inputs
+        ):
+            raise UncertaintyError(
+                "standard_uncertainties must provide one value for every input name"
+            )
         deviations = np.asarray(
-            [_finite_scalar(standard_uncertainties[key], f"standard uncertainty for {key!r}") for key in inputs],
+            [
+                _finite_scalar(standard_uncertainties[key], f"standard uncertainty for {key!r}")
+                for key in inputs
+            ],
             dtype=float,
         )
         if np.any(deviations < 0.0):
@@ -100,7 +113,10 @@ def propagate(
             covariance_matrix = np.asarray(covariance, dtype=float)
         except (TypeError, ValueError) as error:
             raise UncertaintyError("covariance must be a numeric square matrix") from error
-        if covariance_matrix.shape != (len(names), len(names)) or not np.isfinite(covariance_matrix).all():
+        if (
+            covariance_matrix.shape != (len(names), len(names))
+            or not np.isfinite(covariance_matrix).all()
+        ):
             raise UncertaintyError("covariance must be a finite square matrix ordered like inputs")
         scale = max(float(np.max(np.abs(covariance_matrix))), np.finfo(float).tiny)
         if not np.allclose(covariance_matrix, covariance_matrix.T, rtol=1e-10, atol=1e-12 * scale):
@@ -148,7 +164,9 @@ def propagate(
             elif y_minus is not None:
                 derivative = (nominal - y_minus) / step
             else:
-                raise UncertaintyError(f"cannot estimate sensitivity for {name!r} near the supplied input")
+                raise UncertaintyError(
+                    f"cannot estimate sensitivity for {name!r} near the supplied input"
+                )
             if not math.isfinite(derivative):
                 raise UncertaintyError(f"sensitivity for {name!r} is non-finite")
             sensitivities[name] = float(derivative)
@@ -195,7 +213,9 @@ def propagate(
             method="eigh",
         )
     except (ValueError, np.linalg.LinAlgError) as error:
-        raise UncertaintyError(f"could not sample the configured input distribution: {error}") from error
+        raise UncertaintyError(
+            f"could not sample the configured input distribution: {error}"
+        ) from error
     output = np.empty(sample_count, dtype=float)
     for index, draw in enumerate(draws):
         try:
@@ -235,7 +255,12 @@ def _finite_scalar(value: Any, label: str) -> float:
     return result
 
 
-def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray, label: str) -> float:
+def _evaluate(
+    function: Callable[..., float],
+    names: tuple[str, ...],
+    values: Sequence[float] | np.ndarray,
+    label: str,
+) -> float:
     try:
         result = function(**dict(zip(names, values, strict=True)))
     except Exception as error:
@@ -245,13 +270,17 @@ def _evaluate(function: Callable[..., float], names: tuple[str, ...], values: Se
     try:
         output = float(result)  # type: ignore[arg-type]
     except (TypeError, ValueError) as error:
-        raise UncertaintyError(f"equation output for {label} must be a finite scalar number") from error
+        raise UncertaintyError(
+            f"equation output for {label} must be a finite scalar number"
+        ) from error
     if not math.isfinite(output):
         raise UncertaintyError(f"equation output for {label} must be a finite scalar number")
     return output
 
 
-def _try_evaluate(function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray) -> float | None:
+def _try_evaluate(
+    function: Callable[..., float], names: tuple[str, ...], values: Sequence[float] | np.ndarray
+) -> float | None:
     try:
         return _evaluate(function, names, values, "finite difference input")
     except UncertaintyError:

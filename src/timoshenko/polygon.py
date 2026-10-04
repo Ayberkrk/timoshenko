@@ -51,10 +51,13 @@ class PolygonSectionProperties:
     @property
     def principal_axis_angle_rad(self) -> float:
         """Angle in [0, pi) to the axis associated with the larger moment."""
-        return (0.5 * math.atan2(
-            -2.0 * self.product_moment_xy_m4,
-            self.second_moment_x_m4 - self.second_moment_y_m4,
-        )) % math.pi
+        return (
+            0.5
+            * math.atan2(
+                -2.0 * self.product_moment_xy_m4,
+                self.second_moment_x_m4 - self.second_moment_y_m4,
+            )
+        ) % math.pi
 
 
 def polygon_section(
@@ -87,7 +90,9 @@ def polygon_section(
         max(y for ring in shifted for _, y in ring) - min(y for ring in shifted for _, y in ring),
     )
     if not math.isfinite(span) or span <= 0.0 or span > _MAX_SPAN_M:
-        raise ValueError("polygon coordinate span must be finite, non-zero, and no greater than 1e50 m")
+        raise ValueError(
+            "polygon coordinate span must be finite, non-zero, and no greater than 1e50 m"
+        )
 
     area_tolerance = 1e-12 * span * span
     length_tolerance = 1e-12 * span
@@ -168,18 +173,18 @@ def polygon_bending_stress_pa(
     moment_x, moment_y = float(moment_x_n_m), float(moment_y_n_m)
     if not all(math.isfinite(value) for value in (force, moment_x, moment_y)):
         raise ValueError("force and moments must be finite")
-    denominator = section.second_moment_x_m4 * section.second_moment_y_m4 - section.product_moment_xy_m4**2
+    denominator = (
+        section.second_moment_x_m4 * section.second_moment_y_m4 - section.product_moment_xy_m4**2
+    )
     if not math.isfinite(denominator) or denominator <= 0.0:
         raise ValueError("section inertia tensor must be positive definite")
     # sigma = N/A + a*x + b*y, with Mx = integral(sigma*y) and
     # My = -integral(sigma*x). Solve the coupled centroidal equilibrium.
     coefficient_x = (
-        -section.product_moment_xy_m4 * moment_x
-        - section.second_moment_x_m4 * moment_y
+        -section.product_moment_xy_m4 * moment_x - section.second_moment_x_m4 * moment_y
     ) / denominator
     coefficient_y = (
-        section.second_moment_y_m4 * moment_x
-        + section.product_moment_xy_m4 * moment_y
+        section.second_moment_y_m4 * moment_x + section.product_moment_xy_m4 * moment_y
     ) / denominator
     stress_values = []
     try:
@@ -233,11 +238,13 @@ def _ring_integrals(ring: Sequence[Point2D]) -> tuple[float, float, float, float
         first_y6 += (y0 + y1) * cross
         inertia_x12 += (y0 * y0 + y0 * y1 + y1 * y1) * cross
         inertia_y12 += (x0 * x0 + x0 * x1 + x1 * x1) * cross
-        product24 += (2*x0*y0 + x0*y1 + x1*y0 + 2*x1*y1) * cross
-    return area2/2, first_x6/6, first_y6/6, inertia_x12/12, inertia_y12/12, product24/24
+        product24 += (2 * x0 * y0 + x0 * y1 + x1 * y0 + 2 * x1 * y1) * cross
+    return area2 / 2, first_x6 / 6, first_y6 / 6, inertia_x12 / 12, inertia_y12 / 12, product24 / 24
 
 
-def _ensure_simple(ring: Sequence[Point2D], area_tolerance: float, length_tolerance: float, label: str) -> None:
+def _ensure_simple(
+    ring: Sequence[Point2D], area_tolerance: float, length_tolerance: float, label: str
+) -> None:
     count = len(ring)
     for index in range(count):
         previous, current, following = ring[index - 1], ring[index], ring[(index + 1) % count]
@@ -275,15 +282,23 @@ def _segments_intersect(
         )
 
     ab_c, ab_d, cd_a, cd_b = orient(a, b, c), orient(a, b, d), orient(c, d, a), orient(c, d, b)
-    if ((ab_c > area_tolerance and ab_d < -area_tolerance) or (ab_c < -area_tolerance and ab_d > area_tolerance)) and (
-        (cd_a > area_tolerance and cd_b < -area_tolerance) or (cd_a < -area_tolerance and cd_b > area_tolerance)
+    if (
+        (ab_c > area_tolerance and ab_d < -area_tolerance)
+        or (ab_c < -area_tolerance and ab_d > area_tolerance)
+    ) and (
+        (cd_a > area_tolerance and cd_b < -area_tolerance)
+        or (cd_a < -area_tolerance and cd_b > area_tolerance)
     ):
         return True
     return (
-        abs(ab_c) <= area_tolerance and on_segment(a, c, b)
-        or abs(ab_d) <= area_tolerance and on_segment(a, d, b)
-        or abs(cd_a) <= area_tolerance and on_segment(c, a, d)
-        or abs(cd_b) <= area_tolerance and on_segment(c, b, d)
+        abs(ab_c) <= area_tolerance
+        and on_segment(a, c, b)
+        or abs(ab_d) <= area_tolerance
+        and on_segment(a, d, b)
+        or abs(cd_a) <= area_tolerance
+        and on_segment(c, a, d)
+        or abs(cd_b) <= area_tolerance
+        and on_segment(c, b, d)
     )
 
 
@@ -318,7 +333,9 @@ def _validate_holes(
                 or _point_in_ring(hole[0], earlier)
                 or _point_in_ring(earlier[0], hole)
             ):
-                raise ValueError(f"holes {earlier_index} and {index} must not overlap or contain one another")
+                raise ValueError(
+                    f"holes {earlier_index} and {index} must not overlap or contain one another"
+                )
 
 
 def _rings_intersect(

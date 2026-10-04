@@ -25,7 +25,12 @@ class Asset:
         object.__setattr__(self, "metadata", dict(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
-        return {"asset_id": self.asset_id, "asset_type": self.asset_type, "name": self.name, "metadata": dict(self.metadata)}
+        return {
+            "asset_id": self.asset_id,
+            "asset_type": self.asset_type,
+            "name": self.name,
+            "metadata": dict(self.metadata),
+        }
 
 
 @dataclass(frozen=True)
@@ -36,7 +41,10 @@ class Relation:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        source, kind, target = (str(item).strip() for item in (self.source_asset_id, self.relation_type, self.target_asset_id))
+        source, kind, target = (
+            str(item).strip()
+            for item in (self.source_asset_id, self.relation_type, self.target_asset_id)
+        )
         if not source or not kind or not target:
             raise ValueError("relation source, type, and target must be non-empty")
         if source == target:

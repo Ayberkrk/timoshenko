@@ -37,20 +37,28 @@ class Structure:
         masses = tuple(float(value) for value in self.story_masses_kg)
         stiffnesses = tuple(float(value) for value in self.story_stiffness_n_m)
         if not masses or len(masses) != len(stiffnesses):
-            raise ValueError("story_masses_kg and story_stiffness_n_m must have the same non-zero length")
+            raise ValueError(
+                "story_masses_kg and story_stiffness_n_m must have the same non-zero length"
+            )
         if any(not math.isfinite(value) or value <= 0.0 for value in masses):
             raise ValueError("story masses must be finite positive values in kilograms")
         if any(not math.isfinite(value) or value <= 0.0 for value in stiffnesses):
-            raise ValueError("story stiffnesses must be finite positive values in newtons per metre")
+            raise ValueError(
+                "story stiffnesses must be finite positive values in newtons per metre"
+            )
         reference = tuple(float(value) for value in self.reference_frequencies_hz)
         observed = tuple(float(value) for value in self.observed_frequencies_hz)
         for label, values in (("reference", reference), ("observed", observed)):
             if any(not math.isfinite(value) or value <= 0.0 for value in values):
                 raise ValueError(f"{label} modal frequencies must be finite positive values")
         if reference and len(reference) > len(masses):
-            raise ValueError("reference_frequencies_hz cannot contain more entries than the number of stories")
+            raise ValueError(
+                "reference_frequencies_hz cannot contain more entries than the number of stories"
+            )
         if observed and len(observed) > len(masses):
-            raise ValueError("observed_frequencies_hz cannot contain more entries than the number of stories")
+            raise ValueError(
+                "observed_frequencies_hz cannot contain more entries than the number of stories"
+            )
         object.__setattr__(self, "story_masses_kg", masses)
         object.__setattr__(self, "story_stiffness_n_m", stiffnesses)
         object.__setattr__(self, "reference_frequencies_hz", reference)
