@@ -122,6 +122,89 @@ def test_runner_requires_context_manager():
         list(runner)
 
 
+def test_runner_validates_session_source_and_batch_limit():
+    with pytest.raises(TypeError, match="session must be a MonitoringSession"):
+        tm.SessionRunner(ListSource([]), object())
+    with pytest.raises(TypeError, match="source must provide callable"):
+        tm.SessionRunner(object(), session())
+
+    class NonCallableSource:
+        open = None
+        read_batch = 1
+        close = None
+
+    with pytest.raises(TypeError, match="source must provide callable"):
+        tm.SessionRunner(NonCallableSource(), session())
+    for invalid in (True, 1.5, 0, -1):
+        with pytest.raises(ValueError, match="max_batches must be a positive integer"):
+            tm.SessionRunner(ListSource([]), session(), max_batches=invalid)
+
+
+def test_runner_rejects_reentrant_context_and_iteration():
+    source = ListSource([obs_batch(0, 8, "b1"), obs_batch(8, 8, "b2")])
+    runner = tm.SessionRunner(source, session())
+    with runner:
+        with pytest.raises(RuntimeError, match="already active"):
+            runner.__enter__()
+        iterator = iter(runner)
+        next(iterator)
+        with pytest.raises(RuntimeError, match="one active iteration"):
+            next(iter(runner))
+        iterator.close()
+    assert (source.opened, source.closed) == (1, 1)
+
+
+def test_runner_cleans_up_after_open_failure_and_preserves_primary_error():
+    class OpenAndCloseFailure:
+        def open(self):
+            raise OSError("open failed")
+
+        def read_batch(self):
+            return None
+
+        def close(self):
+            raise RuntimeError("close failed")
+
+    runner = tm.SessionRunner(OpenAndCloseFailure(), session())
+    with pytest.raises(OSError, match="open failed") as captured:
+        with runner:
+            pytest.fail("open should fail before the context is entered")
+    if hasattr(captured.value, "__notes__"):
+        assert any("cleanup after open failure" in note for note in captured.value.__notes__)
+
+
+def test_runner_close_failure_is_raised_or_attached_to_body_error():
+    class CloseFailure(ListSource):
+        def close(self):
+            raise RuntimeError("close failed")
+
+    with pytest.raises(RuntimeError, match="close failed"):
+        with tm.SessionRunner(CloseFailure([]), session()):
+            pass
+
+    with pytest.raises(ValueError, match="body failed") as captured:
+        with tm.SessionRunner(CloseFailure([]), session()):
+            raise ValueError("body failed")
+    if hasattr(captured.value, "__notes__"):
+        assert any("also failed" in note for note in captured.value.__notes__)
+
+
+def test_runner_rejects_invalid_batches_and_propagates_acknowledgement_errors():
+    with pytest.raises(TypeError, match="must return ObservationBatch or None"):
+        with tm.SessionRunner(ListSource(["not a batch"]), session()) as runner:
+            list(runner)
+
+    class AckFailure(ListSource):
+        def acknowledge(self, batch, result):
+            raise OSError("acknowledgement failed")
+
+    source = AckFailure([obs_batch(0, 8, "b1")])
+    with pytest.raises(OSError, match="acknowledgement failed"):
+        with tm.SessionRunner(source, session()) as runner:
+            list(runner)
+    assert source.closed == 1
+
+
 class GoodPlugin:
     name = "demo"
     api_version = tm.PLUGIN_API_VERSION
