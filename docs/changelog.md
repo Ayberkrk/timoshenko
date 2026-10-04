@@ -27,6 +27,8 @@ change is listed here.
   reactions and end actions for off-centre loads on such members.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
+- Added `FrameSection.from_properties` to map principal geometric properties
+  and matching section moduli into planar frame bending data.
 - Added support for multi-channel FDD input in `tm.monitor`, forwarding
   estimator options to the selected identification method.
 - Standardized planar structural validation on the shared finite and positive

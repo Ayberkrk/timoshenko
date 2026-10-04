@@ -16,7 +16,7 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
 | `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
-| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and optional local-y elastic section moduli. |
+| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and local-y section moduli; `from_properties` maps principal section properties to frame axes. |
 | `tm.FrameMember` | A two-node prismatic frame member with optional local point and uniform loads, rotational end releases and mass per length. |
 | `tm.FramePointLoad` | A local point force and/or moment at a specified distance along a member. |
 | `tm.analyze_linear_static` | Assemble and solve one linear static planar load case; return displacements, reactions, member end actions and selected end stresses. |

@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import math
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 import numpy as np
 
 from ._validation import finite as _finite
 from ._validation import positive as _positive
+from .polygon import PolygonSectionProperties
+from .sections import SectionProperties
 
 
 def _json_ready(value: Any) -> Any:
@@ -91,6 +93,66 @@ class FrameSection:
         for name, value in zip(("section_modulus_at_positive_local_y_m3", "section_modulus_at_negative_local_y_m3"), moduli, strict=True):
             if value is not None:
                 object.__setattr__(self, name, _positive(name, value))
+
+    @classmethod
+    def from_properties(
+        cls,
+        properties: SectionProperties | PolygonSectionProperties,
+        *,
+        bending_axis: Literal["x", "y", "z"],
+        shear_area_local_y_m2: float | None = None,
+    ) -> FrameSection:
+        """Build a frame section from geometric properties.
+
+        ``bending_axis`` selects the section's principal moment axis to map to
+        the member's local-z bending axis. It has no default because the axis
+        names differ between the two property types: use ``"y"`` or ``"z"``
+        for ``SectionProperties`` and ``"x"`` or ``"y"`` for
+        ``PolygonSectionProperties``. Polygon properties are accepted only
+        when their x/y axes are principal (their product moment is zero within
+        floating-point roundoff). The effective shear area is never inferred.
+        """
+        if isinstance(properties, SectionProperties):
+            if bending_axis == "y":
+                second_moment = properties.second_moment_y_m4
+                section_modulus_positive = section_modulus_negative = properties.section_modulus_y_m3
+            elif bending_axis == "z":
+                second_moment = properties.second_moment_z_m4
+                section_modulus_positive = section_modulus_negative = properties.section_modulus_z_m3
+            else:
+                raise ValueError("bending_axis must be 'y' or 'z' for SectionProperties")
+        elif isinstance(properties, PolygonSectionProperties):
+            if bending_axis not in ("x", "y"):
+                raise ValueError("bending_axis must be 'x' or 'y' for PolygonSectionProperties")
+            inertia_x = float(properties.second_moment_x_m4)
+            inertia_y = float(properties.second_moment_y_m4)
+            product_moment = float(properties.product_moment_xy_m4)
+            if (
+                not all(math.isfinite(value) for value in (inertia_x, inertia_y, product_moment))
+                or inertia_x <= 0.0
+                or inertia_y <= 0.0
+            ):
+                raise ValueError("polygon section properties must have finite positive second moments")
+            roundoff_tolerance = 1e-9 * math.sqrt(inertia_x * inertia_y)
+            if abs(product_moment) > roundoff_tolerance:
+                raise ValueError("polygon section x/y axes must be principal (product moment must be zero)")
+            if bending_axis == "x":
+                second_moment = inertia_x
+                section_modulus_positive = properties.section_modulus_x_positive_m3
+                section_modulus_negative = properties.section_modulus_x_negative_m3
+            else:
+                second_moment = inertia_y
+                section_modulus_positive = properties.section_modulus_y_positive_m3
+                section_modulus_negative = properties.section_modulus_y_negative_m3
+        else:
+            raise TypeError("properties must be SectionProperties or PolygonSectionProperties")
+        return cls(
+            area_m2=properties.area_m2,
+            second_moment_local_z_m4=second_moment,
+            shear_area_local_y_m2=shear_area_local_y_m2,
+            section_modulus_at_positive_local_y_m3=section_modulus_positive,
+            section_modulus_at_negative_local_y_m3=section_modulus_negative,
+        )
 
 
 @dataclass(frozen=True)
