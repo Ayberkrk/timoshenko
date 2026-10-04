@@ -13,7 +13,7 @@
 | src/timoshenko/health.py       |       66 |        5 |     92% |95, 97, 104, 106, 134 |
 | src/timoshenko/mechanics.py    |       26 |        1 |     96% |        45 |
 | src/timoshenko/modal.py        |      125 |        5 |     96% |71, 182, 184, 225, 229 |
-| src/timoshenko/monitor.py      |       19 |        0 |    100% |           |
+| src/timoshenko/monitor.py      |       26 |        0 |    100% |           |
 | src/timoshenko/mqtt.py         |      205 |       35 |     83% |66, 68, 70, 106, 108-112, 129, 131, 135, 139, 142-144, 156, 159-161, 168, 174, 178-179, 190, 192, 223, 227-228, 239, 242, 247, 257-258, 260 |
 | src/timoshenko/multichannel.py |       80 |        2 |     98% |    57, 61 |
 | src/timoshenko/observations.py |       58 |        5 |     91% |38, 40, 87-88, 91 |
@@ -36,7 +36,7 @@
 | src/timoshenko/uncertainty.py  |      172 |        7 |     96% |111-112, 162, 167, 197-198, 212 |
 | src/timoshenko/update.py       |       22 |        3 |     86% |24, 26, 37 |
 | src/timoshenko/vibration.py    |       81 |        9 |     89% |22, 50, 54, 83, 92, 98, 116, 125, 128 |
-| **TOTAL**                      | **3383** |  **285** | **92%** |           |
+| **TOTAL**                      | **3390** |  **285** | **92%** |           |
 
 
 ## Setup coverage badge
