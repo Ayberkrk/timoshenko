@@ -12,10 +12,7 @@ import timoshenko as tm
 
 steel = tm.FrameMaterial(youngs_modulus_pa=200e9, shear_modulus_pa=77e9)
 section = tm.rectangle_section(width_m=0.08, height_m=0.16)
-beam_section = tm.FrameSection(
-    area_m2=section.area_m2,
-    second_moment_local_z_m4=section.second_moment_z_m4,
-)
+beam_section = tm.FrameSection.from_properties(section, bending_axis="z")
 model = tm.StructuralModel(
     nodes=[tm.FrameNode(0.0, 0.0), tm.FrameNode(4.0, 0.0)],
     members=[tm.FrameMember(0, 1, steel, beam_section)],
@@ -37,6 +34,19 @@ outline. Uniform load components and ``FramePointLoad`` forces are positive
 along local x and local y. A point moment is positive about local z. Axial bars
 support local axial loads and do not use bending section data. Rotational end
 releases are condensed from frame-member stiffness and load vectors.
+Modal and buckling analyses keep each released member-end rotation as an
+internal degree of freedom, separate from the joint rotation. P-delta analysis
+also solves with internal released-end rotations, then reports only joint
+displacements.
+
+``FrameSection.from_properties`` maps a selected principal axis from
+``SectionProperties`` or ``PolygonSectionProperties`` to the member's local-z
+bending axis and carries the matching elastic section moduli to the local-y
+edges. Choose ``bending_axis="y"`` or ``"z"`` for standard section properties,
+and ``"x"`` or ``"y"`` for polygon properties. Polygon x/y axes must be
+principal; the constructor rejects a non-zero product moment beyond floating
+point roundoff. It never infers effective shear area, which remains an explicit
+input.
 
 The frame section inertia is about a principal local z axis. Coupled bending
 and out-of-plane torsion from an unsymmetric section are not assembled into
@@ -53,7 +63,9 @@ then node j, strain energy and the free-degree equilibrium residual. End
 actions are forces and moments at the nodes; they are not section-diagram
 ordinates. ``tm.recover_member_response(model, result, member_index,
 stations_m)`` recovers axial force, shear, sagging-positive bending moment and
-local transverse deflection at requested distances from node i. It also finds
+local transverse deflection at requested distances from node i. Shear is the
+local +y resultant of the forces on the member between node i and the section,
+so the moment slope equals the shear. It also finds
 the signed minimum and maximum moment and the location of the largest absolute
 moment, including extrema between requested stations. At point forces shear
 uses its right-hand value and changes by the applied local-y force; at a point
@@ -115,8 +127,9 @@ Timoshenko shear flexibility. It is a first-order P-delta approximation for
 stability screening, not a nonlinear equilibrium path or a design resistance
 calculation.
 
-The P-delta and linear buckling routines do not yet support frame-member end
-releases. Static first-order analysis supports them.
+P-delta and linear buckling analyses support frame-member end releases,
+including pinned-base columns. Released member-end rotations remain independent
+of joint rotations in both analyses.
 
 ## Frame modes
 
@@ -126,11 +139,16 @@ degree of freedom. Its member mass interpolation is Euler-Bernoulli, member
 rotary inertia is omitted, and restraints are removed before solving the
 generalized eigenproblem. It returns frequencies, mode shapes normalized to
 unit peak translation, generalized mass, directional participation factors,
-effective modal mass and effective modal mass ratio in global x and y. Frame
-members with end releases are not yet supported by the modal mass formulation.
-A mode calculation needs positive mass on every free component. Compare
-measured and analytical shapes with ``tm.modal_assurance_criterion`` after
-mapping the measured degrees of freedom into the same order.
+effective modal mass and effective modal mass ratio in global x and y. A
+released member-end rotation is an internal degree of freedom with the member's
+consistent mass; the returned mode shape still contains the three joint
+components at each node. Free components with exactly zero mass, including
+released end rotations of members without mass, are statically condensed from
+the eigenproblem and recovered in the reported mode shapes;
+``condensed_dof_count`` reports how many. At least one free component must have
+positive mass. Compare measured and analytical shapes with
+``tm.modal_assurance_criterion`` after mapping the measured degrees of freedom
+into the same order.
 
 For direction vector ``r``, modal participation is
 ``Gamma = phi.T @ M @ r / (phi.T @ M @ phi)`` and effective modal mass is
@@ -147,6 +165,20 @@ initial imperfections, material yielding and post-buckling response. The
 reference member axial force output is positive in tension and negative in
 compression.
 
+## Result serialization
+
+Static, P-delta, modal and buckling results provide `to_dict()`. The returned
+dictionary has the same fields as the result, with tuples converted to lists,
+so it can be written with `json.dumps`. Member end stresses that were not
+requested stay `None`.
+
+```python
+import json
+
+result = tm.analyze_linear_static(model)
+text = json.dumps(result.to_dict())
+```
+
 ## Scope and checks
 
 The initial solver covers small-displacement, linear-elastic, planar trusses
@@ -159,7 +191,8 @@ response and does not make a safety finding.
 The frame routines are checked against cantilever closed-form displacement,
 Timoshenko shear deflection, point-load and uniform-load reactions, prescribed
 support movement, released ends, axial-bar response, portal equilibrium,
-modal participation and buckling mesh refinement. For safety-related work,
+modal participation and buckling mesh refinement, including pinned-pinned and
+fixed-pinned columns. For safety-related work,
 verify each model's signs, local axes, boundary conditions, mesh adequacy and
 assumptions against an independent engineering reference.
 

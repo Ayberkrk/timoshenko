@@ -6,6 +6,8 @@ change is listed here.
 
 ## Unreleased
 
+- Multi-channel CSV loading now rejects blank sample lines instead of silently
+  dropping them and shifting the time alignment.
 - Added a linear elastic planar frame model with supports, nodal loads,
   point and uniform local member loads, end releases, prescribed support
   movements, reactions, member end actions and optional normal stresses.
@@ -16,6 +18,8 @@ change is listed here.
   masses using explicit lumped and member mass inputs.
 - Added MAC comparison for mapped mode shapes and system eigenvalue buckling
   factors for an explicit proportional reference load pattern.
+- Modal analysis now statically condenses free degrees of freedom with exactly
+  zero mass and recovers their components in the mode shapes.
 - Added principal inertias and elastic coupled bending stress for polygon
   sections.
 - Added verification examples and documented analysis assumptions and scope.
@@ -27,6 +31,23 @@ change is listed here.
   transverse deflection and moment extrema from a first-order static result.
 - Added ``FramePartialUniformLoad`` for uniform local member loads over a
   bounded span, integrated with the frame member's stiffness shape functions.
+- Modal, P-delta and buckling analyses now support frame members with
+  rotational end releases.
+- Added JSON-ready `to_dict()` to the static, modal and buckling analysis
+  results.
+- Added `FrameSection.from_properties` to map principal geometric properties
+  and matching section moduli into planar frame bending data.
+- Added support for multi-channel FDD input in `tm.monitor`, forwarding
+  estimator options to the selected identification method.
+- Standardized planar structural validation on the shared finite and positive
+  value checks.
+- CI now tests and declares support for Python 3.14.
+
+### Changed
+
+- Refined single-channel and FDD peak frequencies with three-point
+  interpolation of the log spectrum; `resolution_hz` remains the FFT-bin
+  spacing.
 
 ## 2.0.3
 
