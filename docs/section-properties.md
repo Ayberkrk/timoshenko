@@ -44,3 +44,12 @@ provides dimensions and published properties for standard and historic
 structural shapes; use the published table when a named manufactured section
 is required. These equations are geometric primitives, not a replacement for
 that catalog data.
+
+Use ``tm.FrameSection.from_properties(properties, bending_axis=...)`` to
+transfer area, one selected principal second moment and its matching elastic
+section moduli into a planar frame section. Standard ``SectionProperties``
+uses the ``y`` and ``z`` axis names; ``PolygonSectionProperties`` uses ``x``
+and ``y``. Polygon properties can be used only when their x/y axes are
+principal (zero product moment, within floating point roundoff). Pass a
+verified ``shear_area_local_y_m2`` separately when Timoshenko shear flexibility
+is required; the section helpers do not calculate it.

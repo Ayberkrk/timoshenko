@@ -390,6 +390,56 @@ def test_frame_component_dimensions_are_validated(factory):
         factory()
 
 
+def test_frame_section_from_standard_properties_maps_axis_and_modulus():
+    properties = tm.rectangle_section(0.3, 0.6)
+    section_y = tm.FrameSection.from_properties(
+        properties, shear_area_local_y_m2=0.012
+    )
+    section_z = tm.FrameSection.from_properties(properties, bending_axis="z")
+
+    assert section_y.area_m2 == properties.area_m2
+    assert section_y.second_moment_local_z_m4 == properties.second_moment_y_m4
+    assert section_y.shear_area_local_y_m2 == 0.012
+    assert section_y.section_modulus_at_positive_local_y_m3 == properties.section_modulus_y_m3
+    assert section_y.section_modulus_at_negative_local_y_m3 == properties.section_modulus_y_m3
+    assert section_z.second_moment_local_z_m4 == properties.second_moment_z_m4
+    assert section_z.section_modulus_at_positive_local_y_m3 == properties.section_modulus_z_m3
+    assert section_z.shear_area_local_y_m2 is None
+
+
+def test_frame_section_from_principal_polygon_properties_and_rejects_coupled_axes():
+    outline = [(0.0, 0.0), (0.3, 0.0), (0.3, 0.6), (0.0, 0.6)]
+    properties = tm.polygon_section(outline)
+    section = tm.FrameSection.from_properties(properties, bending_axis="x")
+
+    assert section.area_m2 == properties.area_m2
+    assert section.second_moment_local_z_m4 == properties.second_moment_x_m4
+    assert section.section_modulus_at_positive_local_y_m3 == properties.section_modulus_x_positive_m3
+    assert section.section_modulus_at_negative_local_y_m3 == properties.section_modulus_x_negative_m3
+
+    angle = 0.4
+    rotated = [
+        (math.cos(angle) * x - math.sin(angle) * y,
+         math.sin(angle) * x + math.cos(angle) * y)
+        for x, y in outline
+    ]
+    coupled = tm.polygon_section(rotated)
+    with pytest.raises(ValueError, match="axes must be principal"):
+        tm.FrameSection.from_properties(coupled)
+
+
+def test_frame_section_from_properties_validates_property_type_and_axis():
+    with pytest.raises(TypeError, match="SectionProperties or PolygonSectionProperties"):
+        tm.FrameSection.from_properties(object())
+    with pytest.raises(ValueError, match="must be 'y' or 'z'"):
+        tm.FrameSection.from_properties(tm.rectangle_section(0.3, 0.6), bending_axis="x")
+    with pytest.raises(ValueError, match="must be 'x' or 'y'"):
+        tm.FrameSection.from_properties(
+            tm.polygon_section([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]),
+            bending_axis="z",
+        )
+
+
 def test_frame_material_checks_optional_isotropic_constants():
     shear = E / (2 * (1 + 0.3))
     assert tm.FrameMaterial(E, shear, 0.3).poisson_ratio == pytest.approx(0.3)
