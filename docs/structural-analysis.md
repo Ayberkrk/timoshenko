@@ -81,9 +81,12 @@ generalized eigenproblem. It returns frequencies, mode shapes normalized to
 unit peak translation, generalized mass, directional participation factors,
 effective modal mass and effective modal mass ratio in global x and y. Frame
 members with end releases are not yet supported by the modal mass formulation.
-A mode calculation needs positive mass on every free component. Compare
-measured and analytical shapes with ``tm.modal_assurance_criterion`` after
-mapping the measured degrees of freedom into the same order.
+Free components with exactly zero mass are statically condensed from the
+eigenproblem and recovered in the reported mode shapes;
+``condensed_dof_count`` reports how many. At least one free component must have
+positive mass. Compare measured and analytical shapes with
+``tm.modal_assurance_criterion`` after mapping the measured degrees of freedom
+into the same order.
 
 For direction vector ``r``, modal participation is
 ``Gamma = phi.T @ M @ r / (phi.T @ M @ phi)`` and effective modal mass is

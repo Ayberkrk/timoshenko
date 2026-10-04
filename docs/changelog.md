@@ -16,6 +16,8 @@ change is listed here.
   masses using explicit lumped and member mass inputs.
 - Added MAC comparison for mapped mode shapes and system eigenvalue buckling
   factors for an explicit proportional reference load pattern.
+- Modal analysis now statically condenses free degrees of freedom with exactly
+  zero mass and recovers their components in the mode shapes.
 - Added principal inertias and elastic coupled bending stress for polygon
   sections.
 - Added verification examples and documented analysis assumptions and scope.

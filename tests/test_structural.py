@@ -315,6 +315,116 @@ def test_modal_axial_bar_matches_one_element_generalized_eigenvalue():
     assert result.effective_modal_mass_ratios_x == pytest.approx((1.0,))
 
 
+@pytest.mark.parametrize(
+    "beam_scale, stiffness_factor, tolerance",
+    [(1e6, 24.0, 2e-3), (1e-6, 6.0, 2e-3)],
+)
+def test_modal_condenses_massless_rotations_in_portal_frame(
+    beam_scale, stiffness_factor, tolerance
+):
+    height, bay_width, lumped_mass = 3.0, 4.0, 1_000.0
+    beam_section = tm.FrameSection(AREA * beam_scale, INERTIA * beam_scale)
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, height),
+            tm.FrameNode(bay_width, height),
+            tm.FrameNode(bay_width, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION),
+            tm.FrameMember(1, 2, MATERIAL, beam_section),
+            tm.FrameMember(2, 3, MATERIAL, SECTION),
+        ),
+        restraints=(
+            (True, True, True),
+            (False, False, False),
+            (False, False, False),
+            (True, True, True),
+        ),
+        nodal_lumped_masses_kg=(0.0, lumped_mass, lumped_mass, 0.0),
+    )
+    result = tm.analyze_modes(model, mode_count=1)
+    expected_stiffness = stiffness_factor * E * INERTIA / height**3
+    expected_frequency = math.sqrt(
+        expected_stiffness / (2.0 * lumped_mass)
+    ) / (2.0 * math.pi)
+    assert result.frequencies_hz[0] == pytest.approx(expected_frequency, rel=tolerance)
+    assert result.condensed_dof_count == 2
+    if beam_scale < 1.0:
+        assert max(abs(node[2]) for node in result.mode_shapes[0][1:3]) > 1e-2
+
+
+def test_lumped_mass_two_storey_frame_matches_shear_building_limit():
+    height, bay_width, mass_per_floor, rigid_factor = 3.0, 4.0, 2_000.0, 1e6
+    column_stiffness = 24.0 * E * INERTIA / height**3
+    beam_section = tm.FrameSection(AREA * rigid_factor, INERTIA * rigid_factor)
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, height),
+            tm.FrameNode(bay_width, height),
+            tm.FrameNode(0.0, 2.0 * height),
+            tm.FrameNode(bay_width, 2.0 * height),
+            tm.FrameNode(bay_width, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION),
+            tm.FrameMember(1, 3, MATERIAL, SECTION),
+            tm.FrameMember(5, 2, MATERIAL, SECTION),
+            tm.FrameMember(2, 4, MATERIAL, SECTION),
+            tm.FrameMember(1, 2, MATERIAL, beam_section),
+            tm.FrameMember(3, 4, MATERIAL, beam_section),
+        ),
+        restraints=(
+            (True, True, True),
+            (False, True, False),
+            (False, True, False),
+            (False, True, False),
+            (False, True, False),
+            (True, True, True),
+        ),
+        nodal_lumped_masses_kg=(
+            0.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            0.0,
+        ),
+    )
+    result = tm.analyze_modes(model, mode_count=2)
+    reference = tm.Structure(
+        story_masses_kg=(mass_per_floor, mass_per_floor),
+        story_stiffness_n_m=(column_stiffness, column_stiffness),
+    )
+    assert result.frequencies_hz == pytest.approx(
+        reference.natural_frequencies_hz, rel=2e-3
+    )
+    assert result.condensed_dof_count == 4
+
+
+def test_modal_zero_mass_condensation_rejects_a_free_mechanism():
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, 3.0),
+            tm.FrameNode(10.0, 0.0),
+        ),
+        members=(tm.FrameMember(0, 1, MATERIAL, SECTION),),
+        restraints=(
+            (True, True, True),
+            (False, False, False),
+            (False, True, True),
+        ),
+        nodal_lumped_masses_kg=(0.0, 1_000.0, 0.0),
+    )
+    with pytest.raises(
+        ValueError, match="cannot be statically condensed; check for mechanisms"
+    ):
+        tm.analyze_modes(model)
+
+
 def test_modal_assurance_criterion_handles_scaling_and_complex_shapes():
     assert tm.modal_assurance_criterion([1.0, 2.0], [3.0, 6.0]) == pytest.approx(1.0)
     assert tm.modal_assurance_criterion([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
@@ -466,6 +576,7 @@ def test_modal_and_buckling_results_to_dict_round_trip_through_json():
     assert modal_data["mode_shapes"] == [[list(row) for row in shape] for shape in modal.mode_shapes]
     assert modal_data["notes"] == list(modal.notes)
     assert modal_data["constrained_dof_count"] == modal.constrained_dof_count
+    assert modal_data["condensed_dof_count"] == modal.condensed_dof_count
 
     column = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(0.0, 3.0)),
