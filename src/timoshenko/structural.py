@@ -13,22 +13,10 @@ from typing import Any, Literal, Sequence
 
 import numpy as np
 
+from ._validation import finite as _finite
+from ._validation import positive as _positive
 from .polygon import PolygonSectionProperties
 from .sections import SectionProperties
-
-
-def _finite(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value):
-        raise ValueError(f"{name} must be finite")
-    return value
-
-
-def _positive(name: str, value: float) -> float:
-    value = _finite(name, value)
-    if value <= 0.0:
-        raise ValueError(f"{name} must be greater than zero")
-    return value
 
 
 def _json_ready(value: Any) -> Any:
@@ -111,14 +99,15 @@ class FrameSection:
         cls,
         properties: SectionProperties | PolygonSectionProperties,
         *,
-        bending_axis: Literal["x", "y", "z"] = "y",
+        bending_axis: Literal["x", "y", "z"],
         shear_area_local_y_m2: float | None = None,
     ) -> FrameSection:
         """Build a frame section from geometric properties.
 
         ``bending_axis`` selects the section's principal moment axis to map to
-        the member's local-z bending axis. Use ``"y"`` or ``"z"`` for
-        ``SectionProperties`` and ``"x"`` or ``"y"`` for
+        the member's local-z bending axis. It has no default because the axis
+        names differ between the two property types: use ``"y"`` or ``"z"``
+        for ``SectionProperties`` and ``"x"`` or ``"y"`` for
         ``PolygonSectionProperties``. Polygon properties are accepted only
         when their x/y axes are principal (their product moment is zero within
         floating-point roundoff). The effective shear area is never inferred.
@@ -144,7 +133,7 @@ class FrameSection:
                 or inertia_y <= 0.0
             ):
                 raise ValueError("polygon section properties must have finite positive second moments")
-            roundoff_tolerance = 1e-12 * math.sqrt(inertia_x * inertia_y)
+            roundoff_tolerance = 1e-9 * math.sqrt(inertia_x * inertia_y)
             if abs(product_moment) > roundoff_tolerance:
                 raise ValueError("polygon section x/y axes must be principal (product moment must be zero)")
             if bending_axis == "x":

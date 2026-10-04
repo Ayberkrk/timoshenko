@@ -393,7 +393,7 @@ def test_frame_component_dimensions_are_validated(factory):
 def test_frame_section_from_standard_properties_maps_axis_and_modulus():
     properties = tm.rectangle_section(0.3, 0.6)
     section_y = tm.FrameSection.from_properties(
-        properties, shear_area_local_y_m2=0.012
+        properties, bending_axis="y", shear_area_local_y_m2=0.012
     )
     section_z = tm.FrameSection.from_properties(properties, bending_axis="z")
 
@@ -425,12 +425,42 @@ def test_frame_section_from_principal_polygon_properties_and_rejects_coupled_axe
     ]
     coupled = tm.polygon_section(rotated)
     with pytest.raises(ValueError, match="axes must be principal"):
-        tm.FrameSection.from_properties(coupled)
+        tm.FrameSection.from_properties(coupled, bending_axis="x")
+
+
+def test_frame_section_from_tee_polygon_keeps_edge_moduli_and_end_stresses():
+    # Tee symmetric about the y axis: flange 0.4 x 0.1 on top of a 0.1 x 0.5 web.
+    outline = [(-0.05, 0.0), (0.05, 0.0), (0.05, 0.5), (0.2, 0.5), (0.2, 0.6), (-0.2, 0.6), (-0.2, 0.5), (-0.05, 0.5)]
+    properties = tm.polygon_section(outline)
+    section = tm.FrameSection.from_properties(properties, bending_axis="x")
+    area = 0.4 * 0.1 + 0.1 * 0.5
+    centroid = (0.4 * 0.1 * 0.55 + 0.1 * 0.5 * 0.25) / area
+    inertia = (0.4 * 0.1**3 / 12 + 0.4 * 0.1 * (0.55 - centroid) ** 2
+               + 0.1 * 0.5**3 / 12 + 0.1 * 0.5 * (0.25 - centroid) ** 2)
+    assert section.area_m2 == pytest.approx(area)
+    assert section.second_moment_local_z_m4 == pytest.approx(inertia)
+    assert section.section_modulus_at_positive_local_y_m3 == pytest.approx(inertia / (0.6 - centroid))
+    assert section.section_modulus_at_negative_local_y_m3 == pytest.approx(inertia / centroid)
+
+    # Cantilever with a downward tip load: tension at the top (flange) edge of the fixed end.
+    length, force = 3.0, -12_000.0
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
+        members=(tm.FrameMember(0, 1, MATERIAL, section),),
+        restraints=((True, True, True), (False, False, False)),
+        nodal_loads=((0.0, 0.0, 0.0), (0.0, force, 0.0)),
+    )
+    top, bottom, _, _ = tm.analyze_linear_static(model).member_end_normal_stresses_pa[0]
+    moment = -force * length
+    assert top == pytest.approx(moment * (0.6 - centroid) / inertia)
+    assert bottom == pytest.approx(-moment * centroid / inertia)
 
 
 def test_frame_section_from_properties_validates_property_type_and_axis():
     with pytest.raises(TypeError, match="SectionProperties or PolygonSectionProperties"):
-        tm.FrameSection.from_properties(object())
+        tm.FrameSection.from_properties(object(), bending_axis="y")
+    with pytest.raises(TypeError):
+        tm.FrameSection.from_properties(tm.rectangle_section(0.3, 0.6))
     with pytest.raises(ValueError, match="must be 'y' or 'z'"):
         tm.FrameSection.from_properties(tm.rectangle_section(0.3, 0.6), bending_axis="x")
     with pytest.raises(ValueError, match="must be 'x' or 'y'"):
@@ -438,6 +468,13 @@ def test_frame_section_from_properties_validates_property_type_and_axis():
             tm.polygon_section([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]),
             bending_axis="z",
         )
+
+
+def test_frame_component_validation_uses_shared_error_messages():
+    with pytest.raises(ValueError, match="area_m2 must be finite and greater than zero"):
+        tm.FrameSection(math.inf, INERTIA)
+    with pytest.raises(ValueError, match="x_m must be finite"):
+        tm.FrameNode(math.nan, 0.0)
 
 
 def test_frame_material_checks_optional_isotropic_constants():

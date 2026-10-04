@@ -8,6 +8,7 @@ from typing import Any, Sequence
 
 import numpy as np
 
+from ._spectral import interpolate_log_peak_frequency
 from .oma import FDDMode as FDDMode
 from .oma import FDDResult as FDDResult
 from .oma import identify_fdd as identify_fdd
@@ -102,13 +103,18 @@ def identify(
     damping_psd = _averaged_psd(values, sensor_data.sampling_hz)
     modes = tuple(
         Mode(
-            frequency_hz=float(frequencies[idx]),
+            frequency_hz=interpolate_log_peak_frequency(frequencies, spectrum, idx),
             amplitude=float(spectrum[idx]),
             damping_ratio=None if damping_psd is None else _half_power_damping(*damping_psd, float(frequencies[idx])),
         )
         for idx in selected
     )
     notes: list[str] = ["Frequency spacing is limited by the record duration."] if resolution > 0.25 else []
+    if modes:
+        notes.append(
+            "Peak frequencies use parabolic interpolation of log spectral magnitude; "
+            "resolution_hz remains the FFT-bin spacing."
+        )
     if any(mode.damping_ratio is not None for mode in modes):
         notes.append(
             "Damping ratios are coarse half-power screening estimates from an averaged spectrum; "

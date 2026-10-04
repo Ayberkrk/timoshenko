@@ -49,7 +49,8 @@ Use ``tm.FrameSection.from_properties(properties, bending_axis=...)`` to
 transfer area, one selected principal second moment and its matching elastic
 section moduli into a planar frame section. Standard ``SectionProperties``
 uses the ``y`` and ``z`` axis names; ``PolygonSectionProperties`` uses ``x``
-and ``y``. Polygon properties can be used only when their x/y axes are
+and ``y``, so the axis must always be named. Polygon properties can be used
+only when their x/y axes are
 principal (zero product moment, within floating point roundoff). Pass a
 verified ``shear_area_local_y_m2`` separately when Timoshenko shear flexibility
 is required; the section helpers do not calculate it.
