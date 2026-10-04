@@ -27,7 +27,7 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
 | `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
 | `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
-| `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT. |
+| `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT and sub-bin peak interpolation. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
 | `tm.Mode` | One identified peak: frequency, spectral amplitude and damping ratio (`None` when not resolvable). |
@@ -45,7 +45,7 @@ Frequency domain decomposition for synchronized channels.
 |---|---|
 | `tm.MultiChannelData` | Aligned array shaped ``(sample, channel)`` with explicit metadata. |
 | `tm.load_multichannel_csv` | Read aligned numeric channels from a headered CSV file. |
-| `tm.identify_fdd` | Estimate modal frequencies and complex mode shapes with Welch FDD. |
+| `tm.identify_fdd` | Estimate modal frequencies with sub-bin peak interpolation and complex mode shapes with Welch FDD. |
 | `tm.FDDResult` | Multi-channel FDD result: modes, resolution, segment settings, channels and notes. |
 | `tm.FDDMode` | One FDD mode: frequency, singular value, and complex mode shape normalized to unit peak magnitude. |
 

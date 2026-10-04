@@ -33,6 +33,12 @@ change is listed here.
   value checks.
 - CI now tests and declares support for Python 3.14.
 
+### Changed
+
+- Refined single-channel and FDD peak frequencies with three-point
+  interpolation of the log spectrum; `resolution_hz` remains the FFT-bin
+  spacing.
+
 ## 2.0.3
 
 - The package ships a `py.typed` marker, so type checkers use its annotations.

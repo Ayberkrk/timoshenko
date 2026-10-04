@@ -56,6 +56,40 @@ def test_peak_picking_recovers_frequencies_within_resolution():
     assert list(result.frequencies_hz) == sorted(result.frequencies_hz)
 
 
+def test_peak_picking_interpolates_tones_between_fft_bins():
+    fs, n = 100.0, 2_000
+    time = np.arange(n) / fs
+    expected = (2.626, 2.650, 2.674)
+    estimates = []
+    for frequency in expected:
+        signal = np.sin(2.0 * np.pi * frequency * time)
+        result = tm.modal.identify(
+            tm.SensorData(signal, fs),
+            max_modes=1,
+            min_frequency_hz=1.0,
+            max_frequency_hz=4.0,
+        )
+        estimates.append(result.frequencies_hz[0])
+        assert abs(result.frequencies_hz[0] - frequency) < 0.001
+        assert any("parabolic interpolation" in note for note in result.notes)
+    assert estimates[0] < estimates[1] < estimates[2]
+
+
+def test_noisy_peak_interpolation_improves_the_bin_center_estimate():
+    fs, n, frequency = 100.0, 2_000, 2.626
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    signal += 0.1 * np.random.default_rng(1).standard_normal(n)
+    result = tm.modal.identify(
+        tm.SensorData(signal, fs),
+        max_modes=1,
+        min_frequency_hz=1.0,
+        max_frequency_hz=4.0,
+    )
+    bin_center = round(result.frequencies_hz[0] / result.resolution_hz) * result.resolution_hz
+    assert abs(result.frequencies_hz[0] - frequency) < abs(bin_center - frequency)
+
+
 def test_peak_picking_flags_constant_signal():
     result = tm.modal.identify(tm.SensorData([4.0] * 64, 10.0))
     assert result.status == "insufficient_signal"
@@ -82,6 +116,21 @@ def test_fdd_recovers_frequencies_and_mode_shapes():
         estimate = np.array(mode.shape_real) + 1j * np.array(mode.shape_imag)
         mac = abs(np.vdot(estimate, expected)) ** 2 / (np.vdot(estimate, estimate).real * np.dot(expected, expected))
         assert mac > 0.999
+
+
+def test_fdd_interpolates_a_tone_between_fft_bins():
+    fs, n, nperseg, frequency = 100.0, 4_096, 2_048, 5.13
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    samples = np.column_stack((signal, 0.4 * signal))
+    data = tm.MultiChannelData(
+        samples, sampling_hz=fs, channel_ids=["a", "b"], units=["g", "g"]
+    )
+    result = tm.identify_fdd(
+        data, nperseg=nperseg, max_modes=1, min_frequency_hz=2.0
+    )
+    assert abs(result.frequencies_hz[0] - frequency) < 0.001
+    assert any("parabolic interpolation" in note for note in result.notes)
 
 
 def test_fdd_rejects_mixed_units_and_single_segment():
