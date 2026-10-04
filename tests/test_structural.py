@@ -425,6 +425,61 @@ def test_modal_zero_mass_condensation_rejects_a_free_mechanism():
         tm.analyze_modes(model)
 
 
+def test_member_end_release_matches_pinned_support_in_modal_buckling_and_p_delta():
+    # A release at a member end on a fully fixed node is the same structure as a pinned node.
+    length, count = 3.0, 4
+    nodes = tuple(tm.FrameNode(0.0, index * length / count) for index in range(count + 1))
+    free = (False, False, False)
+
+    def column(released):
+        members = tuple(
+            tm.FrameMember(
+                index, index + 1, MATERIAL, SECTION,
+                mass_per_length_kg_m=78.5,
+                release_rotation_i=released and index == 0,
+            )
+            for index in range(count)
+        )
+        base = (True, True, True) if released else (True, True, False)
+        return tm.StructuralModel(
+            nodes=nodes,
+            members=members,
+            restraints=(base, *(free,) * (count - 1), (False, False, True)),
+            nodal_loads=(*((0.0, 0.0, 0.0),) * count, (1_000.0, -50_000.0, 0.0)),
+        )
+
+    released, pinned = column(True), column(False)
+    assert tm.analyze_modes(released, mode_count=3).frequencies_hz == pytest.approx(
+        tm.analyze_modes(pinned, mode_count=3).frequencies_hz, rel=1e-9
+    )
+    assert tm.analyze_linear_buckling(released, mode_count=2).critical_load_factors == pytest.approx(
+        tm.analyze_linear_buckling(pinned, mode_count=2).critical_load_factors, rel=1e-9
+    )
+    second_order = tm.analyze_p_delta(released)
+    assert second_order.displacements[-1][0] == pytest.approx(
+        tm.analyze_p_delta(pinned).displacements[-1][0], rel=1e-9
+    )
+    assert second_order.member_end_forces_local[0][2] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_lumped_mass_on_internal_hinge_condenses_released_rotations():
+    # Two cantilevers of length a joined by a hinge carry the mass with stiffness 2 * 3 E I / a^3.
+    arm, lumped_mass = 3.0, 50.0
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(arm, 0.0), tm.FrameNode(2.0 * arm, 0.0)),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION, release_rotation_j=True),
+            tm.FrameMember(1, 2, MATERIAL, SECTION),
+        ),
+        restraints=((True, True, True), (True, False, False), (True, True, True)),
+        nodal_lumped_masses_kg=(0.0, lumped_mass, 0.0),
+    )
+    result = tm.analyze_modes(model, mode_count=1)
+    expected = math.sqrt(6.0 * E * INERTIA / arm**3 / lumped_mass) / (2.0 * math.pi)
+    assert result.frequencies_hz[0] == pytest.approx(expected)
+    assert result.condensed_dof_count == 2
+
+
 def test_modal_assurance_criterion_handles_scaling_and_complex_shapes():
     assert tm.modal_assurance_criterion([1.0, 2.0], [3.0, 6.0]) == pytest.approx(1.0)
     assert tm.modal_assurance_criterion([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
@@ -451,6 +506,127 @@ def test_linear_buckling_column_converges_under_mesh_refinement():
         assert result.reference_member_axial_forces_n == pytest.approx((-reference_load,) * element_count)
     assert abs(estimates[1] - exact_critical_load) < abs(estimates[0] - exact_critical_load)
     assert estimates[-1] == pytest.approx(exact_critical_load, rel=1e-4)
+
+
+def released_column(
+    element_count,
+    *,
+    fixed_base,
+    fixed_top,
+    compression_n,
+    lateral_n=0.0,
+    top_lateral_fixed=True,
+):
+    length = 3.0
+    nodes = tuple(
+        tm.FrameNode(0.0, length * index / element_count)
+        for index in range(element_count + 1)
+    )
+    members = tuple(
+        tm.FrameMember(
+            index,
+            index + 1,
+            MATERIAL,
+            SECTION,
+            release_rotation_i=index == 0 and not fixed_base,
+            release_rotation_j=index == element_count - 1 and not fixed_top,
+        )
+        for index in range(element_count)
+    )
+    restraints = (
+        (True, True, fixed_base),
+        *((False, False, False),) * (element_count - 1),
+        (top_lateral_fixed, False, fixed_top),
+    )
+    nodal_loads = ((0.0, 0.0, 0.0),) * element_count + (
+        (lateral_n, -compression_n, 0.0),
+    )
+    return tm.StructuralModel(
+        nodes=nodes,
+        members=members,
+        restraints=restraints,
+        nodal_loads=nodal_loads,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixed_base", "fixed_top", "effective_length_factor", "relative_tolerance"),
+    [(False, False, 1.0, 1e-3), (True, False, 0.699, 0.02)],
+)
+def test_released_column_buckling_matches_euler_load_under_mesh_refinement(
+    fixed_base, fixed_top, effective_length_factor, relative_tolerance
+):
+    reference_load = 1_000.0
+    exact_critical_load = math.pi**2 * E * INERTIA / (
+        effective_length_factor * 3.0
+    ) ** 2
+    estimates = []
+    for element_count in (2, 4, 8, 16):
+        model = released_column(
+            element_count,
+            fixed_base=fixed_base,
+            fixed_top=fixed_top,
+            compression_n=reference_load,
+        )
+        result = tm.analyze_linear_buckling(model, mode_count=1)
+        estimates.append(result.critical_load_factors[0] * reference_load)
+    assert abs(estimates[-1] - exact_critical_load) < abs(estimates[0] - exact_critical_load)
+    assert estimates[-1] == pytest.approx(exact_critical_load, rel=relative_tolerance)
+
+
+def test_pinned_pinned_modal_beam_matches_continuum_frequency():
+    length, mass_per_length, element_count = 6.0, 12.0, 20
+    nodes = tuple(
+        tm.FrameNode(length * index / element_count, 0.0)
+        for index in range(element_count + 1)
+    )
+    members = tuple(
+        tm.FrameMember(
+            index,
+            index + 1,
+            MATERIAL,
+            SECTION,
+            mass_per_length_kg_m=mass_per_length,
+            release_rotation_i=index == 0,
+            release_rotation_j=index == element_count - 1,
+        )
+        for index in range(element_count)
+    )
+    restraints = tuple(
+        (True, True, False)
+        if index in (0, element_count)
+        else (True, False, False)
+        for index in range(element_count + 1)
+    )
+    result = tm.analyze_modes(
+        tm.StructuralModel(nodes=nodes, members=members, restraints=restraints),
+        mode_count=1,
+    )
+    expected = math.pi**2 / (2.0 * math.pi * length**2) * math.sqrt(
+        E * INERTIA / mass_per_length
+    )
+    assert result.frequencies_hz[0] == pytest.approx(expected, rel=2e-3)
+
+
+def test_p_delta_accepts_pinned_base_and_matches_buckling_amplification():
+    theoretical_p_cr = math.pi**2 * E * INERTIA / (0.699 * 3.0) ** 2
+    compression = 0.1 * theoretical_p_cr
+    lateral = 100.0
+    model = released_column(
+        1,
+        fixed_base=False,
+        fixed_top=True,
+        compression_n=compression,
+        lateral_n=lateral,
+        top_lateral_fixed=False,
+    )
+    first_order = tm.analyze_linear_static(model)
+    second_order = tm.analyze_p_delta(model)
+    buckling = tm.analyze_linear_buckling(model, mode_count=1)
+    p_cr = buckling.critical_load_factors[0] * compression
+    amplification = second_order.displacements[1][0] / first_order.displacements[1][0]
+    assert second_order.analysis_type == "p_delta"
+    assert amplification == pytest.approx(1.0 / (1.0 - compression / p_cr), rel=1e-2)
 
 
 def test_triangular_truss_and_portal_frame_assemble_global_equilibrium():

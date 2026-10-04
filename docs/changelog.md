@@ -27,6 +27,8 @@ change is listed here.
   use equivalent nodal loads consistent with the shear-flexible stiffness.
   The cubic Euler-Bernoulli equivalents used before gave wrong displacements,
   reactions and end actions for off-centre loads on such members.
+- Modal, P-delta and buckling analyses now support frame members with
+  rotational end releases.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
 - Added `FrameSection.from_properties` to map principal geometric properties
