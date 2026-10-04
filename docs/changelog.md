@@ -4,53 +4,67 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
-## Unreleased
+## 2.1.0
 
-- Multi-channel CSV loading now rejects blank sample lines instead of silently
-  dropping them and shifting the time alignment.
-- Added a linear elastic planar frame model with supports, nodal loads,
-  point and uniform local member loads, end releases, prescribed support
-  movements, reactions, member end actions and optional normal stresses.
-- Added an iterative P-delta tangent stiffness option for second-order
+Adds planar structural analysis: frames and trusses with static, P-delta,
+modal and buckling analysis. Two changes affect results from existing code;
+they are listed under "Changed".
+
+**Added**
+
+- A linear elastic planar model, `tm.StructuralModel`, built from nodes, frame
+  members and axial bars, with ideal supports, prescribed support movements,
+  nodal loads, member point forces and moments, full-span uniform loads,
+  partial-span uniform loads (`tm.FramePartialUniformLoad`) and rotational
+  end releases.
+- `tm.analyze_linear_static` returns displacements, reactions, member end
+  actions, optional end normal stresses, strain energy and equilibrium
+  residuals.
+- Frame members use Timoshenko shear-flexible stiffness when an effective
+  shear area is supplied, and Euler-Bernoulli stiffness otherwise. Member
+  load equivalents use the shape functions of the same stiffness, so a
+  loaded member gives the same nodal response as the member split at the
+  load.
+- `tm.recover_member_response` recovers axial force, shear, bending moment
+  and transverse deflection along a frame member from a first-order static
+  result, with the moment extrema and their locations.
+- `tm.analyze_p_delta` iterates a tangent stiffness for second-order
   screening under axial force.
-- Added planar axial bars for truss assembly.
-- Added frame natural frequencies, modal participation and effective modal
-  masses using explicit lumped and member mass inputs.
-- Added MAC comparison for mapped mode shapes and system eigenvalue buckling
-  factors for an explicit proportional reference load pattern.
-- Modal analysis now statically condenses free degrees of freedom with exactly
-  zero mass and recovers their components in the mode shapes.
-- Added principal inertias and elastic coupled bending stress for polygon
-  sections.
-- Added verification examples and documented analysis assumptions and scope.
-- Member point forces and point moments on a frame member with a shear area
-  use equivalent nodal loads consistent with the shear-flexible stiffness.
-  The cubic Euler-Bernoulli equivalents used before gave wrong displacements,
-  reactions and end actions for off-centre loads on such members.
-- Added ``tm.recover_member_response`` to recover frame-member section forces,
-  transverse deflection and moment extrema from a first-order static result.
-- Added ``FramePartialUniformLoad`` for uniform local member loads over a
-  bounded span, integrated with the frame member's stiffness shape functions.
-- Modal, P-delta and buckling analyses now support frame members with
-  rotational end releases.
-- Added JSON-ready `to_dict()` to the static, modal and buckling analysis
+- `tm.analyze_modes` returns natural frequencies, mode shapes, participation
+  factors and effective modal masses from explicit lumped and member mass
+  inputs. Free degrees of freedom with exactly zero mass are statically
+  condensed, so frames that carry only joint masses can be analyzed, and
+  rigid-body modes are reported as exactly 0 Hz.
+- `tm.analyze_linear_buckling` returns elastic system buckling load factors
+  for one proportional reference load pattern.
+- Rotational end releases are supported in static, P-delta, modal and
+  buckling analysis.
+- `tm.modal_assurance_criterion` compares mapped real or complex mode shapes.
+- `tm.FrameSection.from_properties` builds a frame section from
+  `SectionProperties` or a polygon section whose axes are principal. The
+  bending axis must be named and the effective shear area stays explicit.
+- JSON-ready `to_dict()` on the static, member response, modal and buckling
   results.
-- Added `FrameSection.from_properties` to map principal geometric properties
-  and matching section moduli into planar frame bending data.
-- Added support for multi-channel FDD input in `tm.monitor`, forwarding
+- Principal inertias and elastic coupled bending stress for polygon sections.
+- `tm.monitor` accepts multi-channel data, runs FDD for it, and forwards
   estimator options to the selected identification method.
-- Standardized planar structural validation on the shared finite and positive
-  value checks.
-- CI now tests and declares support for Python 3.14.
-- Frame modal analysis no longer reports a valid low mode as 0 Hz when the
-  eigenvalues span more than ten decades. Only eigenvalues within rounding
-  error of zero are reported as rigid-body modes.
+- Python 3.14 is tested in continuous integration and declared in the package
+  metadata.
+- Verification examples and a documentation page that states the analysis
+  assumptions, sign conventions and scope.
 
-### Changed
+**Changed**
 
-- Refined single-channel and FDD peak frequencies with three-point
-  interpolation of the log spectrum; `resolution_hz` remains the FFT-bin
+- `tm.modal.identify` and `tm.identify_fdd` refine each peak frequency
+  between FFT bins with a three-point interpolation of the log spectrum.
+  Identified frequencies are no longer quantized to bin centres, so they can
+  differ from 2.0.3 by up to half a bin. `resolution_hz` remains the FFT-bin
   spacing.
+- `tm.load_multichannel_csv` rejects blank sample lines instead of silently
+  dropping them, which shortened the record and shifted every later sample
+  in time. `tm.load_sensors` already behaved this way.
+- HTML reports and the `sensor_ids` error message use ASCII hyphens. The
+  placeholder for a missing number in a report is now `-`.
 
 ## 2.0.3
 

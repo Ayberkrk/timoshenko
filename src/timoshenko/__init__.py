@@ -130,7 +130,7 @@ from .vibration import (
     rayleigh_damping_coefficients,
 )
 
-__version__ = "2.0.3"
+__version__ = "2.1.0"
 
 __all__ = [
     "HealthAssessment",
