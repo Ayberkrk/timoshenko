@@ -12,10 +12,7 @@ import timoshenko as tm
 
 steel = tm.FrameMaterial(youngs_modulus_pa=200e9, shear_modulus_pa=77e9)
 section = tm.rectangle_section(width_m=0.08, height_m=0.16)
-beam_section = tm.FrameSection(
-    area_m2=section.area_m2,
-    second_moment_local_z_m4=section.second_moment_z_m4,
-)
+beam_section = tm.FrameSection.from_properties(section, bending_axis="z")
 model = tm.StructuralModel(
     nodes=[tm.FrameNode(0.0, 0.0), tm.FrameNode(4.0, 0.0)],
     members=[tm.FrameMember(0, 1, steel, beam_section)],
@@ -37,6 +34,15 @@ outline. Uniform load components and ``FramePointLoad`` forces are positive
 along local x and local y. A point moment is positive about local z. Axial bars
 support local axial loads and do not use bending section data. Rotational end
 releases are condensed from frame-member stiffness and load vectors.
+
+``FrameSection.from_properties`` maps a selected principal axis from
+``SectionProperties`` or ``PolygonSectionProperties`` to the member's local-z
+bending axis and carries the matching elastic section moduli to the local-y
+edges. Choose ``bending_axis="y"`` or ``"z"`` for standard section properties,
+and ``"x"`` or ``"y"`` for polygon properties. Polygon x/y axes must be
+principal; the constructor rejects a non-zero product moment beyond floating
+point roundoff. It never infers effective shear area, which remains an explicit
+input.
 
 The frame section inertia is about a principal local z axis. Coupled bending
 and out-of-plane torsion from an unsymmetric section are not assembled into

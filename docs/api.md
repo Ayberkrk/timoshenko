@@ -16,7 +16,7 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
 | `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
-| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and optional local-y elastic section moduli. |
+| `tm.FrameSection` | Area, in-plane bending inertia, optional effective shear area and local-y section moduli; `from_properties` maps principal section properties to frame axes. |
 | `tm.FrameMember` | A two-node prismatic frame member with optional local point and uniform loads, rotational end releases and mass per length. |
 | `tm.FramePointLoad` | A local point force and/or moment at a specified distance along a member. |
 | `tm.analyze_linear_static` | Assemble and solve one linear static planar load case; return displacements, reactions, member end actions and selected end stresses. |
@@ -27,15 +27,15 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
 | `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
 | `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
-| `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT. |
+| `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT and sub-bin peak interpolation. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
 | `tm.Mode` | One identified peak: frequency, spectral amplitude and damping ratio (`None` when not resolvable). |
 | `tm.update` | Scale all story stiffnesses uniformly to fit identified frequencies. |
 | `tm.health.assess` | Compare observed frequencies with the structure's preserved baseline. |
 | `tm.HealthAssessment` | Paired mode changes against the baseline, evidence status, optional review flag and interpretation limits. |
-| `tm.monitor` | Run modal identification, uniform model update, then health comparison. |
-| `tm.MonitoringResult` | Output of `tm.monitor`: updated structure, modal result and health assessment. |
+| `tm.monitor` | Run single-channel FFT or multi-channel FDD identification, uniform model update, then health comparison; forward estimator options as keyword arguments. |
+| `tm.MonitoringResult` | Output of `tm.monitor`: updated structure, single-channel or FDD modal result, and health assessment. |
 
 ## Multi-channel modal analysis
 
@@ -45,7 +45,7 @@ Frequency domain decomposition for synchronized channels.
 |---|---|
 | `tm.MultiChannelData` | Aligned array shaped ``(sample, channel)`` with explicit metadata. |
 | `tm.load_multichannel_csv` | Read aligned numeric channels from a headered CSV file. |
-| `tm.identify_fdd` | Estimate modal frequencies and complex mode shapes with Welch FDD. |
+| `tm.identify_fdd` | Estimate modal frequencies with sub-bin peak interpolation and complex mode shapes with Welch FDD. |
 | `tm.FDDResult` | Multi-channel FDD result: modes, resolution, segment settings, channels and notes. |
 | `tm.FDDMode` | One FDD mode: frequency, singular value, and complex mode shape normalized to unit peak magnitude. |
 

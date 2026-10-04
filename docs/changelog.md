@@ -6,6 +6,8 @@ change is listed here.
 
 ## Unreleased
 
+- Multi-channel CSV loading now rejects blank sample lines instead of silently
+  dropping them and shifting the time alignment.
 - Added a linear elastic planar frame model with supports, nodal loads,
   point and uniform local member loads, end releases, prescribed support
   movements, reactions, member end actions and optional normal stresses.
@@ -27,6 +29,19 @@ change is listed here.
   reactions and end actions for off-centre loads on such members.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
+- Added `FrameSection.from_properties` to map principal geometric properties
+  and matching section moduli into planar frame bending data.
+- Added support for multi-channel FDD input in `tm.monitor`, forwarding
+  estimator options to the selected identification method.
+- Standardized planar structural validation on the shared finite and positive
+  value checks.
+- CI now tests and declares support for Python 3.14.
+
+### Changed
+
+- Refined single-channel and FDD peak frequencies with three-point
+  interpolation of the log spectrum; `resolution_hz` remains the FFT-bin
+  spacing.
 
 ## 2.0.3
 
