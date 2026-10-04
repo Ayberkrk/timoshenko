@@ -524,14 +524,14 @@ def recover_member_response(
             axial -= load.intensity_local_x_n_m * loaded_length
             shear += load.intensity_local_y_n_m * loaded_length
             moment += load.intensity_local_y_n_m * loaded_length * (x - start - loaded_length / 2.0)
-        for load in point_loads:
-            distance = load.distance_from_i_m
+        for point in point_loads:
+            distance = point.distance_from_i_m
             if distance <= x:
-                axial -= load.force_local_x_n
-                shear += load.force_local_y_n
-                moment += load.force_local_y_n * (x - distance)
+                axial -= point.force_local_x_n
+                shear += point.force_local_y_n
+                moment += point.force_local_y_n * (x - distance)
                 if distance < x or include_couples_at_x:
-                    moment -= load.moment_local_z_n_m
+                    moment -= point.moment_local_z_n_m
         return axial, shear, moment
 
     def deflection(x: float) -> float:
@@ -551,13 +551,13 @@ def recover_member_response(
             shear_integral += load.intensity_local_y_n_m * (
                 after_start**2 - after_end**2
             ) / 2.0
-        for load in point_loads:
-            distance = load.distance_from_i_m
+        for point in point_loads:
+            distance = point.distance_from_i_m
             span = max(0.0, x - distance)
             if span:
-                bending_integral += load.force_local_y_n * span**3 / 6.0
-                bending_integral -= load.moment_local_z_n_m * span**2 / 2.0
-                shear_integral += load.force_local_y_n * span
+                bending_integral += point.force_local_y_n * span**3 / 6.0
+                bending_integral -= point.moment_local_z_n_m * span**2 / 2.0
+                shear_integral += point.force_local_y_n * span
         value = local_v_i + local_theta_i * x + bending_integral / ei
         if shear_stiffness is not None:
             value -= shear_integral / shear_stiffness
@@ -592,10 +592,10 @@ def recover_member_response(
         root = midpoint - state(midpoint)[1] / shear_slope
         if start < root < end:
             moment_candidates.append((root, state(root)[2]))
-    for load in point_loads:
-        if load.moment_local_z_n_m == 0.0:
+    for point in point_loads:
+        if point.moment_local_z_n_m == 0.0:
             continue
-        location = load.distance_from_i_m
+        location = point.distance_from_i_m
         moment_candidates.append((location, state(location, include_couples_at_x=False)[2]))
         moment_candidates.append((location, state(location, include_couples_at_x=True)[2]))
     maximum = max(moment_candidates, key=lambda item: item[1])

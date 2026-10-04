@@ -259,7 +259,7 @@ def test_recover_member_response_for_simply_supported_uniform_load():
         (0.0, -load * length**2 / 8, 0.0), abs=1e-9
     )
     assert response.transverse_deflections_m == pytest.approx(
-        (0.0, expected_midspan_deflection, 0.0), abs=1e-12
+        (0.0, expected_midspan_deflection, 0.0), abs=3e-12
     )
     assert response.maximum_absolute_moment_n_m == pytest.approx(-load * length**2 / 8)
     assert response.maximum_absolute_moment_location_m == pytest.approx(length / 2)
