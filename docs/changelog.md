@@ -6,6 +6,8 @@ change is listed here.
 
 ## Unreleased
 
+- Multi-channel CSV loading now rejects blank sample lines instead of silently
+  dropping them and shifting the time alignment.
 - Added a linear elastic planar frame model with supports, nodal loads,
   point and uniform local member loads, end releases, prescribed support
   movements, reactions, member end actions and optional normal stresses.
