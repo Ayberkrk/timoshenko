@@ -109,7 +109,7 @@ print(frequency.estimate, frequency.standard_uncertainty)  # 6.366 Hz ± 0.090 H
 
 Planar members can also be assembled into a small-displacement linear frame
 model. Supports, nodal loads, local uniform loads and member masses are
-explicit model inputs. See [2D frame analysis](docs/structural-analysis.md)
+explicit model inputs. See [2D frame analysis](https://timoshenko.readthedocs.io/en/latest/structural-analysis/)
 for the stiffness, mass and scope assumptions.
 
 ## What it provides
@@ -197,6 +197,7 @@ The full documentation is at
 python -m pip install -e ".[test,lint]"
 python -m pytest --cov
 python -m ruff check .
+python -m ruff format --check .
 python -m mypy
 ```
 
