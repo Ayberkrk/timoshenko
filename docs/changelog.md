@@ -26,6 +26,12 @@ change is listed here.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
 
+### Changed
+
+- Refined single-channel and FDD peak frequencies with three-point
+  interpolation of the log spectrum; `resolution_hz` remains the FFT-bin
+  spacing.
+
 ## 2.0.3
 
 - The package ships a `py.typed` marker, so type checkers use its annotations.
