@@ -27,14 +27,14 @@ def _positive(name: str, value: float) -> float:
         raise ValueError(f"{name} must be greater than zero")
     return value
 
+
 def _json_ready(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _json_ready(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return [_json_ready(item) for item in value]
-    if isinstance(value, list):
+    if isinstance(value, (tuple, list)):
         return [_json_ready(item) for item in value]
     return value
+
 
 @dataclass(frozen=True)
 class FrameNode:
@@ -291,6 +291,7 @@ class FrameAnalysisResult:
 
     def to_dict(self) -> dict[str, Any]:
         return _json_ready(asdict(self))
+
 
 @dataclass(frozen=True)
 class ModalAnalysisResult:

@@ -1,3 +1,4 @@
+import json
 import math
 
 import pytest
@@ -413,96 +414,67 @@ def test_structural_model_rejects_invalid_indices_and_singular_supports():
     with pytest.raises(ValueError, match="singular"):
         tm.analyze_linear_static(model)
 
-def test_analysis_result_to_dict_is_json_ready():
-    model = tm.StructuralModel(
-        nodes=(
-            tm.FrameNode(0.0, 0.0),
-            tm.FrameNode(1.0, 0.0),
-        ),
-        members=(
-            tm.FrameMember(0, 1, MATERIAL, SECTION),
-        ),
-        restraints=(
-            (True, True, True),
-            (False, True, True),
-        ),
-    )
 
-    result = tm.analyze_linear_static(model)
+def test_modal_analysis_requires_mass_on_free_degrees():
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(1.0, 0.0)),
+        members=(tm.FrameMember(0, 1, MATERIAL, SECTION),),
+        restraints=((True, True, True), (False, False, False)),
+    )
+    with pytest.raises(ValueError, match="mass matrix"):
+        tm.analyze_modes(model)
+
+
+def _json_round_trip(result):
     data = result.to_dict()
-
-    assert isinstance(data, dict)
-    assert isinstance(data["displacements"], list)
-    assert isinstance(data["reactions"], list)
-    assert data["analysis_type"] == "first_order"
+    assert json.loads(json.dumps(data)) == data
+    return data
 
 
-
-
-def test_modal_and_buckling_analysis_results_to_dict():
-    model = tm.StructuralModel(
-        nodes=(
-            tm.FrameNode(0.0, 0.0),
-            tm.FrameNode(3.0, 0.0),
-        ),
-        members=(
-            tm.FrameMember(0, 1, MATERIAL, SECTION, mass_per_length_kg_m=12.0),
-        ),
-        restraints=(
-    (True, True, True),
-    (False, False, False),
-),
-nodal_loads=(
-    (0.0, 0.0, 0.0),
-    (0.0, -1_000.0, 0.0),
-),
+def test_static_result_to_dict_round_trips_through_json():
+    section = tm.FrameSection(
+        AREA, INERTIA,
+        section_modulus_at_positive_local_y_m3=1e-4,
+        section_modulus_at_negative_local_y_m3=1e-4,
     )
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(3.0, 0.0), tm.FrameNode(3.0, 2.0)),
+        members=(tm.FrameMember(0, 1, MATERIAL, section), tm.AxialMember(1, 2, E, AREA)),
+        restraints=((True, True, True), (False, False, False), (True, True, False)),
+        nodal_loads=((0.0, 0.0, 0.0), (500.0, -12_000.0, 0.0), (0.0, 0.0, 0.0)),
+    )
+    result = tm.analyze_linear_static(model)
+    data = _json_round_trip(result)
+    assert data["analysis_type"] == "first_order"
+    assert data["displacements"] == [list(row) for row in result.displacements]
+    assert data["reactions"] == [list(row) for row in result.reactions]
+    assert data["member_end_forces_local"] == [list(row) for row in result.member_end_forces_local]
+    assert data["member_end_normal_stresses_pa"] == [list(row) for row in result.member_end_normal_stresses_pa]
+    assert data["global_equilibrium_residual"] == list(result.global_equilibrium_residual)
+    assert data["strain_energy_j"] == result.strain_energy_j
 
-    modal_result = tm.analyze_modes(model, mode_count=1)
-    modal_data = modal_result.to_dict()
 
-    assert isinstance(modal_data, dict)
-    assert isinstance(modal_data["frequencies_hz"], list)
-    assert isinstance(modal_data["mode_shapes"], list)
+def test_static_result_to_dict_keeps_missing_member_stresses_as_none():
+    data = _json_round_trip(tm.analyze_linear_static(cantilever(load_y_n=-12_000.0)))
+    assert data["member_end_normal_stresses_pa"] == [None]
 
-    buckling_model = tm.StructuralModel(
-    nodes=(
-        tm.FrameNode(0.0, 0.0),
-        tm.FrameNode(0.0, 3.0),
-    ),
-    members=(
-        tm.FrameMember(0, 1, MATERIAL, SECTION),
-    ),
-    restraints=(
-        (True, True, True),
-        (False, False, False),
-    ),
-    nodal_loads=(
-        (0.0, 0.0, 0.0),
-        (0.0, -1_000.0, 0.0),
-    ),
-)
 
-    buckling_model = tm.StructuralModel(
-            nodes=(
-            tm.FrameNode(0.0, 0.0),
-            tm.FrameNode(0.0, 3.0),
-        ),
-    members=(
-        tm.FrameMember(0, 1, MATERIAL, SECTION),
-    ),
-    restraints=(
-        (True, True, True),
-        (False, False, False),
-    ),
-    nodal_loads=(
-        (0.0, 0.0, 0.0),
-        (0.0, -1_000.0, 0.0),
-    ),
-)
+def test_modal_and_buckling_results_to_dict_round_trip_through_json():
+    modal = tm.analyze_modes(cantilever(mass_per_length=12.0), mode_count=2)
+    modal_data = _json_round_trip(modal)
+    assert modal_data["frequencies_hz"] == list(modal.frequencies_hz)
+    assert modal_data["mode_shapes"] == [[list(row) for row in shape] for shape in modal.mode_shapes]
+    assert modal_data["notes"] == list(modal.notes)
+    assert modal_data["constrained_dof_count"] == modal.constrained_dof_count
 
-    buckling_result = tm.analyze_linear_buckling(buckling_model, mode_count=1)
-    buckling_data = buckling_result.to_dict()
-    assert isinstance(buckling_data, dict)
-    assert isinstance(buckling_data["critical_load_factors"], list)
-    assert isinstance(buckling_data["mode_shapes"], list)
+    column = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(0.0, 3.0)),
+        members=(tm.FrameMember(0, 1, MATERIAL, SECTION),),
+        restraints=((True, True, True), (False, False, False)),
+        nodal_loads=((0.0, 0.0, 0.0), (0.0, -1_000.0, 0.0)),
+    )
+    buckling = tm.analyze_linear_buckling(column, mode_count=1)
+    buckling_data = _json_round_trip(buckling)
+    assert buckling_data["critical_load_factors"] == list(buckling.critical_load_factors)
+    assert buckling_data["mode_shapes"] == [[list(row) for row in shape] for shape in buckling.mode_shapes]
+    assert buckling_data["reference_member_axial_forces_n"] == list(buckling.reference_member_axial_forces_n)
