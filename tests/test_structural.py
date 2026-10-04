@@ -390,6 +390,13 @@ def test_frame_component_dimensions_are_validated(factory):
         factory()
 
 
+def test_frame_component_validation_uses_shared_error_messages():
+    with pytest.raises(ValueError, match="area_m2 must be finite and greater than zero"):
+        tm.FrameSection(math.inf, INERTIA)
+    with pytest.raises(ValueError, match="x_m must be finite"):
+        tm.FrameNode(math.nan, 0.0)
+
+
 def test_frame_material_checks_optional_isotropic_constants():
     shear = E / (2 * (1 + 0.3))
     assert tm.FrameMaterial(E, shear, 0.3).poisson_ratio == pytest.approx(0.3)

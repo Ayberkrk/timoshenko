@@ -27,6 +27,8 @@ change is listed here.
   reactions and end actions for off-centre loads on such members.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
+- Standardized planar structural validation on the shared finite and positive
+  value checks.
 - CI now tests and declares support for Python 3.14.
 
 ## 2.0.3
