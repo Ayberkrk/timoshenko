@@ -30,7 +30,7 @@ python -m pip install -e ".[test,lint,docs]"
 Every pull request runs these on GitHub Actions. Run them locally first:
 
 ```bash
-python -m pytest --cov             # tests on Python 3.10 to 3.13 in CI
+python -m pytest --cov             # tests on Python 3.10 to 3.14 in CI
 python -m ruff check .             # lint
 python -m mypy                     # type check of src/timoshenko
 python -m mkdocs build --strict    # documentation, if you changed docs/

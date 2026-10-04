@@ -6,6 +6,8 @@ change is listed here.
 
 ## Unreleased
 
+- Multi-channel CSV loading now rejects blank sample lines instead of silently
+  dropping them and shifting the time alignment.
 - Added a linear elastic planar frame model with supports, nodal loads,
   point and uniform local member loads, end releases, prescribed support
   movements, reactions, member end actions and optional normal stresses.
@@ -27,6 +29,9 @@ change is listed here.
   results.
 - Added support for multi-channel FDD input in `tm.monitor`, forwarding
   estimator options to the selected identification method.
+- Standardized planar structural validation on the shared finite and positive
+  value checks.
+- CI now tests and declares support for Python 3.14.
 
 ## 2.0.3
 
