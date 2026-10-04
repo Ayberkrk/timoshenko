@@ -34,8 +34,8 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.update` | Scale all story stiffnesses uniformly to fit identified frequencies. |
 | `tm.health.assess` | Compare observed frequencies with the structure's preserved baseline. |
 | `tm.HealthAssessment` | Paired mode changes against the baseline, evidence status, optional review flag and interpretation limits. |
-| `tm.monitor` | Run modal identification, uniform model update, then health comparison. |
-| `tm.MonitoringResult` | Output of `tm.monitor`: updated structure, modal result and health assessment. |
+| `tm.monitor` | Run single-channel FFT or multi-channel FDD identification, uniform model update, then health comparison; forward estimator options as keyword arguments. |
+| `tm.MonitoringResult` | Output of `tm.monitor`: updated structure, single-channel or FDD modal result, and health assessment. |
 
 ## Multi-channel modal analysis
 

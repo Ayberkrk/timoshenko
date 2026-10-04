@@ -122,6 +122,37 @@ def test_monitor_reports_insufficient_evidence_for_flat_signal():
     assert result.to_dict()["health"]["mode_changes"] == []
 
 
+def test_monitor_accepts_multichannel_fdd_and_passes_analysis_options():
+    fs, n, nperseg, frequency = 100.0, 4_096, 2_048, 5.13
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    data = tm.MultiChannelData(
+        np.column_stack((signal, 0.4 * signal)),
+        sampling_hz=fs,
+        channel_ids=["a", "b"],
+        units=["g", "g"],
+    )
+    stiffness = 1.0e5
+    mass = stiffness / (2.0 * np.pi * frequency) ** 2
+    result = tm.monitor(
+        tm.Structure([stiffness], [mass]),
+        data,
+        nperseg=nperseg,
+        max_modes=1,
+        min_frequency_hz=2.0,
+    )
+
+    assert isinstance(result.modal, tm.FDDResult)
+    assert result.modal.nperseg == nperseg
+    assert result.modal.frequencies_hz == pytest.approx(
+        (frequency,), abs=result.modal.resolution_hz
+    )
+    assert result.health.modal_result is result.modal
+    assert result.health.status == "evidence_available"
+    assert "Mode 1" in tm.report.to_html(result)
+    assert result.to_dict()["modal"]["method"] == "welch_frequency_domain_decomposition"
+
+
 def test_load_sensors_csv_json_and_array(tmp_path):
     csv_path = tmp_path / "acc.csv"
     csv_path.write_text("time,value\n" + "".join(f"{i},{i * 0.5}\n" for i in range(10)))

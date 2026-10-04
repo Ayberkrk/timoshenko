@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from .health import HealthAssessment, assess
 from .modal import ModalResult, identify
+from .multichannel import MultiChannelData
+from .oma import FDDResult, identify_fdd
 from .sensors import SensorData
 from .structure import Structure
 from .update import update
@@ -14,7 +17,7 @@ from .update import update
 @dataclass(frozen=True)
 class MonitoringResult:
     structure: Structure
-    modal: ModalResult
+    modal: ModalResult | FDDResult
     health: HealthAssessment
 
     def to_dict(self) -> dict:
@@ -35,9 +38,24 @@ class MonitoringResult:
         }
 
 
-def monitor(structure: Structure, sensors: SensorData, *, review_threshold_pct: float | None = None) -> MonitoringResult:
-    """Run modal identification, uniform model update, then health comparison."""
-    modal_result = identify(sensors)
+def monitor(
+    structure: Structure,
+    sensors: SensorData | MultiChannelData,
+    *,
+    review_threshold_pct: float | None = None,
+    **analysis_options: Any,
+) -> MonitoringResult:
+    """Identify modes, update the reference model, and compare its baseline.
+
+    Single-channel data uses ``modal.identify``; aligned multi-channel data
+    uses ``identify_fdd``. Extra keyword options are passed to that estimator.
+    """
+    if isinstance(sensors, SensorData):
+        modal_result = identify(sensors, **analysis_options)
+    elif isinstance(sensors, MultiChannelData):
+        modal_result = identify_fdd(sensors, **analysis_options)
+    else:
+        raise TypeError("sensors must be SensorData or MultiChannelData")
     updated_structure = update(structure, modal_result) if modal_result.modes else structure
     health_result = assess(
         structure=updated_structure,

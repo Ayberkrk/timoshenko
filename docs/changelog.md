@@ -25,6 +25,8 @@ change is listed here.
   reactions and end actions for off-centre loads on such members.
 - Added JSON-ready `to_dict()` to the static, modal and buckling analysis
   results.
+- Added support for multi-channel FDD input in `tm.monitor`, forwarding
+  estimator options to the selected identification method.
 
 ## 2.0.3
 
