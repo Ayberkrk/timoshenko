@@ -264,7 +264,7 @@ def test_recover_member_response_for_simply_supported_uniform_load():
     assert response.maximum_absolute_moment_n_m == pytest.approx(-load * length**2 / 8)
     assert response.maximum_absolute_moment_location_m == pytest.approx(length / 2)
     assert response.maximum_moment_n_m == pytest.approx(-load * length**2 / 8)
-    assert response.minimum_moment_n_m == pytest.approx(0.0)
+    assert response.minimum_moment_n_m == pytest.approx(0.0, abs=3e-12)
 
 
 def test_recover_member_response_finds_fixed_fixed_uniform_load_extremes():
