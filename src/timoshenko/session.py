@@ -135,7 +135,7 @@ class MonitoringSession:
         hop = max(1, window // 4) if hop_samples is None else int(hop_samples)
         tolerance = 0.25 / hz if timestamp_tolerance_s is None and math.isfinite(hz) and hz > 0 else float(timestamp_tolerance_s or 0.0)
         if not ids or len(ids) > 32 or any(not value for value in ids) or len(set(ids)) != len(ids):
-            raise ValueError("sensor_ids must contain 1–32 distinct, non-empty ids")
+            raise ValueError("sensor_ids must contain 1 to 32 distinct, non-empty ids")
         if len(unit_values) != len(ids) or any(not value for value in unit_values):
             raise ValueError("units must contain one non-empty unit per sensor")
         if len(ids) > 1 and len(set(unit_values)) != 1:
