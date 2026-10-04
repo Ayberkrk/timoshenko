@@ -49,15 +49,23 @@ class FrameMaterial:
     poisson_ratio: float | None = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "youngs_modulus_pa", _positive("youngs_modulus_pa", self.youngs_modulus_pa))
-        object.__setattr__(self, "shear_modulus_pa", _positive("shear_modulus_pa", self.shear_modulus_pa))
+        object.__setattr__(
+            self, "youngs_modulus_pa", _positive("youngs_modulus_pa", self.youngs_modulus_pa)
+        )
+        object.__setattr__(
+            self, "shear_modulus_pa", _positive("shear_modulus_pa", self.shear_modulus_pa)
+        )
         if self.poisson_ratio is not None:
             ratio = _finite("poisson_ratio", self.poisson_ratio)
             if not -1.0 < ratio < 0.5:
-                raise ValueError("poisson_ratio must be between -1 and 0.5 for an isotropic elastic material")
+                raise ValueError(
+                    "poisson_ratio must be between -1 and 0.5 for an isotropic elastic material"
+                )
             expected_shear = self.youngs_modulus_pa / (2.0 * (1.0 + ratio))
             if not math.isclose(self.shear_modulus_pa, expected_shear, rel_tol=2e-3):
-                raise ValueError("youngs_modulus_pa, shear_modulus_pa and poisson_ratio are inconsistent")
+                raise ValueError(
+                    "youngs_modulus_pa, shear_modulus_pa and poisson_ratio are inconsistent"
+                )
             object.__setattr__(self, "poisson_ratio", ratio)
 
 
@@ -87,11 +95,22 @@ class FrameSection:
             _positive("second_moment_local_z_m4", self.second_moment_local_z_m4),
         )
         if self.shear_area_local_y_m2 is not None:
-            object.__setattr__(self, "shear_area_local_y_m2", _positive("shear_area_local_y_m2", self.shear_area_local_y_m2))
-        moduli = (self.section_modulus_at_positive_local_y_m3, self.section_modulus_at_negative_local_y_m3)
+            object.__setattr__(
+                self,
+                "shear_area_local_y_m2",
+                _positive("shear_area_local_y_m2", self.shear_area_local_y_m2),
+            )
+        moduli = (
+            self.section_modulus_at_positive_local_y_m3,
+            self.section_modulus_at_negative_local_y_m3,
+        )
         if (moduli[0] is None) != (moduli[1] is None):
             raise ValueError("both local-y section moduli must be supplied together")
-        for name, value in zip(("section_modulus_at_positive_local_y_m3", "section_modulus_at_negative_local_y_m3"), moduli, strict=True):
+        for name, value in zip(
+            ("section_modulus_at_positive_local_y_m3", "section_modulus_at_negative_local_y_m3"),
+            moduli,
+            strict=True,
+        ):
             if value is not None:
                 object.__setattr__(self, name, _positive(name, value))
 
@@ -106,10 +125,18 @@ class FramePointLoad:
     moment_local_z_n_m: float = 0.0
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "distance_from_i_m", _finite("distance_from_i_m", self.distance_from_i_m))
-        object.__setattr__(self, "force_local_x_n", _finite("force_local_x_n", self.force_local_x_n))
-        object.__setattr__(self, "force_local_y_n", _finite("force_local_y_n", self.force_local_y_n))
-        object.__setattr__(self, "moment_local_z_n_m", _finite("moment_local_z_n_m", self.moment_local_z_n_m))
+        object.__setattr__(
+            self, "distance_from_i_m", _finite("distance_from_i_m", self.distance_from_i_m)
+        )
+        object.__setattr__(
+            self, "force_local_x_n", _finite("force_local_x_n", self.force_local_x_n)
+        )
+        object.__setattr__(
+            self, "force_local_y_n", _finite("force_local_y_n", self.force_local_y_n)
+        )
+        object.__setattr__(
+            self, "moment_local_z_n_m", _finite("moment_local_z_n_m", self.moment_local_z_n_m)
+        )
 
 
 def _node_index(name: str, value: int) -> int:
@@ -144,14 +171,26 @@ class FrameMember:
         object.__setattr__(self, "node_j", _node_index("node_j", self.node_j))
         if self.node_i == self.node_j:
             raise ValueError("a frame member must connect two different nodes")
-        if not isinstance(self.material, FrameMaterial) or not isinstance(self.section, FrameSection):
+        if not isinstance(self.material, FrameMaterial) or not isinstance(
+            self.section, FrameSection
+        ):
             raise TypeError("material and section must be FrameMaterial and FrameSection instances")
-        object.__setattr__(self, "uniform_load_local_x_n_m", _finite("uniform_load_local_x_n_m", self.uniform_load_local_x_n_m))
-        object.__setattr__(self, "uniform_load_local_y_n_m", _finite("uniform_load_local_y_n_m", self.uniform_load_local_y_n_m))
+        object.__setattr__(
+            self,
+            "uniform_load_local_x_n_m",
+            _finite("uniform_load_local_x_n_m", self.uniform_load_local_x_n_m),
+        )
+        object.__setattr__(
+            self,
+            "uniform_load_local_y_n_m",
+            _finite("uniform_load_local_y_n_m", self.uniform_load_local_y_n_m),
+        )
         point_loads = tuple(self.point_loads)
         if any(not isinstance(load, FramePointLoad) for load in point_loads):
             raise TypeError("point_loads must contain FramePointLoad instances")
-        if not isinstance(self.release_rotation_i, bool) or not isinstance(self.release_rotation_j, bool):
+        if not isinstance(self.release_rotation_i, bool) or not isinstance(
+            self.release_rotation_j, bool
+        ):
             raise TypeError("rotation releases must be booleans")
         object.__setattr__(self, "point_loads", point_loads)
         if self.mass_per_length_kg_m is not None:
@@ -178,9 +217,15 @@ class AxialMember:
         object.__setattr__(self, "node_j", _node_index("node_j", self.node_j))
         if self.node_i == self.node_j:
             raise ValueError("an axial member must connect two different nodes")
-        object.__setattr__(self, "youngs_modulus_pa", _positive("youngs_modulus_pa", self.youngs_modulus_pa))
+        object.__setattr__(
+            self, "youngs_modulus_pa", _positive("youngs_modulus_pa", self.youngs_modulus_pa)
+        )
         object.__setattr__(self, "area_m2", _positive("area_m2", self.area_m2))
-        object.__setattr__(self, "uniform_load_local_x_n_m", _finite("uniform_load_local_x_n_m", self.uniform_load_local_x_n_m))
+        object.__setattr__(
+            self,
+            "uniform_load_local_x_n_m",
+            _finite("uniform_load_local_x_n_m", self.uniform_load_local_x_n_m),
+        )
         if self.mass_per_length_kg_m is not None:
             value = _finite("mass_per_length_kg_m", self.mass_per_length_kg_m)
             if value < 0.0:
@@ -189,7 +234,9 @@ class AxialMember:
         point_loads = tuple(self.point_loads)
         if any(not isinstance(load, FramePointLoad) for load in point_loads):
             raise TypeError("point_loads must contain FramePointLoad instances")
-        if any(load.force_local_y_n != 0.0 or load.moment_local_z_n_m != 0.0 for load in point_loads):
+        if any(
+            load.force_local_y_n != 0.0 or load.moment_local_z_n_m != 0.0 for load in point_loads
+        ):
             raise ValueError("axial members only support local axial point loads")
         object.__setattr__(self, "point_loads", point_loads)
 
@@ -219,7 +266,9 @@ class StructuralModel:
             raise ValueError("a structural model must contain at least one node")
         if any(not isinstance(node, FrameNode) for node in nodes):
             raise TypeError("nodes must contain FrameNode instances")
-        if not members or any(not isinstance(member, (FrameMember, AxialMember)) for member in members):
+        if not members or any(
+            not isinstance(member, (FrameMember, AxialMember)) for member in members
+        ):
             raise ValueError("members must contain FrameMember or AxialMember instances")
         if any(max(member.node_i, member.node_j) >= len(nodes) for member in members):
             raise ValueError("member node indices must refer to nodes in the model")
@@ -230,17 +279,25 @@ class StructuralModel:
             raise TypeError("restraint values must be booleans")
         restraints = tuple(tuple(bool(value) for value in row) for row in restraints)
         if len(self.prescribed_displacements):
-            prescribed = tuple(tuple(value for value in row) for row in self.prescribed_displacements)
+            prescribed = tuple(
+                tuple(value for value in row) for row in self.prescribed_displacements
+            )
             if len(prescribed) != len(nodes) or any(len(row) != 3 for row in prescribed):
-                raise ValueError("prescribed_displacements must have one (x_m, y_m, rotation_rad) row per node")
+                raise ValueError(
+                    "prescribed_displacements must have one (x_m, y_m, rotation_rad) row per node"
+                )
             normalized_prescribed = []
             for node_index, row in enumerate(prescribed):
                 values: list[float | None] = []
                 for dof, value in enumerate(row):
                     if restraints[node_index][dof]:
-                        values.append(0.0 if value is None else _finite("prescribed displacement", value))
+                        values.append(
+                            0.0 if value is None else _finite("prescribed displacement", value)
+                        )
                     elif value is not None:
-                        raise ValueError("prescribed displacements can only be set on restrained degrees of freedom")
+                        raise ValueError(
+                            "prescribed displacements can only be set on restrained degrees of freedom"
+                        )
                     else:
                         values.append(None)
                 normalized_prescribed.append(tuple(values))
@@ -248,15 +305,21 @@ class StructuralModel:
         else:
             prescribed = tuple(tuple(0.0 if fix else None for fix in row) for row in restraints)
         if len(self.nodal_loads):
-            loads = tuple(tuple(_finite("nodal load", value) for value in row) for row in self.nodal_loads)
+            loads = tuple(
+                tuple(_finite("nodal load", value) for value in row) for row in self.nodal_loads
+            )
             if len(loads) != len(nodes) or any(len(row) != 3 for row in loads):
                 raise ValueError("nodal_loads must have one (Fx_N, Fy_N, Mz_Nm) row per node")
         else:
             loads = tuple((0.0, 0.0, 0.0) for _ in nodes)
         if len(self.nodal_lumped_masses_kg):
-            masses = tuple(_finite("nodal_lumped_masses_kg", value) for value in self.nodal_lumped_masses_kg)
+            masses = tuple(
+                _finite("nodal_lumped_masses_kg", value) for value in self.nodal_lumped_masses_kg
+            )
             if len(masses) != len(nodes) or any(value < 0.0 for value in masses):
-                raise ValueError("nodal_lumped_masses_kg must contain one non-negative value per node")
+                raise ValueError(
+                    "nodal_lumped_masses_kg must contain one non-negative value per node"
+                )
         else:
             masses = tuple(0.0 for _ in nodes)
         object.__setattr__(self, "nodes", nodes)
@@ -327,10 +390,15 @@ def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:
     displacements = prescribed.copy()
     if len(free):
         try:
-            right_hand_side = load[free] - stiffness[np.ix_(free, np.flatnonzero(restrained))] @ prescribed[restrained]
+            right_hand_side = (
+                load[free]
+                - stiffness[np.ix_(free, np.flatnonzero(restrained))] @ prescribed[restrained]
+            )
             displacements[free] = np.linalg.solve(stiffness[np.ix_(free, free)], right_hand_side)
         except np.linalg.LinAlgError as exc:
-            raise ValueError("the restrained frame stiffness is singular; check supports and member connectivity") from exc
+            raise ValueError(
+                "the restrained frame stiffness is singular; check supports and member connectivity"
+            ) from exc
     if not np.all(np.isfinite(displacements)):
         raise ValueError("frame solution produced non-finite displacements")
     residual = stiffness @ displacements - load
@@ -357,7 +425,9 @@ def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:
         strain_energy_j=energy,
         free_dof_residual_norm=residual_norm,
         member_end_normal_stresses_pa=member_stresses,
-        global_equilibrium_residual=_global_equilibrium_residual(model, load + residual, displacements),
+        global_equilibrium_residual=_global_equilibrium_residual(
+            model, load + residual, displacements
+        ),
     )
 
 
@@ -378,9 +448,18 @@ def analyze_p_delta(
     """
     if not isinstance(model, StructuralModel):
         raise TypeError("model must be a StructuralModel")
-    if any(isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j) for member in model.members):
-        raise ValueError("P-delta analysis does not support frame members with rotational end releases")
-    if isinstance(maximum_iterations, bool) or int(maximum_iterations) != maximum_iterations or maximum_iterations < 1:
+    if any(
+        isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j)
+        for member in model.members
+    ):
+        raise ValueError(
+            "P-delta analysis does not support frame members with rotational end releases"
+        )
+    if (
+        isinstance(maximum_iterations, bool)
+        or int(maximum_iterations) != maximum_iterations
+        or maximum_iterations < 1
+    ):
         raise ValueError("maximum_iterations must be a positive integer")
     tolerance = _positive("tolerance", tolerance)
     relaxation = _finite("relaxation", relaxation)
@@ -394,14 +473,24 @@ def analyze_p_delta(
     else:
         try:
             displacement = prescribed.copy()
-            right_hand_side = load[free] - material_stiffness[np.ix_(free, np.flatnonzero(restrained))] @ prescribed[restrained]
-            displacement[free] = np.linalg.solve(material_stiffness[np.ix_(free, free)], right_hand_side)
+            right_hand_side = (
+                load[free]
+                - material_stiffness[np.ix_(free, np.flatnonzero(restrained))]
+                @ prescribed[restrained]
+            )
+            displacement[free] = np.linalg.solve(
+                material_stiffness[np.ix_(free, free)], right_hand_side
+            )
         except np.linalg.LinAlgError as exc:
-            raise ValueError("the restrained frame stiffness is singular; check supports and member connectivity") from exc
+            raise ValueError(
+                "the restrained frame stiffness is singular; check supports and member connectivity"
+            ) from exc
     converged_iteration = 0
     tangent = material_stiffness
     for iteration in range(1, int(maximum_iterations) + 1):
-        tangent, axial_forces = _p_delta_tangent(model, material_stiffness, element_data, displacement)
+        tangent, axial_forces = _p_delta_tangent(
+            model, material_stiffness, element_data, displacement
+        )
         trial = np.zeros_like(displacement)
         trial[restrained] = prescribed[restrained]
         if len(free):
@@ -410,10 +499,15 @@ def analyze_p_delta(
             if float(np.min(eigenvalues)) < -1e-12 * stiffness_scale:
                 raise ValueError("P-delta tangent stiffness indicates frame instability")
             try:
-                right_hand_side = load[free] - tangent[np.ix_(free, np.flatnonzero(restrained))] @ prescribed[restrained]
+                right_hand_side = (
+                    load[free]
+                    - tangent[np.ix_(free, np.flatnonzero(restrained))] @ prescribed[restrained]
+                )
                 trial[free] = np.linalg.solve(tangent[np.ix_(free, free)], right_hand_side)
             except np.linalg.LinAlgError as exc:
-                raise ValueError("P-delta tangent stiffness is singular; the frame may have reached instability") from exc
+                raise ValueError(
+                    "P-delta tangent stiffness is singular; the frame may have reached instability"
+                ) from exc
         updated = displacement + relaxation * (trial - displacement)
         difference = float(np.linalg.norm(updated - displacement, ord=np.inf))
         reference = max(float(np.linalg.norm(updated, ord=np.inf)), 1e-12)
@@ -428,7 +522,9 @@ def analyze_p_delta(
     residual_norm = float(np.linalg.norm(residual[free], ord=np.inf)) if len(free) else 0.0
     scale = max(1.0, float(np.linalg.norm(load, ord=np.inf)))
     if residual_norm > max(1e-8, tolerance * 10.0) * scale:
-        raise ValueError("P-delta solution did not satisfy free-degree equilibrium within tolerance")
+        raise ValueError(
+            "P-delta solution did not satisfy free-degree equilibrium within tolerance"
+        )
     member_forces: list[tuple[float, float, float, float, float, float]] = []
     for member, data, axial_tension in zip(model.members, element_data, axial_forces, strict=True):
         dofs, transform, local_stiffness, equivalent_load, length, _, _ = data
@@ -454,7 +550,9 @@ def analyze_p_delta(
         analysis_type="p_delta",
         iteration_count=converged_iteration,
         member_end_normal_stresses_pa=member_stresses,
-        global_equilibrium_residual=_global_equilibrium_residual(model, load + residual, displacement, deformed_positions=True),
+        global_equilibrium_residual=_global_equilibrium_residual(
+            model, load + residual, displacement, deformed_positions=True
+        ),
     )
 
 
@@ -470,8 +568,13 @@ def analyze_modes(model: StructuralModel, *, mode_count: int = 6) -> ModalAnalys
         raise TypeError("model must be a StructuralModel")
     if isinstance(mode_count, bool) or int(mode_count) != mode_count or mode_count < 1:
         raise ValueError("mode_count must be a positive integer")
-    if any(isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j) for member in model.members):
-        raise ValueError("modal analysis does not support frame members with rotational end releases")
+    if any(
+        isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j)
+        for member in model.members
+    ):
+        raise ValueError(
+            "modal analysis does not support frame members with rotational end releases"
+        )
     stiffness, _, element_data = _assemble(model, include_member_loads=False)
     mass = np.zeros_like(stiffness)
     for node_index, lumped_mass in enumerate(model.nodal_lumped_masses_kg):
@@ -491,7 +594,9 @@ def analyze_modes(model: StructuralModel, *, mode_count: int = 6) -> ModalAnalys
     try:
         lower = np.linalg.cholesky(mff)
     except np.linalg.LinAlgError as exc:
-        raise ValueError("modal mass matrix is not positive definite; provide mass for every free component") from exc
+        raise ValueError(
+            "modal mass matrix is not positive definite; provide mass for every free component"
+        ) from exc
     left_solved = np.linalg.solve(lower, kff)
     symmetric = np.linalg.solve(lower, left_solved.T).T
     symmetric = 0.5 * (symmetric + symmetric.T)
@@ -541,7 +646,9 @@ def analyze_modes(model: StructuralModel, *, mode_count: int = 6) -> ModalAnalys
         effective_mass_y.append(effective_y)
         modal_mass_ratio_x.append(effective_x / total_mass_x if total_mass_x > 0.0 else 0.0)
         modal_mass_ratio_y.append(effective_y / total_mass_y if total_mass_y > 0.0 else 0.0)
-    notes = ("Member rotary inertia and damping are omitted; member mass uses Euler-Bernoulli interpolation.",)
+    notes = (
+        "Member rotary inertia and damping are omitted; member mass uses Euler-Bernoulli interpolation.",
+    )
     return ModalAnalysisResult(
         frequencies_hz=tuple(frequencies),
         mode_shapes=tuple(shapes),
@@ -559,7 +666,9 @@ def analyze_modes(model: StructuralModel, *, mode_count: int = 6) -> ModalAnalys
     )
 
 
-def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> BucklingAnalysisResult:
+def analyze_linear_buckling(
+    model: StructuralModel, *, mode_count: int = 6
+) -> BucklingAnalysisResult:
     """Estimate elastic system buckling load factors for one reference load pattern.
 
     The reference axial forces come from a first-order static solution. The
@@ -570,8 +679,13 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
     """
     if not isinstance(model, StructuralModel):
         raise TypeError("model must be a StructuralModel")
-    if any(isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j) for member in model.members):
-        raise ValueError("buckling analysis does not support frame members with rotational end releases")
+    if any(
+        isinstance(member, FrameMember) and (member.release_rotation_i or member.release_rotation_j)
+        for member in model.members
+    ):
+        raise ValueError(
+            "buckling analysis does not support frame members with rotational end releases"
+        )
     if isinstance(mode_count, bool) or int(mode_count) != mode_count or mode_count < 1:
         raise ValueError("mode_count must be a positive integer")
     stiffness, load, element_data = _assemble(model, include_member_loads=True)
@@ -585,7 +699,9 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
     try:
         displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
     except np.linalg.LinAlgError as exc:
-        raise ValueError("the restrained frame stiffness is singular; check supports and connectivity") from exc
+        raise ValueError(
+            "the restrained frame stiffness is singular; check supports and connectivity"
+        ) from exc
     _, axial_forces = _p_delta_tangent(model, stiffness, element_data, displacement)
     geometric = np.zeros_like(stiffness)
     for member, data, axial_tension in zip(model.members, element_data, axial_forces, strict=True):
@@ -598,7 +714,9 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
     try:
         lower = np.linalg.cholesky(kff)
     except np.linalg.LinAlgError as exc:
-        raise ValueError("the restrained frame stiffness must be positive definite for buckling analysis") from exc
+        raise ValueError(
+            "the restrained frame stiffness must be positive definite for buckling analysis"
+        ) from exc
     left_solved = np.linalg.solve(lower, gff)
     symmetric = np.linalg.solve(lower, left_solved.T).T
     symmetric = 0.5 * (symmetric + symmetric.T)
@@ -626,7 +744,9 @@ def analyze_linear_buckling(model: StructuralModel, *, mode_count: int = 6) -> B
         critical_load_factors=tuple(factors),
         mode_shapes=tuple(shapes),
         reference_member_axial_forces_n=tuple(axial_forces),
-        notes=("Ideal elastic eigenvalue estimate; imperfections, yielding and post-buckling response are omitted.",),
+        notes=(
+            "Ideal elastic eigenvalue estimate; imperfections, yielding and post-buckling response are omitted.",
+        ),
     )
 
 
@@ -641,7 +761,12 @@ def modal_assurance_criterion(
     """
     reference = np.asarray(reference_shape, dtype=complex)
     observed = np.asarray(observed_shape, dtype=complex)
-    if reference.ndim != 1 or observed.ndim != 1 or reference.size == 0 or reference.shape != observed.shape:
+    if (
+        reference.ndim != 1
+        or observed.ndim != 1
+        or reference.size == 0
+        or reference.shape != observed.shape
+    ):
         raise ValueError("mode shapes must be non-empty one-dimensional vectors of equal length")
     if not np.all(np.isfinite(reference)) or not np.all(np.isfinite(observed)):
         raise ValueError("mode shape values must be finite")
@@ -666,13 +791,26 @@ def _assemble(
         node_i, node_j = model.nodes[member.node_i], model.nodes[member.node_j]
         dx, dy = node_j.x_m - node_i.x_m, node_j.y_m - node_i.y_m
         length = math.hypot(dx, dy)
-        if length <= np.finfo(float).eps * max(1.0, abs(node_i.x_m), abs(node_i.y_m), abs(node_j.x_m), abs(node_j.y_m)):
-            raise ValueError("frame member length must be greater than zero at the model coordinate scale")
+        if length <= np.finfo(float).eps * max(
+            1.0, abs(node_i.x_m), abs(node_i.y_m), abs(node_j.x_m), abs(node_j.y_m)
+        ):
+            raise ValueError(
+                "frame member length must be greater than zero at the model coordinate scale"
+            )
         cosine, sine = dx / length, dy / length
         local_stiffness = _local_stiffness(member, length)
         transform = _transformation(cosine, sine)
-        dofs = np.asarray((3 * member.node_i, 3 * member.node_i + 1, 3 * member.node_i + 2,
-                           3 * member.node_j, 3 * member.node_j + 1, 3 * member.node_j + 2), dtype=int)
+        dofs = np.asarray(
+            (
+                3 * member.node_i,
+                3 * member.node_i + 1,
+                3 * member.node_i + 2,
+                3 * member.node_j,
+                3 * member.node_j + 1,
+                3 * member.node_j + 2,
+            ),
+            dtype=int,
+        )
         member_load = _equivalent_local_load(member, length)
         equivalent_load = member_load if include_member_loads else np.zeros(6)
         if isinstance(member, FrameMember):
@@ -683,7 +821,9 @@ def _assemble(
         stiffness[np.ix_(dofs, dofs)] += global_stiffness
         if include_member_loads:
             load[dofs] += transform.T @ equivalent_load
-        element_data.append((dofs, transform, local_stiffness, equivalent_load, length, cosine, sine))
+        element_data.append(
+            (dofs, transform, local_stiffness, equivalent_load, length, cosine, sine)
+        )
     if not np.all(np.isfinite(stiffness)) or not np.all(np.isfinite(load)):
         raise ValueError("assembled stiffness or load contains non-finite values")
     return stiffness, load, element_data
@@ -692,7 +832,11 @@ def _assemble(
 def _constraint_arrays(model: StructuralModel) -> tuple[np.ndarray, np.ndarray]:
     restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
     prescribed = np.asarray(
-        [0.0 if value is None else value for row in model.prescribed_displacements for value in row],
+        [
+            0.0 if value is None else value
+            for row in model.prescribed_displacements
+            for value in row
+        ],
         dtype=float,
     )
     active_rotation = [False] * len(model.nodes)
@@ -705,7 +849,9 @@ def _constraint_arrays(model: StructuralModel) -> tuple[np.ndarray, np.ndarray]:
             continue
         rotation_dof = 3 * node_index + 2
         if not restrained[rotation_dof] and model.nodal_loads[node_index][2] != 0.0:
-            raise ValueError("a nodal moment requires an unreleased frame member or a restrained rotation")
+            raise ValueError(
+                "a nodal moment requires an unreleased frame member or a restrained rotation"
+            )
         restrained[rotation_dof] = True
     return restrained, prescribed
 
@@ -738,10 +884,12 @@ def _geometric_stiffness_unit(length: float, member: FrameMember | AxialMember) 
         result[np.ix_((1, 4), (1, 4))] = np.array([[1.0, -1.0], [-1.0, 1.0]]) / length
         return result
     beam = np.asarray(
-        [[36.0, 3.0 * length, -36.0, 3.0 * length],
-         [3.0 * length, 4.0 * length**2, -3.0 * length, -length**2],
-         [-36.0, -3.0 * length, 36.0, -3.0 * length],
-         [3.0 * length, -length**2, -3.0 * length, 4.0 * length**2]],
+        [
+            [36.0, 3.0 * length, -36.0, 3.0 * length],
+            [3.0 * length, 4.0 * length**2, -3.0 * length, -(length**2)],
+            [-36.0, -3.0 * length, 36.0, -3.0 * length],
+            [3.0 * length, -(length**2), -3.0 * length, 4.0 * length**2],
+        ],
         dtype=float,
     ) / (30.0 * length)
     result = np.zeros((6, 6), dtype=float)
@@ -754,7 +902,13 @@ def _condense_rotational_releases(
     stiffness: np.ndarray,
     load: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    released = tuple(index for index, flag in zip((2, 5), (member.release_rotation_i, member.release_rotation_j), strict=True) if flag)
+    released = tuple(
+        index
+        for index, flag in zip(
+            (2, 5), (member.release_rotation_i, member.release_rotation_j), strict=True
+        )
+        if flag
+    )
     if not released:
         return stiffness, load
     retained = tuple(index for index in range(6) if index not in released)
@@ -790,12 +944,19 @@ def _local_stiffness(member: FrameMember | AxialMember, length: float) -> np.nda
     ei = material.youngs_modulus_pa * section.second_moment_local_z_m4
     phi = _shear_parameter(member, length)
     scale = 1.0 / (1.0 + phi)
-    bending = scale * np.array(
-        [[12.0, 6.0 * length, -12.0, 6.0 * length],
-         [6.0 * length, (4.0 + phi) * length**2, -6.0 * length, (2.0 - phi) * length**2],
-         [-12.0, -6.0 * length, 12.0, -6.0 * length],
-         [6.0 * length, (2.0 - phi) * length**2, -6.0 * length, (4.0 + phi) * length**2]]
-    ) * ei / length**3
+    bending = (
+        scale
+        * np.array(
+            [
+                [12.0, 6.0 * length, -12.0, 6.0 * length],
+                [6.0 * length, (4.0 + phi) * length**2, -6.0 * length, (2.0 - phi) * length**2],
+                [-12.0, -6.0 * length, 12.0, -6.0 * length],
+                [6.0 * length, (2.0 - phi) * length**2, -6.0 * length, (4.0 + phi) * length**2],
+            ]
+        )
+        * ei
+        / length**3
+    )
     result = np.zeros((6, 6), dtype=float)
     result[np.ix_((0, 3), (0, 3))] = ea_l * np.array([[1.0, -1.0], [-1.0, 1.0]])
     result[np.ix_((1, 2, 4, 5), (1, 2, 4, 5))] = bending
@@ -812,12 +973,16 @@ def _local_mass(member: FrameMember | AxialMember, length: float) -> np.ndarray:
         return result
     scale = mass_per_length * length / 420.0
     result = np.zeros((6, 6), dtype=float)
-    result[np.ix_((0, 3), (0, 3))] = mass_per_length * length / 6.0 * np.array([[2.0, 1.0], [1.0, 2.0]])
+    result[np.ix_((0, 3), (0, 3))] = (
+        mass_per_length * length / 6.0 * np.array([[2.0, 1.0], [1.0, 2.0]])
+    )
     beam = np.array(
-        [[156.0, 22.0 * length, 54.0, -13.0 * length],
-         [22.0 * length, 4.0 * length**2, 13.0 * length, -3.0 * length**2],
-         [54.0, 13.0 * length, 156.0, -22.0 * length],
-         [-13.0 * length, -3.0 * length**2, -22.0 * length, 4.0 * length**2]]
+        [
+            [156.0, 22.0 * length, 54.0, -13.0 * length],
+            [22.0 * length, 4.0 * length**2, 13.0 * length, -3.0 * length**2],
+            [54.0, 13.0 * length, 156.0, -22.0 * length],
+            [-13.0 * length, -3.0 * length**2, -22.0 * length, 4.0 * length**2],
+        ]
     )
     result[np.ix_((1, 2, 4, 5), (1, 2, 4, 5))] = scale * beam
     return result
@@ -846,8 +1011,16 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
             result[3] += point.force_local_x_n * ratio
         return result
     qy = member.uniform_load_local_y_n_m
-    result += np.asarray((0.0, qy * length / 2.0, qy * length**2 / 12.0,
-                          0.0, qy * length / 2.0, -qy * length**2 / 12.0))
+    result += np.asarray(
+        (
+            0.0,
+            qy * length / 2.0,
+            qy * length**2 / 12.0,
+            0.0,
+            qy * length / 2.0,
+            -qy * length**2 / 12.0,
+        )
+    )
     # Shape functions of the shear-flexible member, consistent with
     # _local_stiffness: deflection for a force, section rotation for a moment.
     # Both reduce to the Hermite cubics when phi is zero.
@@ -859,21 +1032,31 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
         ratio = location / length
         result[0] += point.force_local_x_n * (1.0 - ratio)
         result[3] += point.force_local_x_n * ratio
-        shape = np.asarray((1.0 - 3 * ratio**2 + 2 * ratio**3 + phi * (1.0 - ratio),
-                            length * (ratio - 2 * ratio**2 + ratio**3 + 0.5 * phi * (ratio - ratio**2)),
-                            3 * ratio**2 - 2 * ratio**3 + phi * ratio,
-                            length * (-ratio**2 + ratio**3 - 0.5 * phi * (ratio - ratio**2)))) / (1.0 + phi)
+        shape = np.asarray(
+            (
+                1.0 - 3 * ratio**2 + 2 * ratio**3 + phi * (1.0 - ratio),
+                length * (ratio - 2 * ratio**2 + ratio**3 + 0.5 * phi * (ratio - ratio**2)),
+                3 * ratio**2 - 2 * ratio**3 + phi * ratio,
+                length * (-(ratio**2) + ratio**3 - 0.5 * phi * (ratio - ratio**2)),
+            )
+        ) / (1.0 + phi)
         result[np.asarray((1, 2, 4, 5))] += point.force_local_y_n * shape
-        rotation = np.asarray(((-6 * ratio + 6 * ratio**2) / length,
-                               1.0 - 4 * ratio + 3 * ratio**2 + phi * (1.0 - ratio),
-                               (6 * ratio - 6 * ratio**2) / length,
-                               -2 * ratio + 3 * ratio**2 + phi * ratio)) / (1.0 + phi)
+        rotation = np.asarray(
+            (
+                (-6 * ratio + 6 * ratio**2) / length,
+                1.0 - 4 * ratio + 3 * ratio**2 + phi * (1.0 - ratio),
+                (6 * ratio - 6 * ratio**2) / length,
+                -2 * ratio + 3 * ratio**2 + phi * ratio,
+            )
+        ) / (1.0 + phi)
         result[np.asarray((1, 2, 4, 5))] += point.moment_local_z_n_m * rotation
     return result
 
 
 def _node_rows(values: np.ndarray) -> tuple[tuple[float, float, float], ...]:
-    return tuple((float(x), float(y), float(rotation)) for x, y, rotation in values.reshape((-1, 3)))
+    return tuple(
+        (float(x), float(y), float(rotation)) for x, y, rotation in values.reshape((-1, 3))
+    )
 
 
 def _end_actions(values: np.ndarray) -> tuple[float, float, float, float, float, float]:

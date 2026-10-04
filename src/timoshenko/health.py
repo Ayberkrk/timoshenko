@@ -110,14 +110,16 @@ def assess(
     for reference_index, observed_index in pairs:
         reference_hz = float(reference[reference_index])
         observed_hz = float(result.modes[observed_index].frequency_hz)
-        changes.append(ModeChange(
-            mode_number=reference_index + 1,
-            reference_frequency_hz=reference_hz,
-            observed_frequency_hz=observed_hz,
-            change_pct=100.0 * (observed_hz - reference_hz) / reference_hz,
-            observed_mode_number=observed_index + 1,
-            resolution_limited=abs(observed_hz - reference_hz) <= result.resolution_hz,
-        ))
+        changes.append(
+            ModeChange(
+                mode_number=reference_index + 1,
+                reference_frequency_hz=reference_hz,
+                observed_frequency_hz=observed_hz,
+                change_pct=100.0 * (observed_hz - reference_hz) / reference_hz,
+                observed_mode_number=observed_index + 1,
+                resolution_limited=abs(observed_hz - reference_hz) <= result.resolution_hz,
+            )
+        )
     enough = result.status == "ok" and bool(changes)
     status = "evidence_available" if enough else "insufficient_evidence"
     summary = (
@@ -131,9 +133,13 @@ def assess(
     ]
     unpaired = len(result.modes) - len(changes)
     if unpaired:
-        notes.append(f"{unpaired} observed peak(s) were not paired with a reference mode and were not compared.")
+        notes.append(
+            f"{unpaired} observed peak(s) were not paired with a reference mode and were not compared."
+        )
     if threshold is None:
-        notes.append("No review threshold was supplied, so no review flag is raised; choose one from a calibrated baseline.")
+        notes.append(
+            "No review threshold was supplied, so no review flag is raised; choose one from a calibrated baseline."
+        )
     review = threshold is not None and any(
         not change.resolution_limited and change.change_pct <= -threshold for change in changes
     )

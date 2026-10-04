@@ -69,7 +69,11 @@ class CSVObservationSource:
         if isinstance(batch_size, bool) or size != batch_size or not 1 <= size <= 4096:
             raise ValueError("batch_size must be an integer between 1 and 4096")
         columns = [timestamp_column, sensor_id_column, unit_column, value_column]
-        columns.extend(column for column in (name_column, quality_column, asset_id_column) if column is not None)
+        columns.extend(
+            column
+            for column in (name_column, quality_column, asset_id_column)
+            if column is not None
+        )
         normalized = [str(column).strip() for column in columns]
         if any(not column for column in normalized) or len(set(normalized)) != len(normalized):
             raise ValueError("configured CSV column names must be non-empty and distinct")
@@ -114,7 +118,11 @@ class CSVObservationSource:
             self.unit_column,
             self.value_column,
         }
-        required.update(column for column in (self.name_column, self.quality_column, self.asset_id_column) if column is not None)
+        required.update(
+            column
+            for column in (self.name_column, self.quality_column, self.asset_id_column)
+            if column is not None
+        )
         missing = required - set(headers)
         if missing:
             file.close()
@@ -134,20 +142,34 @@ class CSVObservationSource:
             except StopIteration:
                 break
             except csv.Error as error:
-                raise CSVSourceError(f"malformed CSV near line {self._reader.line_num}: {error}") from error
+                raise CSVSourceError(
+                    f"malformed CSV near line {self._reader.line_num}: {error}"
+                ) from error
             line_number = self._reader.line_num
             if None in row:
-                raise CSVSourceError(f"row near line {line_number} has more fields than the CSV header")
+                raise CSVSourceError(
+                    f"row near line {line_number} has more fields than the CSV header"
+                )
             if all(value is None or not value.strip() for value in row.values()):
                 continue
             try:
                 sensor_id = self._required(row, self.sensor_id_column)
                 unit = self._required(row, self.unit_column)
-                raw_name = sensor_id if self.name_column is None else self._required(row, self.name_column)
+                raw_name = (
+                    sensor_id if self.name_column is None else self._required(row, self.name_column)
+                )
                 timestamp = _parse_timestamp(self._required(row, self.timestamp_column))
                 value = float(self._required(row, self.value_column))
-                quality = True if self.quality_column is None else _parse_quality(self._required(row, self.quality_column))
-                raw_asset_id = "" if self.asset_id_column is None else (row.get(self.asset_id_column) or "").strip()
+                quality = (
+                    True
+                    if self.quality_column is None
+                    else _parse_quality(self._required(row, self.quality_column))
+                )
+                raw_asset_id = (
+                    ""
+                    if self.asset_id_column is None
+                    else (row.get(self.asset_id_column) or "").strip()
+                )
                 observation = Observation(
                     sensor_id=sensor_id,
                     name=raw_name,
@@ -160,7 +182,9 @@ class CSVObservationSource:
                     metadata={"csv_line": line_number},
                 )
             except (TypeError, ValueError) as error:
-                raise CSVSourceError(f"invalid observation near CSV line {line_number}: {error}") from error
+                raise CSVSourceError(
+                    f"invalid observation near CSV line {line_number}: {error}"
+                ) from error
             rows.append(observation)
             self._row_sequence += 1
         if not rows:

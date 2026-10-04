@@ -44,7 +44,9 @@ class PluginContributions:
         if not callable(factory):
             raise TypeError("source factory must be callable")
         if key in self._source_factories:
-            raise PluginError(f"source factory {key!r} was registered more than once by this plugin")
+            raise PluginError(
+                f"source factory {key!r} was registered more than once by this plugin"
+            )
         self._source_factories[key] = factory
 
 
@@ -88,7 +90,9 @@ class PluginRegistry:
             raise PluginLoadError(f"plugin {name!r} failed during registration: {error}") from error
         collisions = sorted(set(staged._source_factories) & set(self._source_factories))
         if collisions:
-            raise PluginError(f"plugin {name!r} conflicts with registered source name(s): {', '.join(collisions)}")
+            raise PluginError(
+                f"plugin {name!r} conflicts with registered source name(s): {', '.join(collisions)}"
+            )
         self._source_factories.update(staged._source_factories)
         self._plugins[name] = api_version
 
@@ -97,9 +101,14 @@ class PluginRegistry:
         try:
             factory = self._source_factories[key]
         except KeyError:
-            raise KeyError(f"no source factory registered as {key!r}; available: {', '.join(self.source_names) or '(none)'}") from None
+            raise KeyError(
+                f"no source factory registered as {key!r}; available: {', '.join(self.source_names) or '(none)'}"
+            ) from None
         source = factory(**configuration)
-        if any(not callable(getattr(source, method, None)) for method in ("open", "read_batch", "close")):
+        if any(
+            not callable(getattr(source, method, None))
+            for method in ("open", "read_batch", "close")
+        ):
             raise PluginError(f"source factory {key!r} did not return an ObservationSource")
         return source
 
@@ -110,13 +119,17 @@ class PluginRegistry:
         for point in sorted(entry_points(group=group), key=lambda item: item.name):
             try:
                 exported = point.load()
-                if inspect.isclass(exported) or (callable(exported) and not callable(getattr(exported, "register", None))):
+                if inspect.isclass(exported) or (
+                    callable(exported) and not callable(getattr(exported, "register", None))
+                ):
                     exported = exported()
                 registry.register(exported)
             except Exception as error:
                 if isinstance(error, PluginLoadError):
                     raise PluginLoadError(f"entry point {point.name!r}: {error}") from error
-                raise PluginLoadError(f"could not load entry point {point.name!r}: {error}") from error
+                raise PluginLoadError(
+                    f"could not load entry point {point.name!r}: {error}"
+                ) from error
         return registry
 
 

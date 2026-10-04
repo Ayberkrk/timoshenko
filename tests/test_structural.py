@@ -15,11 +15,16 @@ SECTION = tm.FrameSection(AREA, INERTIA)
 def cantilever(*, load_y_n=0.0, shear_area=None, distributed_y_n_m=0.0, mass_per_length=None):
     return tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(3.0, 0.0)),
-        members=(tm.FrameMember(
-            0, 1, MATERIAL, tm.FrameSection(AREA, INERTIA, shear_area),
-            uniform_load_local_y_n_m=distributed_y_n_m,
-            mass_per_length_kg_m=mass_per_length,
-        ),),
+        members=(
+            tm.FrameMember(
+                0,
+                1,
+                MATERIAL,
+                tm.FrameSection(AREA, INERTIA, shear_area),
+                uniform_load_local_y_n_m=distributed_y_n_m,
+                mass_per_length_kg_m=mass_per_length,
+            ),
+        ),
         restraints=((True, True, True), (False, False, False)),
         nodal_loads=((0.0, 0.0, 0.0), (0.0, load_y_n, 0.0)),
     )
@@ -127,12 +132,17 @@ def test_concentrated_member_loads_and_released_ends_on_simple_support():
     length, load = 6.0, -12_000.0
     model = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
-        members=(tm.FrameMember(
-            0, 1, MATERIAL, SECTION,
-            point_loads=(tm.FramePointLoad(length / 2, force_local_y_n=load),),
-            release_rotation_i=True,
-            release_rotation_j=True,
-        ),),
+        members=(
+            tm.FrameMember(
+                0,
+                1,
+                MATERIAL,
+                SECTION,
+                point_loads=(tm.FramePointLoad(length / 2, force_local_y_n=load),),
+                release_rotation_i=True,
+                release_rotation_j=True,
+            ),
+        ),
         restraints=((True, True, False), (False, True, False)),
     )
     result = tm.analyze_linear_static(model)
@@ -164,12 +174,17 @@ def test_concentrated_member_moment_has_correct_support_couple():
     length, moment = 6.0, 3_000.0
     model = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
-        members=(tm.FrameMember(
-            0, 1, MATERIAL, SECTION,
-            point_loads=(tm.FramePointLoad(length / 2, moment_local_z_n_m=moment),),
-            release_rotation_i=True,
-            release_rotation_j=True,
-        ),),
+        members=(
+            tm.FrameMember(
+                0,
+                1,
+                MATERIAL,
+                SECTION,
+                point_loads=(tm.FramePointLoad(length / 2, moment_local_z_n_m=moment),),
+                release_rotation_i=True,
+                release_rotation_j=True,
+            ),
+        ),
         restraints=((True, True, False), (False, True, False)),
     )
     result = tm.analyze_linear_static(model)
@@ -184,10 +199,15 @@ def test_shear_flexible_cantilever_off_centre_point_load_matches_closed_form():
     length, location, force, shear_area = 3.0, 0.75, -12_000.0, 0.0002
     model = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
-        members=(tm.FrameMember(
-            0, 1, MATERIAL, tm.FrameSection(AREA, INERTIA, shear_area),
-            point_loads=(tm.FramePointLoad(location, force_local_y_n=force),),
-        ),),
+        members=(
+            tm.FrameMember(
+                0,
+                1,
+                MATERIAL,
+                tm.FrameSection(AREA, INERTIA, shear_area),
+                point_loads=(tm.FramePointLoad(location, force_local_y_n=force),),
+            ),
+        ),
         restraints=((True, True, True), (False, False, False)),
     )
     result = tm.analyze_linear_static(model)
@@ -200,42 +220,62 @@ def test_shear_flexible_cantilever_off_centre_point_load_matches_closed_form():
 
 
 @pytest.mark.parametrize("shear_area", [None, 0.004, 0.0005])
-@pytest.mark.parametrize("point_load", [
-    {"force_local_y_n": -12_000.0},
-    {"moment_local_z_n_m": 3_000.0},
-])
+@pytest.mark.parametrize(
+    "point_load",
+    [
+        {"force_local_y_n": -12_000.0},
+        {"moment_local_z_n_m": 3_000.0},
+    ],
+)
 @pytest.mark.parametrize("release_j", [False, True])
 def test_member_point_load_matches_model_split_at_the_load(shear_area, point_load, release_j):
     # A nodal load is exact for this element, so a member split at the load is the reference.
     length, location = 3.0, 0.75
     section = tm.FrameSection(AREA, INERTIA, shear_area)
     fixed, free = (True, True, True), (False, False, False)
-    single = tm.analyze_linear_static(tm.StructuralModel(
-        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
-        members=(tm.FrameMember(
-            0, 1, MATERIAL, section,
-            point_loads=(tm.FramePointLoad(location, **point_load),),
-            release_rotation_j=release_j,
-        ),),
-        restraints=(fixed, fixed),
-    ))
-    split = tm.analyze_linear_static(tm.StructuralModel(
-        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(location, 0.0), tm.FrameNode(length, 0.0)),
-        members=(
-            tm.FrameMember(0, 1, MATERIAL, section),
-            tm.FrameMember(1, 2, MATERIAL, section, release_rotation_j=release_j),
-        ),
-        restraints=(fixed, free, fixed),
-        nodal_loads=(
-            (0.0, 0.0, 0.0),
-            (0.0, point_load.get("force_local_y_n", 0.0), point_load.get("moment_local_z_n_m", 0.0)),
-            (0.0, 0.0, 0.0),
-        ),
-    ))
+    single = tm.analyze_linear_static(
+        tm.StructuralModel(
+            nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
+            members=(
+                tm.FrameMember(
+                    0,
+                    1,
+                    MATERIAL,
+                    section,
+                    point_loads=(tm.FramePointLoad(location, **point_load),),
+                    release_rotation_j=release_j,
+                ),
+            ),
+            restraints=(fixed, fixed),
+        )
+    )
+    split = tm.analyze_linear_static(
+        tm.StructuralModel(
+            nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(location, 0.0), tm.FrameNode(length, 0.0)),
+            members=(
+                tm.FrameMember(0, 1, MATERIAL, section),
+                tm.FrameMember(1, 2, MATERIAL, section, release_rotation_j=release_j),
+            ),
+            restraints=(fixed, free, fixed),
+            nodal_loads=(
+                (0.0, 0.0, 0.0),
+                (
+                    0.0,
+                    point_load.get("force_local_y_n", 0.0),
+                    point_load.get("moment_local_z_n_m", 0.0),
+                ),
+                (0.0, 0.0, 0.0),
+            ),
+        )
+    )
     assert single.reactions[0] == pytest.approx(split.reactions[0], abs=1e-6)
     assert single.reactions[1] == pytest.approx(split.reactions[2], abs=1e-6)
-    assert single.member_end_forces_local[0][:3] == pytest.approx(split.member_end_forces_local[0][:3], abs=1e-6)
-    assert single.member_end_forces_local[0][3:] == pytest.approx(split.member_end_forces_local[1][3:], abs=1e-6)
+    assert single.member_end_forces_local[0][:3] == pytest.approx(
+        split.member_end_forces_local[0][:3], abs=1e-6
+    )
+    assert single.member_end_forces_local[0][3:] == pytest.approx(
+        split.member_end_forces_local[1][3:], abs=1e-6
+    )
 
 
 def test_axial_bar_and_prescribed_support_displacement():
@@ -327,8 +367,12 @@ def test_linear_buckling_column_converges_under_mesh_refinement():
     exact_critical_load = math.pi**2 * E * INERTIA / (4.0 * length**2)
     estimates = []
     for element_count in (1, 2, 4):
-        nodes = tuple(tm.FrameNode(0.0, length * index / element_count) for index in range(element_count + 1))
-        members = tuple(tm.FrameMember(index, index + 1, MATERIAL, SECTION) for index in range(element_count))
+        nodes = tuple(
+            tm.FrameNode(0.0, length * index / element_count) for index in range(element_count + 1)
+        )
+        members = tuple(
+            tm.FrameMember(index, index + 1, MATERIAL, SECTION) for index in range(element_count)
+        )
         model = tm.StructuralModel(
             nodes=nodes,
             members=members,
@@ -337,7 +381,9 @@ def test_linear_buckling_column_converges_under_mesh_refinement():
         )
         result = tm.analyze_linear_buckling(model, mode_count=1)
         estimates.append(result.critical_load_factors[0] * reference_load)
-        assert result.reference_member_axial_forces_n == pytest.approx((-reference_load,) * element_count)
+        assert result.reference_member_axial_forces_n == pytest.approx(
+            (-reference_load,) * element_count
+        )
     assert abs(estimates[1] - exact_critical_load) < abs(estimates[0] - exact_critical_load)
     assert estimates[-1] == pytest.approx(exact_critical_load, rel=1e-4)
 
@@ -358,7 +404,12 @@ def test_triangular_truss_and_portal_frame_assemble_global_equilibrium():
     assert truss_result.displacements[2][0] > 0.0
     assert truss_result.global_equilibrium_residual == pytest.approx((0.0, 0.0, 0.0), abs=1e-7)
 
-    nodes = (tm.FrameNode(0.0, 0.0), tm.FrameNode(4.0, 0.0), tm.FrameNode(0.0, 3.0), tm.FrameNode(4.0, 3.0))
+    nodes = (
+        tm.FrameNode(0.0, 0.0),
+        tm.FrameNode(4.0, 0.0),
+        tm.FrameNode(0.0, 3.0),
+        tm.FrameNode(4.0, 3.0),
+    )
     portal = tm.StructuralModel(
         nodes=nodes,
         members=(
@@ -366,12 +417,19 @@ def test_triangular_truss_and_portal_frame_assemble_global_equilibrium():
             tm.FrameMember(1, 3, MATERIAL, SECTION),
             tm.FrameMember(2, 3, MATERIAL, SECTION),
         ),
-        restraints=((True, True, True), (True, True, True), (False, False, False), (False, False, False)),
+        restraints=(
+            (True, True, True),
+            (True, True, True),
+            (False, False, False),
+            (False, False, False),
+        ),
         nodal_loads=((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (5_000.0, 0.0, 0.0), (5_000.0, 0.0, 0.0)),
     )
     portal_result = tm.analyze_linear_static(portal)
     assert portal_result.reactions[0][0] + portal_result.reactions[1][0] == pytest.approx(-10_000.0)
-    assert portal_result.displacements[2][0] == pytest.approx(portal_result.displacements[3][0], rel=1e-12)
+    assert portal_result.displacements[2][0] == pytest.approx(
+        portal_result.displacements[3][0], rel=1e-12
+    )
     assert portal_result.global_equilibrium_residual == pytest.approx((0.0, 0.0, 0.0), abs=1e-7)
 
 

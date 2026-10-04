@@ -23,7 +23,9 @@ def update(structure: Structure, modal: ModalResult | FDDResult) -> Structure:
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a timoshenko.Structure")
     if not isinstance(modal, (ModalResult, FDDResult)):
-        raise TypeError("modal must be a result from tm.modal.identify() or tm.modal.identify_fdd()")
+        raise TypeError(
+            "modal must be a result from tm.modal.identify() or tm.modal.identify_fdd()"
+        )
     if modal.status != "ok" or not modal.modes:
         raise ValueError(f"cannot update structure from modal result with status {modal.status!r}")
 
@@ -33,7 +35,9 @@ def update(structure: Structure, modal: ModalResult | FDDResult) -> Structure:
         (modal.modes[observed].frequency_hz / analytical[reference]) ** 2
         for reference, observed in pairs
     ]
-    if not scale_by_mode or any(not math.isfinite(scale) or scale <= 0.0 for scale in scale_by_mode):
+    if not scale_by_mode or any(
+        not math.isfinite(scale) or scale <= 0.0 for scale in scale_by_mode
+    ):
         raise ValueError("modal/model frequency pairing produced an invalid stiffness scale")
     scale = float(statistics.median(scale_by_mode))
     spread_pct = 100.0 * statistics.median(abs(value - scale) for value in scale_by_mode) / scale

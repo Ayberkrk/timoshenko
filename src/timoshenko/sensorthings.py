@@ -24,8 +24,16 @@ _DEFAULT_PORTS = {"http": 80, "https": 443}
 
 def _origin(url: str) -> tuple[str, str, int]:
     parsed = urlsplit(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
-        raise ValueError("SensorThings URLs must be absolute HTTP(S) URLs without embedded credentials or fragments")
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "SensorThings URLs must be absolute HTTP(S) URLs without embedded credentials or fragments"
+        )
     try:
         port = parsed.port
     except ValueError as error:
@@ -61,7 +69,9 @@ class _SameOriginRedirectHandler(HTTPRedirectHandler):
             target = None
         if target != self._allowed_origin:
             fp.close()
-            raise SensorThingsSourceError(f"refusing HTTP {code} redirect away from the configured SensorThings origin")
+            raise SensorThingsSourceError(
+                f"refusing HTTP {code} redirect away from the configured SensorThings origin"
+            )
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -70,7 +80,9 @@ def _phenomenon_timestamp(value: Any) -> float:
         raise ValueError("phenomenonTime must be a timezone-aware ISO-8601 instant")
     text = value.strip()
     if "/" in text:
-        raise ValueError("interval phenomenonTime values are not supported; provide instant observations")
+        raise ValueError(
+            "interval phenomenonTime values are not supported; provide instant observations"
+        )
     iso_text = text[:-1] + "+00:00" if text.endswith(("Z", "z")) else text
     parsed = datetime.fromisoformat(iso_text)
     if parsed.tzinfo is None or parsed.utcoffset() is None:
@@ -117,9 +129,17 @@ class SensorThingsObservationSource:
         byte_limit, observation_limit = int(max_response_bytes), int(max_observations_per_page)
         if not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("timeout_s must be finite and positive")
-        if isinstance(max_response_bytes, bool) or byte_limit != max_response_bytes or not 1 <= byte_limit <= 67_108_864:
+        if (
+            isinstance(max_response_bytes, bool)
+            or byte_limit != max_response_bytes
+            or not 1 <= byte_limit <= 67_108_864
+        ):
             raise ValueError("max_response_bytes must be an integer between 1 and 67108864")
-        if isinstance(max_observations_per_page, bool) or observation_limit != max_observations_per_page or not 1 <= observation_limit <= 65_536:
+        if (
+            isinstance(max_observations_per_page, bool)
+            or observation_limit != max_observations_per_page
+            or not 1 <= observation_limit <= 65_536
+        ):
             raise ValueError("max_observations_per_page must be an integer between 1 and 65536")
         token = None if bearer_token is None else str(bearer_token).strip()
         if token == "":
@@ -135,7 +155,9 @@ class SensorThingsObservationSource:
         if not self.name:
             raise ValueError("name must be non-empty")
         self.unit = unit_value
-        self.source_id = str(source_id).strip() if source_id is not None else f"sensorthings:{sensor_value}"
+        self.source_id = (
+            str(source_id).strip() if source_id is not None else f"sensorthings:{sensor_value}"
+        )
         if not self.source_id:
             raise ValueError("source_id must be non-empty")
         self.bearer_token = token
@@ -168,7 +190,9 @@ class SensorThingsObservationSource:
                 raise ValueError("response must be a JSON object with a 'value' array")
             items = document["value"]
             if len(items) > self.max_observations_per_page:
-                raise ValueError(f"response has more than {self.max_observations_per_page} observations")
+                raise ValueError(
+                    f"response has more than {self.max_observations_per_page} observations"
+                )
             next_link = document.get("@iot.nextLink")
             if next_link is not None:
                 if not isinstance(next_link, str) or not next_link.strip():
@@ -182,7 +206,13 @@ class SensorThingsObservationSource:
             if any(item_id is None for item_id in batch_material):
                 batch_material = items
             digest = hashlib.sha256(
-                json.dumps(batch_material, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+                json.dumps(
+                    batch_material,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    allow_nan=False,
+                ).encode("utf-8")
             ).hexdigest()
             return ObservationBatch(
                 observations,
@@ -191,8 +221,17 @@ class SensorThingsObservationSource:
             )
         except SensorThingsSourceError:
             raise
-        except (ValueError, TypeError, KeyError, OverflowError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise SensorThingsSourceError(f"invalid SensorThings observation page: {error}") from error
+        except (
+            ValueError,
+            TypeError,
+            KeyError,
+            OverflowError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ) as error:
+            raise SensorThingsSourceError(
+                f"invalid SensorThings observation page: {error}"
+            ) from error
 
     def _fetch_page(self, url: str) -> bytes:
         headers = {"Accept": "application/json"}
@@ -216,7 +255,9 @@ class SensorThingsObservationSource:
         if not isinstance(payload, bytes):
             raise SensorThingsSourceError("SensorThings fetcher must return response bytes")
         if len(payload) > self.max_response_bytes:
-            raise SensorThingsSourceError(f"SensorThings response exceeded {self.max_response_bytes} bytes")
+            raise SensorThingsSourceError(
+                f"SensorThings response exceeded {self.max_response_bytes} bytes"
+            )
         return payload
 
     def _observation(self, item: Any, index: int) -> Observation:
@@ -236,7 +277,9 @@ class SensorThingsObservationSource:
             if isinstance(parameters, dict) and self.quality_parameter in parameters:
                 parameter_value = parameters[self.quality_parameter]
                 if type(parameter_value) is not bool:
-                    raise ValueError(f"value[{index}].parameters[{self.quality_parameter!r}] must be boolean")
+                    raise ValueError(
+                        f"value[{index}].parameters[{self.quality_parameter!r}] must be boolean"
+                    )
                 quality = parameter_value
         return Observation(
             sensor_id=self.sensor_id,

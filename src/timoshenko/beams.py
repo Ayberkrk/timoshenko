@@ -23,8 +23,14 @@ class BeamDeflection:
         return self.bending_m + self.shear_m
 
 
-def _response(bending: float, shear_force_factor: float, *, shear_modulus_pa: float | None,
-              area_m2: float | None, shear_correction: float) -> BeamDeflection:
+def _response(
+    bending: float,
+    shear_force_factor: float,
+    *,
+    shear_modulus_pa: float | None,
+    area_m2: float | None,
+    shear_correction: float,
+) -> BeamDeflection:
     if (shear_modulus_pa is None) != (area_m2 is None):
         raise ValueError("provide both shear_modulus_pa and area_m2 to include shear deflection")
     shear = 0.0
@@ -36,41 +42,101 @@ def _response(bending: float, shear_force_factor: float, *, shear_modulus_pa: fl
     return BeamDeflection(float(bending), float(shear))
 
 
-def cantilever_tip_load(load_n: float, span_m: float, youngs_modulus_pa: float,
-                        second_moment_m4: float, *, shear_modulus_pa: float | None = None,
-                        area_m2: float | None = None, shear_correction: float = 5.0 / 6.0) -> BeamDeflection:
+def cantilever_tip_load(
+    load_n: float,
+    span_m: float,
+    youngs_modulus_pa: float,
+    second_moment_m4: float,
+    *,
+    shear_modulus_pa: float | None = None,
+    area_m2: float | None = None,
+    shear_correction: float = 5.0 / 6.0,
+) -> BeamDeflection:
     """Tip deflection of a cantilever with a point load at its free end."""
     p, length = _finite("load_n", load_n), _positive("span_m", span_m)
-    e, inertia = _positive("youngs_modulus_pa", youngs_modulus_pa), _positive("second_moment_m4", second_moment_m4)
-    return _response(p * length**3 / (3 * e * inertia), p * length,
-                     shear_modulus_pa=shear_modulus_pa, area_m2=area_m2, shear_correction=shear_correction)
+    e, inertia = (
+        _positive("youngs_modulus_pa", youngs_modulus_pa),
+        _positive("second_moment_m4", second_moment_m4),
+    )
+    return _response(
+        p * length**3 / (3 * e * inertia),
+        p * length,
+        shear_modulus_pa=shear_modulus_pa,
+        area_m2=area_m2,
+        shear_correction=shear_correction,
+    )
 
 
-def cantilever_uniform_load(load_n_per_m: float, span_m: float, youngs_modulus_pa: float,
-                            second_moment_m4: float, *, shear_modulus_pa: float | None = None,
-                            area_m2: float | None = None, shear_correction: float = 5.0 / 6.0) -> BeamDeflection:
+def cantilever_uniform_load(
+    load_n_per_m: float,
+    span_m: float,
+    youngs_modulus_pa: float,
+    second_moment_m4: float,
+    *,
+    shear_modulus_pa: float | None = None,
+    area_m2: float | None = None,
+    shear_correction: float = 5.0 / 6.0,
+) -> BeamDeflection:
     """Free-end deflection of a cantilever under a full-span uniform load."""
     w, length = _finite("load_n_per_m", load_n_per_m), _positive("span_m", span_m)
-    e, inertia = _positive("youngs_modulus_pa", youngs_modulus_pa), _positive("second_moment_m4", second_moment_m4)
-    return _response(w * length**4 / (8 * e * inertia), w * length**2 / 2,
-                     shear_modulus_pa=shear_modulus_pa, area_m2=area_m2, shear_correction=shear_correction)
+    e, inertia = (
+        _positive("youngs_modulus_pa", youngs_modulus_pa),
+        _positive("second_moment_m4", second_moment_m4),
+    )
+    return _response(
+        w * length**4 / (8 * e * inertia),
+        w * length**2 / 2,
+        shear_modulus_pa=shear_modulus_pa,
+        area_m2=area_m2,
+        shear_correction=shear_correction,
+    )
 
 
-def simply_supported_midpoint_load(load_n: float, span_m: float, youngs_modulus_pa: float,
-                                   second_moment_m4: float, *, shear_modulus_pa: float | None = None,
-                                   area_m2: float | None = None, shear_correction: float = 5.0 / 6.0) -> BeamDeflection:
+def simply_supported_midpoint_load(
+    load_n: float,
+    span_m: float,
+    youngs_modulus_pa: float,
+    second_moment_m4: float,
+    *,
+    shear_modulus_pa: float | None = None,
+    area_m2: float | None = None,
+    shear_correction: float = 5.0 / 6.0,
+) -> BeamDeflection:
     """Midspan deflection of a simply supported beam with a center point load."""
     p, length = _finite("load_n", load_n), _positive("span_m", span_m)
-    e, inertia = _positive("youngs_modulus_pa", youngs_modulus_pa), _positive("second_moment_m4", second_moment_m4)
-    return _response(p * length**3 / (48 * e * inertia), p * length / 4,
-                     shear_modulus_pa=shear_modulus_pa, area_m2=area_m2, shear_correction=shear_correction)
+    e, inertia = (
+        _positive("youngs_modulus_pa", youngs_modulus_pa),
+        _positive("second_moment_m4", second_moment_m4),
+    )
+    return _response(
+        p * length**3 / (48 * e * inertia),
+        p * length / 4,
+        shear_modulus_pa=shear_modulus_pa,
+        area_m2=area_m2,
+        shear_correction=shear_correction,
+    )
 
 
-def simply_supported_uniform_load(load_n_per_m: float, span_m: float, youngs_modulus_pa: float,
-                                  second_moment_m4: float, *, shear_modulus_pa: float | None = None,
-                                  area_m2: float | None = None, shear_correction: float = 5.0 / 6.0) -> BeamDeflection:
+def simply_supported_uniform_load(
+    load_n_per_m: float,
+    span_m: float,
+    youngs_modulus_pa: float,
+    second_moment_m4: float,
+    *,
+    shear_modulus_pa: float | None = None,
+    area_m2: float | None = None,
+    shear_correction: float = 5.0 / 6.0,
+) -> BeamDeflection:
     """Midspan deflection of a simply supported beam under full-span UDL."""
     w, length = _finite("load_n_per_m", load_n_per_m), _positive("span_m", span_m)
-    e, inertia = _positive("youngs_modulus_pa", youngs_modulus_pa), _positive("second_moment_m4", second_moment_m4)
-    return _response(5 * w * length**4 / (384 * e * inertia), w * length**2 / 8,
-                     shear_modulus_pa=shear_modulus_pa, area_m2=area_m2, shear_correction=shear_correction)
+    e, inertia = (
+        _positive("youngs_modulus_pa", youngs_modulus_pa),
+        _positive("second_moment_m4", second_moment_m4),
+    )
+    return _response(
+        5 * w * length**4 / (384 * e * inertia),
+        w * length**2 / 8,
+        shear_modulus_pa=shear_modulus_pa,
+        area_m2=area_m2,
+        shear_correction=shear_correction,
+    )

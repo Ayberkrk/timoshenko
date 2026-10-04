@@ -13,7 +13,11 @@ def _result_parts(result: Any) -> tuple[Any, Any, Any, str, str]:
     if not all(hasattr(result, name) for name in ("structure", "modal", "health")):
         raise TypeError("result must be a Timoshenko monitoring, session, or project result")
     structure, modal, health = result.structure, result.modal, result.health
-    if not hasattr(structure, "structure_id") or not hasattr(modal, "modes") or not hasattr(health, "mode_changes"):
+    if (
+        not hasattr(structure, "structure_id")
+        or not hasattr(modal, "modes")
+        or not hasattr(health, "mode_changes")
+    ):
         raise TypeError("result does not expose the Timoshenko analysis result contract")
     title = str(getattr(result, "project_name", "") or structure.name or structure.structure_id)
     method = str(getattr(result, "method", "") or modal.method)
@@ -44,28 +48,36 @@ def _chart_svg(modal: Any, health: Any) -> str:
         f'<svg class="frequency-chart" viewBox="0 0 {width} {height}" role="img" aria-labelledby="chart-title chart-desc">',
         '<title id="chart-title">Reference and observed modal frequencies</title>',
         '<desc id="chart-desc">Horizontal lines compare model reference frequencies with the frequencies identified from observations.</desc>',
-        f'<line x1="{margin}" y1="26" x2="{width-margin}" y2="26" stroke="#94a3b8" stroke-width="1"/>',
+        f'<line x1="{margin}" y1="26" x2="{width - margin}" y2="26" stroke="#94a3b8" stroke-width="1"/>',
         f'<text x="{margin}" y="18" class="axis-label">0 Hz</text>',
-        f'<text x="{width-margin}" y="18" text-anchor="end" class="axis-label">{_number(max_frequency, 1)} Hz</text>',
+        f'<text x="{width - margin}" y="18" text-anchor="end" class="axis-label">{_number(max_frequency, 1)} Hz</text>',
     ]
     for index, mode in enumerate(modes):
         y = 62 + index * 44
         change = changes.get(index + 1)
         label = f"Mode {change.mode_number}" if change is not None else "Unpaired"
-        pieces.append(f'<text x="4" y="{y+4}" class="mode-label">{label}</text>')
+        pieces.append(f'<text x="4" y="{y + 4}" class="mode-label">{label}</text>')
         if change is not None:
             reference_x = margin + float(change.reference_frequency_hz) * scale
-            pieces.append(f'<line x1="{margin}" y1="{y-5}" x2="{reference_x:.2f}" y2="{y-5}" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>')
-            pieces.append(f'<circle cx="{reference_x:.2f}" cy="{y-5}" r="5" fill="#475569"/>')
+            pieces.append(
+                f'<line x1="{margin}" y1="{y - 5}" x2="{reference_x:.2f}" y2="{y - 5}" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>'
+            )
+            pieces.append(f'<circle cx="{reference_x:.2f}" cy="{y - 5}" r="5" fill="#475569"/>')
         observed_x = margin + float(mode.frequency_hz) * scale
-        pieces.append(f'<line x1="{margin}" y1="{y+7}" x2="{observed_x:.2f}" y2="{y+7}" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>')
-        pieces.append(f'<circle cx="{observed_x:.2f}" cy="{y+7}" r="5" fill="#1d4ed8"/>')
-        pieces.append(f'<text x="{width-margin+8}" y="{y-2}" class="value-label">{_number(mode.frequency_hz)} Hz</text>')
-    pieces.extend([
-        f'<circle cx="{margin+8}" cy="{height-19}" r="5" fill="#475569"/><text x="{margin+19}" y="{height-15}" class="legend">Model reference</text>',
-        f'<circle cx="{margin+170}" cy="{height-19}" r="5" fill="#1d4ed8"/><text x="{margin+181}" y="{height-15}" class="legend">Observed</text>',
-        '</svg>',
-    ])
+        pieces.append(
+            f'<line x1="{margin}" y1="{y + 7}" x2="{observed_x:.2f}" y2="{y + 7}" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>'
+        )
+        pieces.append(f'<circle cx="{observed_x:.2f}" cy="{y + 7}" r="5" fill="#1d4ed8"/>')
+        pieces.append(
+            f'<text x="{width - margin + 8}" y="{y - 2}" class="value-label">{_number(mode.frequency_hz)} Hz</text>'
+        )
+    pieces.extend(
+        [
+            f'<circle cx="{margin + 8}" cy="{height - 19}" r="5" fill="#475569"/><text x="{margin + 19}" y="{height - 15}" class="legend">Model reference</text>',
+            f'<circle cx="{margin + 170}" cy="{height - 19}" r="5" fill="#1d4ed8"/><text x="{margin + 181}" y="{height - 15}" class="legend">Observed</text>',
+            "</svg>",
+        ]
+    )
     return "".join(pieces)
 
 
@@ -88,7 +100,7 @@ def to_html(result: Any, *, title: str | None = None) -> str:
         damping = getattr(mode, "damping_ratio", None)
         rows.append(
             "<tr>"
-            f"<th scope=\"row\">{change.mode_number if change is not None else 'unpaired'}</th>"
+            f'<th scope="row">{change.mode_number if change is not None else "unpaired"}</th>'
             f"<td>{_number(reference)}</td>"
             f"<td>{_number(float(mode.frequency_hz))}</td>"
             f"<td>{_number(shift, 2)}{'%' if shift is not None else ''}</td>"
@@ -105,10 +117,16 @@ def to_html(result: Any, *, title: str | None = None) -> str:
         f"<dt>Health evidence</dt><dd>{escape(str(health.status))}</dd>",
     ]
     if hasattr(result, "event_time_s"):
-        metadata.append(f"<dt>Window end (Unix time)</dt><dd>{_number(result.event_time_s, 3)}</dd>")
+        metadata.append(
+            f"<dt>Window end (Unix time)</dt><dd>{_number(result.event_time_s, 3)}</dd>"
+        )
     if hasattr(result, "source_sha256"):
-        metadata.append(f"<dt>Input SHA-256</dt><dd><code>{escape(str(result.source_sha256))}</code></dd>")
-        metadata.append(f"<dt>Manifest SHA-256</dt><dd><code>{escape(str(result.manifest_sha256))}</code></dd>")
+        metadata.append(
+            f"<dt>Input SHA-256</dt><dd><code>{escape(str(result.source_sha256))}</code></dd>"
+        )
+        metadata.append(
+            f"<dt>Manifest SHA-256</dt><dd><code>{escape(str(result.manifest_sha256))}</code></dd>"
+        )
     limitations = "".join(f"<li>{escape(str(item))}</li>" for item in health.limitations)
     notes = "".join(f"<li>{escape(str(item))}</li>" for item in getattr(modal, "notes", ()))
     summary = escape(str(health.evidence_summary))
@@ -135,11 +153,11 @@ dl{{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:8px 16px;marg
 </style></head><body><main>
 <p class="subtle">Timoshenko Engine · analysis report</p><h1>{display_title}</h1>
 <p class="summary">{summary}<br><strong>{escape(review)}</strong></p>
-<dl>{''.join(metadata)}</dl>
+<dl>{"".join(metadata)}</dl>
 <h2>Modal frequency comparison</h2>{chart}
-<table><thead><tr><th>Mode</th><th>Reference (Hz)</th><th>Observed (Hz)</th><th>Difference</th><th>Damping ratio</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
-<h2>Method notes</h2><ul>{notes or '<li>No additional method notes.</li>'}</ul>
-<h2>Interpretation limits</h2><ul>{limitations or '<li>No limitation notes were supplied.</li>'}</ul>
+<table><thead><tr><th>Mode</th><th>Reference (Hz)</th><th>Observed (Hz)</th><th>Difference</th><th>Damping ratio</th></tr></thead><tbody>{"".join(rows)}</tbody></table>
+<h2>Method notes</h2><ul>{notes or "<li>No additional method notes.</li>"}</ul>
+<h2>Interpretation limits</h2><ul>{limitations or "<li>No limitation notes were supplied.</li>"}</ul>
 </main></body></html>"""
 
 

@@ -81,7 +81,11 @@ def load_multichannel_csv(
     if len(unit_names) != len(names):
         raise ValueError("units must contain one entry per selected column")
     ids = tuple(channel_ids) if channel_ids is not None else names
-    if len(ids) != len(names) or any(not str(item).strip() for item in ids) or len(set(ids)) != len(ids):
+    if (
+        len(ids) != len(names)
+        or any(not str(item).strip() for item in ids)
+        or len(set(ids)) != len(ids)
+    ):
         raise ValueError("channel_ids must contain one distinct, non-empty id per selected column")
     data: list[list[float]] = []
     with Path(source).open("r", encoding="utf-8-sig", newline="") as handle:
@@ -97,7 +101,9 @@ def load_multichannel_csv(
                 try:
                     value = float(raw)
                 except (TypeError, ValueError):
-                    raise ValueError(f"CSV row {row_number} has a missing/non-numeric value in {name!r}") from None
+                    raise ValueError(
+                        f"CSV row {row_number} has a missing/non-numeric value in {name!r}"
+                    ) from None
                 if not math.isfinite(value):
                     raise ValueError(f"CSV row {row_number} has a non-finite value in {name!r}")
                 record.append(value)

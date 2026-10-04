@@ -30,7 +30,8 @@ class FDDMode:
             "channel_ids": list(self.channel_ids),
             "units": list(self.units),
             "mode_shape": [
-                {"real": real, "imag": imag} for real, imag in zip(self.shape_real, self.shape_imag, strict=True)
+                {"real": real, "imag": imag}
+                for real, imag in zip(self.shape_real, self.shape_imag, strict=True)
             ],
             "singular_value_ratio": self.singular_value_ratio,
         }
@@ -91,9 +92,13 @@ def identify_fdd(
     environmental normalization, or damage classification.
     """
     if not isinstance(observations, MultiChannelData):
-        raise TypeError("observations must be MultiChannelData; use tm.load_multichannel_csv() or construct it explicitly")
+        raise TypeError(
+            "observations must be MultiChannelData; use tm.load_multichannel_csv() or construct it explicitly"
+        )
     if len(set(observations.units)) != 1:
-        raise ValueError("FDD requires channels with the same measurement unit; calibrate/transform mixed-unit channels first")
+        raise ValueError(
+            "FDD requires channels with the same measurement unit; calibrate/transform mixed-unit channels first"
+        )
     sample_count, channel_count = np.shape(observations.samples)
     nperseg_value, hop, segment_count, resolution, low, high = _plan(
         sample_count,
@@ -115,12 +120,16 @@ def identify_fdd(
     frequencies = np.fft.rfftfreq(nperseg_value, d=1.0 / observations.sampling_hz)
     frequency_count = len(frequencies)
     retained = min(int(max_singular_values), channel_count)
-    spectral_matrices = np.zeros((frequency_count, channel_count, channel_count), dtype=np.complex128)
+    spectral_matrices = np.zeros(
+        (frequency_count, channel_count, channel_count), dtype=np.complex128
+    )
     for start in starts:
         segment = values[start : start + nperseg_value]
         segment = segment - np.mean(segment, axis=0, keepdims=True)
         spectrum = np.fft.rfft(segment * window[:, None], axis=0)
-        spectral_matrices += np.einsum("fc,fd->fcd", spectrum, np.conjugate(spectrum), optimize=True)
+        spectral_matrices += np.einsum(
+            "fc,fd->fcd", spectrum, np.conjugate(spectrum), optimize=True
+        )
     spectral_matrices /= segment_count * observations.sampling_hz * window_power
     if nperseg_value % 2 == 0:
         spectral_matrices[1:-1] *= 2.0
@@ -159,7 +168,10 @@ def identify_fdd(
     chosen: list[tuple[float, int, int]] = []
     for candidate in candidates:
         _, rank, idx = candidate
-        if all(abs(float(frequencies[idx] - frequencies[other_idx])) >= 2.0 * resolution for _, _, other_idx in chosen):
+        if all(
+            abs(float(frequencies[idx] - frequencies[other_idx])) >= 2.0 * resolution
+            for _, _, other_idx in chosen
+        ):
             chosen.append(candidate)
         if len(chosen) >= max_modes:
             break
@@ -174,16 +186,20 @@ def identify_fdd(
             shape = shape / maximum
             phase_reference = int(np.argmax(np.abs(shape)))
             shape = shape * np.exp(-1j * np.angle(shape[phase_reference]))
-        modes.append(FDDMode(
-            frequency_hz=float(frequencies[idx]),
-            singular_value=value,
-            singular_value_index=rank + 1,
-            channel_ids=tuple(observations.channel_ids),
-            units=tuple(observations.units),
-            shape_real=tuple(float(item.real) for item in shape),
-            shape_imag=tuple(float(item.imag) for item in shape),
-            singular_value_ratio=float(value / singular[idx, 0]) if singular[idx, 0] > 0.0 else 0.0,
-        ))
+        modes.append(
+            FDDMode(
+                frequency_hz=float(frequencies[idx]),
+                singular_value=value,
+                singular_value_index=rank + 1,
+                channel_ids=tuple(observations.channel_ids),
+                units=tuple(observations.units),
+                shape_real=tuple(float(item.real) for item in shape),
+                shape_imag=tuple(float(item.imag) for item in shape),
+                singular_value_ratio=float(value / singular[idx, 0])
+                if singular[idx, 0] > 0.0
+                else 0.0,
+            )
+        )
     notes = (
         "Frequency resolution is sampling_hz / nperseg; longer windows improve resolution but reduce the number of averages.",
         "Mode-shape components are normalized to unit peak magnitude; their overall scale and phase are arbitrary.",
@@ -230,7 +246,10 @@ def _plan(
         raise ValueError("max_modes and max_singular_values must be positive")
     if not 0.0 <= min_peak_ratio < 1.0:
         raise ValueError("min_peak_ratio must be in [0, 1)")
-    if not math.isfinite(float(min_singular_value_ratio)) or not 0.0 <= float(min_singular_value_ratio) <= 1.0:
+    if (
+        not math.isfinite(float(min_singular_value_ratio))
+        or not 0.0 <= float(min_singular_value_ratio) <= 1.0
+    ):
         raise ValueError("min_singular_value_ratio must be finite and in [0, 1]")
     overlap_value = float(overlap)
     if not math.isfinite(overlap_value) or not 0.0 <= overlap_value <= 0.9:
@@ -245,11 +264,15 @@ def _plan(
     hop = max(1, int(round(nperseg_value * (1.0 - overlap_value))))
     segment_count = len(range(0, sample_count - nperseg_value + 1, hop))
     if segment_count < 2:
-        raise ValueError("at least two overlapping FFT segments are required; lower nperseg or overlap less")
+        raise ValueError(
+            "at least two overlapping FFT segments are required; lower nperseg or overlap less"
+        )
     resolution = sampling_hz / nperseg_value
     low = float(min_frequency_hz) if min_frequency_hz is not None else resolution
     high = float(max_frequency_hz) if max_frequency_hz is not None else sampling_hz / 2.0
     high = min(high, sampling_hz / 2.0)
     if not math.isfinite(low) or low < 0.0 or not math.isfinite(high) or high <= low:
-        raise ValueError("frequency bounds must be finite and non-negative, with max greater than min")
+        raise ValueError(
+            "frequency bounds must be finite and non-negative, with max greater than min"
+        )
     return nperseg_value, hop, segment_count, resolution, low, high

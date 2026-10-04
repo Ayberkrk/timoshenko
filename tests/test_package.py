@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_version_matches_package_metadata():
-    declared = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.MULTILINE).group(1)
+    declared = re.search(
+        r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.MULTILINE
+    ).group(1)
     assert tm.__version__ == declared
 
 
@@ -25,7 +27,9 @@ def test_storage_does_not_import_the_analysis_stack():
         "import timoshenko.storage\n"
         "print('timoshenko.project' in sys.modules, 'timoshenko.health' in sys.modules)\n"
     )
-    completed = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=True)
+    completed = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=True
+    )
     assert completed.stdout.split() == ["False", "False"]
 
 
@@ -40,9 +44,14 @@ def test_closed_store_reports_that_it_is_closed():
 def test_sensorthings_wraps_numeric_overflow():
     from timoshenko.sensorthings import SensorThingsSourceError
 
-    body = ('{"value":[{"phenomenonTime":"2024-01-01T00:00:00Z","result":1' + "0" * 400 + "}]}").encode()
+    body = (
+        '{"value":[{"phenomenonTime":"2024-01-01T00:00:00Z","result":1' + "0" * 400 + "}]}"
+    ).encode()
     source = tm.SensorThingsObservationSource(
-        "https://sta.example.org/Observations", sensor_id="s", unit="g", fetcher=lambda request, timeout, limit: body
+        "https://sta.example.org/Observations",
+        sensor_id="s",
+        unit="g",
+        fetcher=lambda request, timeout, limit: body,
     )
     source.open()
     with pytest.raises(SensorThingsSourceError):
@@ -50,8 +59,12 @@ def test_sensorthings_wraps_numeric_overflow():
 
 
 def test_formula_modules_share_validation_messages():
-    for call in (lambda: tm.rectangle_section(0.0, 1.0), lambda: tm.axial_stress(1.0, -1.0),
-                 lambda: tm.cantilever_tip_load(1.0, 0.0, 1.0, 1.0), lambda: tm.natural_frequency_hz(float("nan"), 1.0)):
+    for call in (
+        lambda: tm.rectangle_section(0.0, 1.0),
+        lambda: tm.axial_stress(1.0, -1.0),
+        lambda: tm.cantilever_tip_load(1.0, 0.0, 1.0, 1.0),
+        lambda: tm.natural_frequency_hz(float("nan"), 1.0),
+    ):
         with pytest.raises(ValueError, match="must be finite and greater than zero"):
             call()
 
@@ -61,7 +74,8 @@ def test_every_public_name_is_in_the_api_reference():
 
     reference = (ROOT / "docs" / "api.md").read_text(encoding="utf-8")
     missing = [
-        name for name in tm.__all__
+        name
+        for name in tm.__all__
         if not inspect.ismodule(getattr(tm, name)) and f"`tm.{name}`" not in reference
     ]
     assert missing == []
@@ -70,7 +84,7 @@ def test_every_public_name_is_in_the_api_reference():
 @pytest.mark.parametrize("heading", ["## Quick start", "## Engineering calculations"])
 def test_readme_examples_run(heading):
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    section = readme[readme.index(heading):]
-    code = section[section.index("```python") + len("```python"):]
+    section = readme[readme.index(heading) :]
+    code = section[section.index("```python") + len("```python") :]
     code = code[: code.index("```")]
     exec(compile(code, f"README {heading}", "exec"), {})

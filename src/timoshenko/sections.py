@@ -57,7 +57,9 @@ def circular_tube(outer_diameter_m: float, inner_diameter_m: float) -> SectionPr
     outer = _positive("outer_diameter_m", outer_diameter_m)
     inner = float(inner_diameter_m)
     if not math.isfinite(inner) or inner < 0.0 or inner >= outer:
-        raise ValueError("inner_diameter_m must be finite, non-negative, and smaller than outer diameter")
+        raise ValueError(
+            "inner_diameter_m must be finite, non-negative, and smaller than outer diameter"
+        )
     area = math.pi * (outer**2 - inner**2) / 4.0
     inertia = math.pi * (outer**4 - inner**4) / 64.0
     modulus = inertia / (outer / 2.0)
@@ -117,17 +119,20 @@ def rectangular_tube(
         2.0 * (width * thickness**3 / 12.0 + width * thickness * horizontal_plate_offset**2)
         + 2.0 * thickness * inner_height**3 / 12.0
     )
-    inertia_z = (
-        2.0 * thickness * width**3 / 12.0
-        + 2.0 * (inner_height * thickness**3 / 12.0 + inner_height * thickness * vertical_plate_offset**2)
+    inertia_z = 2.0 * thickness * width**3 / 12.0 + 2.0 * (
+        inner_height * thickness**3 / 12.0 + inner_height * thickness * vertical_plate_offset**2
     )
     return _checked_properties(area, inertia_y, inertia_z, height / 2.0, width / 2.0)
 
 
-def _checked_properties(area: float, inertia_y: float, inertia_z: float, half_height: float, half_width: float) -> SectionProperties:
+def _checked_properties(
+    area: float, inertia_y: float, inertia_z: float, half_height: float, half_width: float
+) -> SectionProperties:
     values = (area, inertia_y, inertia_z, half_height, half_width)
     if any(not math.isfinite(value) or value <= 0.0 for value in values):
-        raise ValueError("section dimensions produced non-finite or non-positive geometric properties")
+        raise ValueError(
+            "section dimensions produced non-finite or non-positive geometric properties"
+        )
     modulus_y, modulus_z = inertia_y / half_height, inertia_z / half_width
     if not math.isfinite(modulus_y) or not math.isfinite(modulus_z):
         raise ValueError("section dimensions produced non-finite section moduli")

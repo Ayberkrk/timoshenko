@@ -15,7 +15,9 @@ import timoshenko as tm
 
 def simpson(values, x):
     h = (x[-1] - x[0]) / (len(x) - 1)
-    return h / 3.0 * (values[0] + values[-1] + 4.0 * values[1:-1:2].sum() + 2.0 * values[2:-1:2].sum())
+    return (
+        h / 3.0 * (values[0] + values[-1] + 4.0 * values[1:-1:2].sum() + 2.0 * values[2:-1:2].sum())
+    )
 
 
 E, G, INERTIA, AREA, KAPPA, SPAN = 200e9, 77e9, 8.0e-6, 6.0e-3, 5.0 / 6.0, 3.2
@@ -34,15 +36,28 @@ def half(x, left, right):
 
 BEAM_CASES = [
     (
-        tm.cantilever_tip_load, 12e3,
-        lambda P: (lambda x: -P * (SPAN - x), lambda x: -(SPAN - x), lambda x: P + 0 * x, lambda x: 1 + 0 * x),
+        tm.cantilever_tip_load,
+        12e3,
+        lambda P: (
+            lambda x: -P * (SPAN - x),
+            lambda x: -(SPAN - x),
+            lambda x: P + 0 * x,
+            lambda x: 1 + 0 * x,
+        ),
     ),
     (
-        tm.cantilever_uniform_load, 4e3,
-        lambda w: (lambda x: -w * (SPAN - x) ** 2 / 2, lambda x: -(SPAN - x), lambda x: w * (SPAN - x), lambda x: 1 + 0 * x),
+        tm.cantilever_uniform_load,
+        4e3,
+        lambda w: (
+            lambda x: -w * (SPAN - x) ** 2 / 2,
+            lambda x: -(SPAN - x),
+            lambda x: w * (SPAN - x),
+            lambda x: 1 + 0 * x,
+        ),
     ),
     (
-        tm.simply_supported_midpoint_load, 12e3,
+        tm.simply_supported_midpoint_load,
+        12e3,
         lambda P: (
             lambda x: P * half(x, lambda s: s / 2, lambda s: (SPAN - s) / 2),
             lambda x: half(x, lambda s: s / 2, lambda s: (SPAN - s) / 2),
@@ -51,7 +66,8 @@ BEAM_CASES = [
         ),
     ),
     (
-        tm.simply_supported_uniform_load, 4e3,
+        tm.simply_supported_uniform_load,
+        4e3,
         lambda w: (
             lambda x: w * x * (SPAN - x) / 2,
             lambda x: half(x, lambda s: s / 2, lambda s: (SPAN - s) / 2),
@@ -62,7 +78,9 @@ BEAM_CASES = [
 ]
 
 
-@pytest.mark.parametrize("function, load, fields", BEAM_CASES, ids=lambda item: getattr(item, "__name__", ""))
+@pytest.mark.parametrize(
+    "function, load, fields", BEAM_CASES, ids=lambda item: getattr(item, "__name__", "")
+)
 def test_beam_deflection_matches_unit_load_integration(function, load, fields):
     bending, shear = unit_load_deflection(*fields(load))
     result = function(load, SPAN, E, INERTIA, shear_modulus_pa=G, area_m2=AREA)
@@ -138,17 +156,23 @@ def test_circular_torsion_polar_moment_is_twice_the_second_moment():
 def test_euler_buckling_and_slenderness():
     base = tm.euler_critical_load(200e9, 1e-6, 3.0)
     assert base == pytest.approx(math.pi**2 * 200e9 * 1e-6 / 9.0)
-    assert tm.euler_critical_load(200e9, 1e-6, 3.0, effective_length_factor=2.0) == pytest.approx(base / 4)
+    assert tm.euler_critical_load(200e9, 1e-6, 3.0, effective_length_factor=2.0) == pytest.approx(
+        base / 4
+    )
     assert tm.slenderness_ratio(3.0, 1.0, 4e-3, 1e-6) == pytest.approx(3.0 / math.sqrt(1e-6 / 4e-3))
 
 
-@pytest.mark.parametrize("sx, sy, txy", [(80e6, -20e6, 35e6), (0.0, 0.0, 50e6), (-40e6, -40e6, 0.0), (10e6, 90e6, -25e6)])
+@pytest.mark.parametrize(
+    "sx, sy, txy", [(80e6, -20e6, 35e6), (0.0, 0.0, 50e6), (-40e6, -40e6, 0.0), (10e6, 90e6, -25e6)]
+)
 def test_plane_stress_matches_tensor_eigenvalues(sx, sy, txy):
     principal = np.linalg.eigvalsh(np.array([[sx, txy], [txy, sy]]))
     result = tm.plane_stress(sx, sy, txy)
     assert result.principal_max_pa == pytest.approx(principal[1], abs=1.0)
     assert result.principal_min_pa == pytest.approx(principal[0], abs=1.0)
-    assert result.maximum_in_plane_shear_pa == pytest.approx((principal[1] - principal[0]) / 2, abs=1.0)
+    assert result.maximum_in_plane_shear_pa == pytest.approx(
+        (principal[1] - principal[0]) / 2, abs=1.0
+    )
     s1, s2, s3 = principal[1], principal[0], 0.0
     von_mises = math.sqrt(((s1 - s2) ** 2 + (s2 - s3) ** 2 + (s3 - s1) ** 2) / 2)
     assert result.von_mises_pa == pytest.approx(von_mises, abs=1.0)

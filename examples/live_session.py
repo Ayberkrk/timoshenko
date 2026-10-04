@@ -31,17 +31,25 @@ def main() -> None:
         for index in range(start, min(start + 64, sample_count)):
             t = index / sampling_hz
             left = math.sin(2.0 * math.pi * 5.0 * t) + 0.2 * math.sin(2.0 * math.pi * 12.0 * t)
-            right = 0.7 * math.sin(2.0 * math.pi * 5.0 * t) - 0.4 * math.sin(2.0 * math.pi * 12.0 * t)
+            right = 0.7 * math.sin(2.0 * math.pi * 5.0 * t) - 0.4 * math.sin(
+                2.0 * math.pi * 12.0 * t
+            )
             timestamp = origin + t
-            observations.extend((
-                tm.Observation("deck-left", "acceleration", "m/s^2", left, timestamp=timestamp),
-                tm.Observation("deck-right", "acceleration", "m/s^2", right, timestamp=timestamp),
-            ))
-        result = session.ingest(tm.ObservationBatch(
-            observations,
-            batch_id=f"demo:{batch_number}",
-            source_id="synthetic-demo",
-        ))
+            observations.extend(
+                (
+                    tm.Observation("deck-left", "acceleration", "m/s^2", left, timestamp=timestamp),
+                    tm.Observation(
+                        "deck-right", "acceleration", "m/s^2", right, timestamp=timestamp
+                    ),
+                )
+            )
+        result = session.ingest(
+            tm.ObservationBatch(
+                observations,
+                batch_id=f"demo:{batch_number}",
+                source_id="synthetic-demo",
+            )
+        )
         for report in result.reports:
             print(report.to_dict())
 

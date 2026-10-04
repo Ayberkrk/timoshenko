@@ -133,13 +133,19 @@ class MonitoringSession:
         hz = float(sampling_hz)
         window = int(window_samples)
         hop = max(1, window // 4) if hop_samples is None else int(hop_samples)
-        tolerance = 0.25 / hz if timestamp_tolerance_s is None and math.isfinite(hz) and hz > 0 else float(timestamp_tolerance_s or 0.0)
+        tolerance = (
+            0.25 / hz
+            if timestamp_tolerance_s is None and math.isfinite(hz) and hz > 0
+            else float(timestamp_tolerance_s or 0.0)
+        )
         if not ids or len(ids) > 32 or any(not value for value in ids) or len(set(ids)) != len(ids):
             raise ValueError("sensor_ids must contain 1–32 distinct, non-empty ids")
         if len(unit_values) != len(ids) or any(not value for value in unit_values):
             raise ValueError("units must contain one non-empty unit per sensor")
         if len(ids) > 1 and len(set(unit_values)) != 1:
-            raise ValueError("FDD monitoring requires every channel to use the same measurement unit")
+            raise ValueError(
+                "FDD monitoring requires every channel to use the same measurement unit"
+            )
         if not math.isfinite(hz) or hz <= 0.0:
             raise ValueError("sampling_hz must be finite and positive")
         if window < 16 or window > 65_536:
@@ -147,7 +153,9 @@ class MonitoringSession:
         if hop < 1 or hop > window:
             raise ValueError("hop_samples must be between 1 and window_samples")
         if not math.isfinite(tolerance) or tolerance < 0.0 or tolerance >= 0.5 / hz:
-            raise ValueError("timestamp_tolerance_s must be finite, non-negative, and less than half a sample interval")
+            raise ValueError(
+                "timestamp_tolerance_s must be finite, non-negative, and less than half a sample interval"
+            )
         if store is not None and not isinstance(store, SQLiteStore):
             raise TypeError("store must be a SQLiteStore or None")
 
@@ -163,14 +171,21 @@ class MonitoringSession:
             {"max_modes", "min_frequency_hz", "max_frequency_hz", "min_peak_ratio"}
             if len(ids) == 1
             else {
-                "nperseg", "overlap", "max_modes", "max_singular_values",
-                "min_frequency_hz", "max_frequency_hz", "min_peak_ratio",
+                "nperseg",
+                "overlap",
+                "max_modes",
+                "max_singular_values",
+                "min_frequency_hz",
+                "max_frequency_hz",
+                "min_peak_ratio",
                 "min_singular_value_ratio",
             }
         )
         unexpected = set(self._options) - allowed
         if unexpected:
-            raise ValueError(f"unsupported analysis option(s) for this session: {', '.join(sorted(unexpected))}")
+            raise ValueError(
+                f"unsupported analysis option(s) for this session: {', '.join(sorted(unexpected))}"
+            )
         # Check option values now; otherwise a bad value surfaces only when the
         # first full window arrives, possibly hours into a live stream.
         validate = validate_peak_picking_options if len(ids) == 1 else validate_fdd_options
@@ -178,7 +193,9 @@ class MonitoringSession:
         self._review_threshold_pct = validate_review_threshold(review_threshold_pct)
         self._baseline_structure = structure
         self._store = store
-        self._buffers: dict[str, deque[tuple[int, float]]] = {sensor_id: deque(maxlen=window) for sensor_id in ids}
+        self._buffers: dict[str, deque[tuple[int, float]]] = {
+            sensor_id: deque(maxlen=window) for sensor_id in ids
+        }
         self._last_key: dict[str, int] = {}
         self._seen_by_key: dict[int, set[str]] = {}
         self._seen_key_heap: list[int] = []
@@ -252,7 +269,9 @@ class MonitoringSession:
         self._last_complete_key = restored_keys[-1] if restored_keys else None
         self._complete_run = len(restored_keys)
         self._last_key = last_keys
-        self._last_analysis_key = restored_keys[-1] if len(restored_keys) >= self._window_samples else None
+        self._last_analysis_key = (
+            restored_keys[-1] if len(restored_keys) >= self._window_samples else None
+        )
         last_time = None if not restored_keys else restored_keys[-1] / self._sampling_hz
         return SessionRestoreResult(
             restored_samples=len(restored_keys) * len(self._sensor_ids),
@@ -267,7 +286,9 @@ class MonitoringSession:
         if self._store is not None and self._store.has_batch(batch):
             return SessionIngestResult(0, 0, 0, 0, 0, 0, 0, True, ())
 
-        accepted = rejected_quality = unknown = missing_time = invalid_time = out_of_order = unit_mismatch = 0
+        accepted = rejected_quality = unknown = missing_time = invalid_time = out_of_order = (
+            unit_mismatch
+        ) = 0
         reports: list[SessionReport] = []
         index_by_sensor = {sensor_id: idx for idx, sensor_id in enumerate(self._sensor_ids)}
         for observation in batch.observations:
@@ -304,7 +325,9 @@ class MonitoringSession:
                 # Keys complete in increasing order because every sensor's keys
                 # increase, so a run counter tells cheaply whether a full
                 # contiguous window can exist before scanning the buffers.
-                contiguous = self._last_complete_key is not None and key == self._last_complete_key + 1
+                contiguous = (
+                    self._last_complete_key is not None and key == self._last_complete_key + 1
+                )
                 self._complete_run = self._complete_run + 1 if contiguous else 1
                 self._last_complete_key = key
                 if self._complete_run >= self._window_samples:
@@ -317,7 +340,17 @@ class MonitoringSession:
 
         if self._store is not None:
             self._store.append_batch(batch)
-        return SessionIngestResult(accepted, rejected_quality, unknown, missing_time, invalid_time, out_of_order, unit_mismatch, False, tuple(reports))
+        return SessionIngestResult(
+            accepted,
+            rejected_quality,
+            unknown,
+            missing_time,
+            invalid_time,
+            out_of_order,
+            unit_mismatch,
+            False,
+            tuple(reports),
+        )
 
     def _latest_contiguous_window(self) -> tuple[list[int], np.ndarray] | None:
         values_by_sensor = {
@@ -338,13 +371,19 @@ class MonitoringSession:
             return None
         selected = run[-self._window_samples :]
         matrix = np.asarray(
-            [[values_by_sensor[sensor_id][key] for sensor_id in self._sensor_ids] for key in selected],
+            [
+                [values_by_sensor[sensor_id][key] for sensor_id in self._sensor_ids]
+                for key in selected
+            ],
             dtype=float,
         )
         return selected, matrix
 
     def _maybe_analyze(self, completed_key: int) -> SessionReport | None:
-        if self._last_analysis_key is not None and completed_key - self._last_analysis_key < self._hop_samples:
+        if (
+            self._last_analysis_key is not None
+            and completed_key - self._last_analysis_key < self._hop_samples
+        ):
             return None
         snapshot = self._latest_contiguous_window()
         if snapshot is None:
