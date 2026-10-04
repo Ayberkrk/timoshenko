@@ -12,10 +12,7 @@ import timoshenko as tm
 
 steel = tm.FrameMaterial(youngs_modulus_pa=200e9, shear_modulus_pa=77e9)
 section = tm.rectangle_section(width_m=0.08, height_m=0.16)
-beam_section = tm.FrameSection(
-    area_m2=section.area_m2,
-    second_moment_local_z_m4=section.second_moment_z_m4,
-)
+beam_section = tm.FrameSection.from_properties(section, bending_axis="z")
 model = tm.StructuralModel(
     nodes=[tm.FrameNode(0.0, 0.0), tm.FrameNode(4.0, 0.0)],
     members=[tm.FrameMember(0, 1, steel, beam_section)],
@@ -41,6 +38,15 @@ Modal and buckling analyses keep each released member-end rotation as an
 internal degree of freedom, separate from the joint rotation. P-delta analysis
 also solves with internal released-end rotations, then reports only joint
 displacements.
+
+``FrameSection.from_properties`` maps a selected principal axis from
+``SectionProperties`` or ``PolygonSectionProperties`` to the member's local-z
+bending axis and carries the matching elastic section moduli to the local-y
+edges. Choose ``bending_axis="y"`` or ``"z"`` for standard section properties,
+and ``"x"`` or ``"y"`` for polygon properties. Polygon x/y axes must be
+principal; the constructor rejects a non-zero product moment beyond floating
+point roundoff. It never infers effective shear area, which remains an explicit
+input.
 
 The frame section inertia is about a principal local z axis. Coupled bending
 and out-of-plane torsion from an unsymmetric section are not assembled into
@@ -87,8 +93,11 @@ unit peak translation, generalized mass, directional participation factors,
 effective modal mass and effective modal mass ratio in global x and y. A
 released member-end rotation is an internal degree of freedom with the member's
 consistent mass; the returned mode shape still contains the three joint
-components at each node. A mode calculation needs positive mass on every free
-component. Compare measured and analytical shapes with
+components at each node. Free components with exactly zero mass, including
+released end rotations of members without mass, are statically condensed from
+the eigenproblem and recovered in the reported mode shapes;
+``condensed_dof_count`` reports how many. At least one free component must have
+positive mass. Compare measured and analytical shapes with
 ``tm.modal_assurance_criterion`` after mapping the measured degrees of freedom
 into the same order.
 

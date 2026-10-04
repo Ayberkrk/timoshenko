@@ -315,6 +315,171 @@ def test_modal_axial_bar_matches_one_element_generalized_eigenvalue():
     assert result.effective_modal_mass_ratios_x == pytest.approx((1.0,))
 
 
+@pytest.mark.parametrize(
+    "beam_scale, stiffness_factor, tolerance",
+    [(1e6, 24.0, 2e-3), (1e-6, 6.0, 2e-3)],
+)
+def test_modal_condenses_massless_rotations_in_portal_frame(
+    beam_scale, stiffness_factor, tolerance
+):
+    height, bay_width, lumped_mass = 3.0, 4.0, 1_000.0
+    beam_section = tm.FrameSection(AREA * beam_scale, INERTIA * beam_scale)
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, height),
+            tm.FrameNode(bay_width, height),
+            tm.FrameNode(bay_width, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION),
+            tm.FrameMember(1, 2, MATERIAL, beam_section),
+            tm.FrameMember(2, 3, MATERIAL, SECTION),
+        ),
+        restraints=(
+            (True, True, True),
+            (False, False, False),
+            (False, False, False),
+            (True, True, True),
+        ),
+        nodal_lumped_masses_kg=(0.0, lumped_mass, lumped_mass, 0.0),
+    )
+    result = tm.analyze_modes(model, mode_count=1)
+    expected_stiffness = stiffness_factor * E * INERTIA / height**3
+    expected_frequency = math.sqrt(
+        expected_stiffness / (2.0 * lumped_mass)
+    ) / (2.0 * math.pi)
+    assert result.frequencies_hz[0] == pytest.approx(expected_frequency, rel=tolerance)
+    assert result.condensed_dof_count == 2
+    if beam_scale < 1.0:
+        assert max(abs(node[2]) for node in result.mode_shapes[0][1:3]) > 1e-2
+
+
+def test_lumped_mass_two_storey_frame_matches_shear_building_limit():
+    height, bay_width, mass_per_floor, rigid_factor = 3.0, 4.0, 2_000.0, 1e6
+    column_stiffness = 24.0 * E * INERTIA / height**3
+    beam_section = tm.FrameSection(AREA * rigid_factor, INERTIA * rigid_factor)
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, height),
+            tm.FrameNode(bay_width, height),
+            tm.FrameNode(0.0, 2.0 * height),
+            tm.FrameNode(bay_width, 2.0 * height),
+            tm.FrameNode(bay_width, 0.0),
+        ),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION),
+            tm.FrameMember(1, 3, MATERIAL, SECTION),
+            tm.FrameMember(5, 2, MATERIAL, SECTION),
+            tm.FrameMember(2, 4, MATERIAL, SECTION),
+            tm.FrameMember(1, 2, MATERIAL, beam_section),
+            tm.FrameMember(3, 4, MATERIAL, beam_section),
+        ),
+        restraints=(
+            (True, True, True),
+            (False, True, False),
+            (False, True, False),
+            (False, True, False),
+            (False, True, False),
+            (True, True, True),
+        ),
+        nodal_lumped_masses_kg=(
+            0.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            mass_per_floor / 2.0,
+            0.0,
+        ),
+    )
+    result = tm.analyze_modes(model, mode_count=2)
+    reference = tm.Structure(
+        story_masses_kg=(mass_per_floor, mass_per_floor),
+        story_stiffness_n_m=(column_stiffness, column_stiffness),
+    )
+    assert result.frequencies_hz == pytest.approx(
+        reference.natural_frequencies_hz, rel=2e-3
+    )
+    assert result.condensed_dof_count == 4
+
+
+def test_modal_zero_mass_condensation_rejects_a_free_mechanism():
+    model = tm.StructuralModel(
+        nodes=(
+            tm.FrameNode(0.0, 0.0),
+            tm.FrameNode(0.0, 3.0),
+            tm.FrameNode(10.0, 0.0),
+        ),
+        members=(tm.FrameMember(0, 1, MATERIAL, SECTION),),
+        restraints=(
+            (True, True, True),
+            (False, False, False),
+            (False, True, True),
+        ),
+        nodal_lumped_masses_kg=(0.0, 1_000.0, 0.0),
+    )
+    with pytest.raises(
+        ValueError, match="cannot be statically condensed; check for mechanisms"
+    ):
+        tm.analyze_modes(model)
+
+
+def test_member_end_release_matches_pinned_support_in_modal_buckling_and_p_delta():
+    # A release at a member end on a fully fixed node is the same structure as a pinned node.
+    length, count = 3.0, 4
+    nodes = tuple(tm.FrameNode(0.0, index * length / count) for index in range(count + 1))
+    free = (False, False, False)
+
+    def column(released):
+        members = tuple(
+            tm.FrameMember(
+                index, index + 1, MATERIAL, SECTION,
+                mass_per_length_kg_m=78.5,
+                release_rotation_i=released and index == 0,
+            )
+            for index in range(count)
+        )
+        base = (True, True, True) if released else (True, True, False)
+        return tm.StructuralModel(
+            nodes=nodes,
+            members=members,
+            restraints=(base, *(free,) * (count - 1), (False, False, True)),
+            nodal_loads=(*((0.0, 0.0, 0.0),) * count, (1_000.0, -50_000.0, 0.0)),
+        )
+
+    released, pinned = column(True), column(False)
+    assert tm.analyze_modes(released, mode_count=3).frequencies_hz == pytest.approx(
+        tm.analyze_modes(pinned, mode_count=3).frequencies_hz, rel=1e-9
+    )
+    assert tm.analyze_linear_buckling(released, mode_count=2).critical_load_factors == pytest.approx(
+        tm.analyze_linear_buckling(pinned, mode_count=2).critical_load_factors, rel=1e-9
+    )
+    second_order = tm.analyze_p_delta(released)
+    assert second_order.displacements[-1][0] == pytest.approx(
+        tm.analyze_p_delta(pinned).displacements[-1][0], rel=1e-9
+    )
+    assert second_order.member_end_forces_local[0][2] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_lumped_mass_on_internal_hinge_condenses_released_rotations():
+    # Two cantilevers of length a joined by a hinge carry the mass with stiffness 2 * 3 E I / a^3.
+    arm, lumped_mass = 3.0, 50.0
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(arm, 0.0), tm.FrameNode(2.0 * arm, 0.0)),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, SECTION, release_rotation_j=True),
+            tm.FrameMember(1, 2, MATERIAL, SECTION),
+        ),
+        restraints=((True, True, True), (True, False, False), (True, True, True)),
+        nodal_lumped_masses_kg=(0.0, lumped_mass, 0.0),
+    )
+    result = tm.analyze_modes(model, mode_count=1)
+    expected = math.sqrt(6.0 * E * INERTIA / arm**3 / lumped_mass) / (2.0 * math.pi)
+    assert result.frequencies_hz[0] == pytest.approx(expected)
+    assert result.condensed_dof_count == 2
+
+
 def test_modal_assurance_criterion_handles_scaling_and_complex_shapes():
     assert tm.modal_assurance_criterion([1.0, 2.0], [3.0, 6.0]) == pytest.approx(1.0)
     assert tm.modal_assurance_criterion([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
@@ -511,6 +676,93 @@ def test_frame_component_dimensions_are_validated(factory):
         factory()
 
 
+def test_frame_section_from_standard_properties_maps_axis_and_modulus():
+    properties = tm.rectangle_section(0.3, 0.6)
+    section_y = tm.FrameSection.from_properties(
+        properties, bending_axis="y", shear_area_local_y_m2=0.012
+    )
+    section_z = tm.FrameSection.from_properties(properties, bending_axis="z")
+
+    assert section_y.area_m2 == properties.area_m2
+    assert section_y.second_moment_local_z_m4 == properties.second_moment_y_m4
+    assert section_y.shear_area_local_y_m2 == 0.012
+    assert section_y.section_modulus_at_positive_local_y_m3 == properties.section_modulus_y_m3
+    assert section_y.section_modulus_at_negative_local_y_m3 == properties.section_modulus_y_m3
+    assert section_z.second_moment_local_z_m4 == properties.second_moment_z_m4
+    assert section_z.section_modulus_at_positive_local_y_m3 == properties.section_modulus_z_m3
+    assert section_z.shear_area_local_y_m2 is None
+
+
+def test_frame_section_from_principal_polygon_properties_and_rejects_coupled_axes():
+    outline = [(0.0, 0.0), (0.3, 0.0), (0.3, 0.6), (0.0, 0.6)]
+    properties = tm.polygon_section(outline)
+    section = tm.FrameSection.from_properties(properties, bending_axis="x")
+
+    assert section.area_m2 == properties.area_m2
+    assert section.second_moment_local_z_m4 == properties.second_moment_x_m4
+    assert section.section_modulus_at_positive_local_y_m3 == properties.section_modulus_x_positive_m3
+    assert section.section_modulus_at_negative_local_y_m3 == properties.section_modulus_x_negative_m3
+
+    angle = 0.4
+    rotated = [
+        (math.cos(angle) * x - math.sin(angle) * y,
+         math.sin(angle) * x + math.cos(angle) * y)
+        for x, y in outline
+    ]
+    coupled = tm.polygon_section(rotated)
+    with pytest.raises(ValueError, match="axes must be principal"):
+        tm.FrameSection.from_properties(coupled, bending_axis="x")
+
+
+def test_frame_section_from_tee_polygon_keeps_edge_moduli_and_end_stresses():
+    # Tee symmetric about the y axis: flange 0.4 x 0.1 on top of a 0.1 x 0.5 web.
+    outline = [(-0.05, 0.0), (0.05, 0.0), (0.05, 0.5), (0.2, 0.5), (0.2, 0.6), (-0.2, 0.6), (-0.2, 0.5), (-0.05, 0.5)]
+    properties = tm.polygon_section(outline)
+    section = tm.FrameSection.from_properties(properties, bending_axis="x")
+    area = 0.4 * 0.1 + 0.1 * 0.5
+    centroid = (0.4 * 0.1 * 0.55 + 0.1 * 0.5 * 0.25) / area
+    inertia = (0.4 * 0.1**3 / 12 + 0.4 * 0.1 * (0.55 - centroid) ** 2
+               + 0.1 * 0.5**3 / 12 + 0.1 * 0.5 * (0.25 - centroid) ** 2)
+    assert section.area_m2 == pytest.approx(area)
+    assert section.second_moment_local_z_m4 == pytest.approx(inertia)
+    assert section.section_modulus_at_positive_local_y_m3 == pytest.approx(inertia / (0.6 - centroid))
+    assert section.section_modulus_at_negative_local_y_m3 == pytest.approx(inertia / centroid)
+
+    # Cantilever with a downward tip load: tension at the top (flange) edge of the fixed end.
+    length, force = 3.0, -12_000.0
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
+        members=(tm.FrameMember(0, 1, MATERIAL, section),),
+        restraints=((True, True, True), (False, False, False)),
+        nodal_loads=((0.0, 0.0, 0.0), (0.0, force, 0.0)),
+    )
+    top, bottom, _, _ = tm.analyze_linear_static(model).member_end_normal_stresses_pa[0]
+    moment = -force * length
+    assert top == pytest.approx(moment * (0.6 - centroid) / inertia)
+    assert bottom == pytest.approx(-moment * centroid / inertia)
+
+
+def test_frame_section_from_properties_validates_property_type_and_axis():
+    with pytest.raises(TypeError, match="SectionProperties or PolygonSectionProperties"):
+        tm.FrameSection.from_properties(object(), bending_axis="y")
+    with pytest.raises(TypeError):
+        tm.FrameSection.from_properties(tm.rectangle_section(0.3, 0.6))
+    with pytest.raises(ValueError, match="must be 'y' or 'z'"):
+        tm.FrameSection.from_properties(tm.rectangle_section(0.3, 0.6), bending_axis="x")
+    with pytest.raises(ValueError, match="must be 'x' or 'y'"):
+        tm.FrameSection.from_properties(
+            tm.polygon_section([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]),
+            bending_axis="z",
+        )
+
+
+def test_frame_component_validation_uses_shared_error_messages():
+    with pytest.raises(ValueError, match="area_m2 must be finite and greater than zero"):
+        tm.FrameSection(math.inf, INERTIA)
+    with pytest.raises(ValueError, match="x_m must be finite"):
+        tm.FrameNode(math.nan, 0.0)
+
+
 def test_frame_material_checks_optional_isotropic_constants():
     shear = E / (2 * (1 + 0.3))
     assert tm.FrameMaterial(E, shear, 0.3).poisson_ratio == pytest.approx(0.3)
@@ -587,6 +839,7 @@ def test_modal_and_buckling_results_to_dict_round_trip_through_json():
     assert modal_data["mode_shapes"] == [[list(row) for row in shape] for shape in modal.mode_shapes]
     assert modal_data["notes"] == list(modal.notes)
     assert modal_data["constrained_dof_count"] == modal.constrained_dof_count
+    assert modal_data["condensed_dof_count"] == modal.condensed_dof_count
 
     column = tm.StructuralModel(
         nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(0.0, 3.0)),
