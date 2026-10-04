@@ -5,6 +5,7 @@
 | Name                           |    Stmts |     Miss |   Cover |   Missing |
 |------------------------------- | -------: | -------: | ------: | --------: |
 | src/timoshenko/\_\_init\_\_.py |       37 |        0 |    100% |           |
+| src/timoshenko/\_spectral.py   |       22 |        4 |     82% |18, 23, 28, 31 |
 | src/timoshenko/\_validation.py |       12 |        0 |    100% |           |
 | src/timoshenko/adapters.py     |       68 |        0 |    100% |           |
 | src/timoshenko/assets.py       |       41 |        7 |     83% |19, 21, 28, 41, 43, 45, 52 |
@@ -12,12 +13,12 @@
 | src/timoshenko/csv\_source.py  |      127 |       22 |     83% |26-27, 32, 41, 70, 75, 80, 82, 98, 101-102, 106-107, 109-110, 120-121, 128, 136-137, 142, 178 |
 | src/timoshenko/health.py       |       66 |        5 |     92% |95, 97, 104, 106, 134 |
 | src/timoshenko/mechanics.py    |       26 |        1 |     96% |        45 |
-| src/timoshenko/modal.py        |      125 |        5 |     96% |71, 182, 184, 225, 229 |
+| src/timoshenko/modal.py        |      128 |        5 |     96% |72, 188, 190, 231, 235 |
 | src/timoshenko/monitor.py      |       26 |        0 |    100% |           |
 | src/timoshenko/mqtt.py         |      205 |       35 |     83% |66, 68, 70, 106, 108-112, 129, 131, 135, 139, 142-144, 156, 159-161, 168, 174, 178-179, 190, 192, 223, 227-228, 239, 242, 247, 257-258, 260 |
 | src/timoshenko/multichannel.py |       80 |        2 |     98% |    57, 61 |
 | src/timoshenko/observations.py |       58 |        5 |     91% |38, 40, 87-88, 91 |
-| src/timoshenko/oma.py          |      131 |       11 |     92% |94, 128, 145, 230, 232, 234, 237, 239-240, 244, 254 |
+| src/timoshenko/oma.py          |      132 |       11 |     92% |95, 129, 146, 234, 236, 238, 241, 243-244, 248, 258 |
 | src/timoshenko/plugins.py      |       87 |       10 |     89% |45, 47, 76, 103, 116-119, 125, 128 |
 | src/timoshenko/polygon.py      |      188 |       21 |     89% |90, 97, 114, 122, 124, 130, 145, 166, 170, 173, 189, 192, 198-199, 201, 203, 212, 214-215, 219, 221 |
 | src/timoshenko/pressure.py     |       15 |        2 |     87% |    26, 28 |
@@ -36,7 +37,7 @@
 | src/timoshenko/uncertainty.py  |      172 |        7 |     96% |111-112, 162, 167, 197-198, 212 |
 | src/timoshenko/update.py       |       22 |        3 |     86% |24, 26, 37 |
 | src/timoshenko/vibration.py    |       81 |        9 |     89% |22, 50, 54, 83, 92, 98, 116, 125, 128 |
-| **TOTAL**                      | **3390** |  **285** | **92%** |           |
+| **TOTAL**                      | **3416** |  **289** | **92%** |           |
 
 
 ## Setup coverage badge
