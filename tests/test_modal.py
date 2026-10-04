@@ -135,7 +135,7 @@ def test_monitor_accepts_multichannel_fdd_and_passes_analysis_options():
     stiffness = 1.0e5
     mass = stiffness / (2.0 * np.pi * frequency) ** 2
     result = tm.monitor(
-        tm.Structure([stiffness], [mass]),
+        tm.Structure(story_masses_kg=[mass], story_stiffness_n_m=[stiffness]),
         data,
         nperseg=nperseg,
         max_modes=1,
@@ -149,6 +149,11 @@ def test_monitor_accepts_multichannel_fdd_and_passes_analysis_options():
     )
     assert result.health.modal_result is result.modal
     assert result.health.status == "evidence_available"
+    assert result.structure.update_status == "updated"
+    assert result.structure.update_scale_factor == pytest.approx(1.0, abs=0.01)
+    assert abs(result.health.mode_changes[0].change_pct) < 0.5
+    with pytest.raises(TypeError, match="SensorData or MultiChannelData"):
+        tm.monitor(tm.Structure(story_masses_kg=[mass], story_stiffness_n_m=[stiffness]), signal)
     assert "Mode 1" in tm.report.to_html(result)
     assert result.to_dict()["modal"]["method"] == "welch_frequency_domain_decomposition"
 
