@@ -50,6 +50,7 @@ def monitor(
     Single-channel data uses ``modal.identify``; aligned multi-channel data
     uses ``identify_fdd``. Extra keyword options are passed to that estimator.
     """
+    modal_result: ModalResult | FDDResult
     if isinstance(sensors, SensorData):
         modal_result = identify(sensors, **analysis_options)
     elif isinstance(sensors, MultiChannelData):
