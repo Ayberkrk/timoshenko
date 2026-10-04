@@ -89,15 +89,24 @@ def load_multichannel_csv(
         raise ValueError("channel_ids must contain one distinct, non-empty id per selected column")
     data: list[list[float]] = []
     with Path(source).open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        headings = reader.fieldnames or []
+        reader = csv.reader(handle)
+        headings = next(reader, [])
         missing = [name for name in names if name not in headings]
         if missing:
             raise ValueError(f"CSV columns not found: {missing}; available columns are {headings}")
-        for row_number, row in enumerate(reader, start=2):
+        for row in reader:
+            row_number = reader.line_num
+            if not row:
+                raise ValueError(
+                    f"CSV line {row_number} is blank; blank sample rows are not allowed"
+                )
+            row_values = {
+                heading: row[index] if index < len(row) else None
+                for index, heading in enumerate(headings)
+            }
             record: list[float] = []
             for name in names:
-                raw = row.get(name) or ""
+                raw = row_values.get(name) or ""
                 try:
                     value = float(raw)
                 except (TypeError, ValueError):

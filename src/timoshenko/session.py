@@ -139,7 +139,7 @@ class MonitoringSession:
             else float(timestamp_tolerance_s or 0.0)
         )
         if not ids or len(ids) > 32 or any(not value for value in ids) or len(set(ids)) != len(ids):
-            raise ValueError("sensor_ids must contain 1–32 distinct, non-empty ids")
+            raise ValueError("sensor_ids must contain 1 to 32 distinct, non-empty ids")
         if len(unit_values) != len(ids) or any(not value for value in unit_values):
             raise ValueError("units must contain one non-empty unit per sensor")
         if len(ids) > 1 and len(set(unit_values)) != 1:

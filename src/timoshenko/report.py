@@ -26,10 +26,10 @@ def _result_parts(result: Any) -> tuple[Any, Any, Any, str, str]:
 
 def _number(value: float | None, digits: int = 3) -> str:
     if value is None:
-        return "—"
+        return "-"
     number = float(value)
     if not math.isfinite(number):
-        return "—"
+        return "-"
     return f"{number:.{digits}f}"
 
 
@@ -140,7 +140,7 @@ def to_html(result: Any, *, title: str | None = None) -> str:
     chart = _chart_svg(modal, health)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{display_title} — Timoshenko report</title>
+<title>{display_title} - Timoshenko report</title>
 <style>
 :root{{color-scheme:light;--ink:#172033;--muted:#536178;--line:#dbe2ea;--blue:#1d4ed8;--paper:#fff;--wash:#f4f7fb}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--wash);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}}

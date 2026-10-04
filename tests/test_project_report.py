@@ -59,8 +59,17 @@ def test_project_multichannel_uses_fdd_and_can_be_stored(tmp_path):
     result = tm.run_project(manifest)
     assert result.method == "fdd"
     with tm.SQLiteStore(tmp_path / "runs.db") as store:
+        with pytest.raises(TypeError, match="result must be a ProjectRunResult"):
+            store.save_run(object())
+        with pytest.raises(ValueError, match="run_id must be non-empty"):
+            store.save_run(result, run_id=" ")
         run_id = store.save_run(result, run_id="r1")
         assert store.get_run(run_id) == json.loads(json.dumps(result.to_dict()))
+        assert store.get_run("missing") is None
+        assert store.list_runs(project_id="p1") == (result.to_dict(),)
+        assert store.list_runs(project_id="other") == ()
+        with pytest.raises(ValueError, match="limit must be positive"):
+            store.list_runs(limit=0)
         with pytest.raises(sqlite3.IntegrityError):
             store.save_run(result, run_id="r1")
 

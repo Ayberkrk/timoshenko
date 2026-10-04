@@ -259,3 +259,93 @@ def test_ingest_cost_does_not_grow_with_window_size():
     start = time.perf_counter()
     session.ingest(batch(60000, 4000, frequency=3.0))
     assert time.perf_counter() - start < 2.0
+
+
+@pytest.mark.parametrize("timeout", [0, -1, math.nan, math.inf])
+def test_store_rejects_non_positive_or_non_finite_timeout(timeout, tmp_path):
+    with pytest.raises(ValueError, match="timeout_seconds must be finite and positive"):
+        tm.SQLiteStore(tmp_path / "invalid.db", timeout_seconds=timeout)
+
+
+def test_store_rejects_wrong_types_and_non_json_asset_metadata(tmp_path):
+    with tm.SQLiteStore(tmp_path / "history.db") as store:
+        with pytest.raises(TypeError, match="batch must be an ObservationBatch"):
+            store.append_batch(object())
+        with pytest.raises(TypeError, match="asset must be an Asset"):
+            store.upsert_asset(object())
+        with pytest.raises(TypeError, match="relation must be a Relation"):
+            store.add_relation(object())
+        with pytest.raises(ValueError, match="value is not JSON-serializable"):
+            store.upsert_asset(tm.Asset("bad", "sensor", metadata={"value": object()}))
+
+
+def test_store_closed_state_is_reported_by_context_and_queries():
+    store = tm.SQLiteStore(":memory:")
+    store.close()
+    with pytest.raises(RuntimeError, match="store is closed"):
+        store.__enter__()
+    with pytest.raises(RuntimeError, match="SQLiteStore is closed"):
+        store.get_asset("missing")
+
+
+def test_store_filters_observations_by_asset_and_time_and_returns_missing_assets():
+    records = [
+        tm.Observation("a", "deck", "mm", 1.0, timestamp=1.0, asset_id="deck-1"),
+        tm.Observation("a", "deck", "mm", 2.0, timestamp=2.0, asset_id="deck-1"),
+        tm.Observation("a", "deck", "mm", 3.0, timestamp=3.0, asset_id="deck-2"),
+        tm.Observation("b", "pier", "mm", 4.0, timestamp=2.0, asset_id="deck-1"),
+    ]
+    with tm.SQLiteStore(":memory:") as store:
+        store.append_batch(tm.ObservationBatch(records, batch_id="filter", source_id="source"))
+        selected = store.observations(
+            sensor_id="a", asset_id="deck-1", start_timestamp=1.0, end_timestamp=2.0, limit=2
+        )
+        assert [(item.value, item.asset_id) for item in selected] == [
+            (1.0, "deck-1"),
+            (2.0, "deck-1"),
+        ]
+        limited = store.observations(sensor_id="a", asset_id="deck-1", limit=1)
+        assert [item.value for item in limited] == [1.0]
+        assert store.get_asset("missing") is None
+        assert store.list_assets(asset_type="missing") == ()
+
+
+@pytest.mark.parametrize(
+    "arguments, message",
+    [
+        ({"order_by": "newest"}, "order_by must be"),
+        ({"start_timestamp": math.nan}, "start_timestamp must be finite"),
+        ({"end_timestamp": math.inf}, "end_timestamp must be finite"),
+        (
+            {"start_timestamp": 2.0, "end_timestamp": 1.0},
+            "start_timestamp must be less than or equal",
+        ),
+        ({"limit": 0}, "limit must be positive"),
+    ],
+)
+def test_observation_query_rejects_invalid_order_bounds_and_limit(arguments, message):
+    with tm.SQLiteStore(":memory:") as store, pytest.raises(ValueError, match=message):
+        store.observations(**arguments)
+
+
+@pytest.mark.parametrize("limit", [0, -1, 262145])
+def test_recent_observations_rejects_limits_outside_supported_range(limit):
+    with (
+        tm.SQLiteStore(":memory:") as store,
+        pytest.raises(ValueError, match="limit must be between 1 and 262144"),
+    ):
+        store.recent_observations(sensor_id="a", limit=limit)
+
+
+def test_recent_observations_include_only_timestamped_good_values_matching_unit():
+    records = [
+        tm.Observation("a", "a", "g", 1.0, timestamp=1.0),
+        tm.Observation("a", "a", "g", 2.0, timestamp=2.0, quality=False),
+        tm.Observation("a", "a", "g", 3.0, timestamp=None),
+        tm.Observation("a", "a", "m/s^2", 4.0, timestamp=4.0),
+        tm.Observation("a", "a", "g", 5.0, timestamp=5.0),
+    ]
+    with tm.SQLiteStore(":memory:") as store:
+        store.append_batch(tm.ObservationBatch(records, batch_id="recent", source_id="source"))
+        recent = store.recent_observations(sensor_id="a", limit=1, unit="g")
+        assert [(item.value, item.timestamp, item.quality) for item in recent] == [(5.0, 5.0, True)]

@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 
+from ._spectral import interpolate_log_peak_frequency
 from .multichannel import MultiChannelData
 
 
@@ -188,7 +189,7 @@ def identify_fdd(
             shape = shape * np.exp(-1j * np.angle(shape[phase_reference]))
         modes.append(
             FDDMode(
-                frequency_hz=float(frequencies[idx]),
+                frequency_hz=interpolate_log_peak_frequency(frequencies, singular[:, rank], idx),
                 singular_value=value,
                 singular_value_index=rank + 1,
                 channel_ids=tuple(observations.channel_ids),
@@ -202,6 +203,7 @@ def identify_fdd(
         )
     notes = (
         "Frequency resolution is sampling_hz / nperseg; longer windows improve resolution but reduce the number of averages.",
+        "Peak frequencies use parabolic interpolation of log singular value; resolution_hz remains the FFT-bin spacing.",
         "Mode-shape components are normalized to unit peak magnitude; their overall scale and phase are arbitrary.",
         "Peaks from different singular-value curves can be missed or duplicated for close/repeated modes; review results against engineering context.",
     )

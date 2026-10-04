@@ -70,6 +70,40 @@ def test_peak_picking_recovers_frequencies_within_resolution():
     assert list(result.frequencies_hz) == sorted(result.frequencies_hz)
 
 
+def test_peak_picking_interpolates_tones_between_fft_bins():
+    fs, n = 100.0, 2_000
+    time = np.arange(n) / fs
+    expected = (2.626, 2.650, 2.674)
+    estimates = []
+    for frequency in expected:
+        signal = np.sin(2.0 * np.pi * frequency * time)
+        result = tm.modal.identify(
+            tm.SensorData(signal, fs),
+            max_modes=1,
+            min_frequency_hz=1.0,
+            max_frequency_hz=4.0,
+        )
+        estimates.append(result.frequencies_hz[0])
+        assert abs(result.frequencies_hz[0] - frequency) < 0.001
+        assert any("parabolic interpolation" in note for note in result.notes)
+    assert estimates[0] < estimates[1] < estimates[2]
+
+
+def test_noisy_peak_interpolation_improves_the_bin_center_estimate():
+    fs, n, frequency = 100.0, 2_000, 2.626
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    signal += 0.1 * np.random.default_rng(1).standard_normal(n)
+    result = tm.modal.identify(
+        tm.SensorData(signal, fs),
+        max_modes=1,
+        min_frequency_hz=1.0,
+        max_frequency_hz=4.0,
+    )
+    bin_center = round(result.frequencies_hz[0] / result.resolution_hz) * result.resolution_hz
+    assert abs(result.frequencies_hz[0] - frequency) < abs(bin_center - frequency)
+
+
 def test_peak_picking_flags_constant_signal():
     result = tm.modal.identify(tm.SensorData([4.0] * 64, 10.0))
     assert result.status == "insufficient_signal"
@@ -100,6 +134,17 @@ def test_fdd_recovers_frequencies_and_mode_shapes():
             np.vdot(estimate, estimate).real * np.dot(expected, expected)
         )
         assert mac > 0.999
+
+
+def test_fdd_interpolates_a_tone_between_fft_bins():
+    fs, n, nperseg, frequency = 100.0, 4_096, 2_048, 5.13
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    samples = np.column_stack((signal, 0.4 * signal))
+    data = tm.MultiChannelData(samples, sampling_hz=fs, channel_ids=["a", "b"], units=["g", "g"])
+    result = tm.identify_fdd(data, nperseg=nperseg, max_modes=1, min_frequency_hz=2.0)
+    assert abs(result.frequencies_hz[0] - frequency) < 0.001
+    assert any("parabolic interpolation" in note for note in result.notes)
 
 
 def test_fdd_rejects_mixed_units_and_single_segment():
@@ -149,6 +194,42 @@ def test_monitor_reports_insufficient_evidence_for_flat_signal():
     assert result.health.status == "insufficient_evidence"
     assert result.structure.update_status == "not_updated"
     assert result.to_dict()["health"]["mode_changes"] == []
+
+
+def test_monitor_accepts_multichannel_fdd_and_passes_analysis_options():
+    fs, n, nperseg, frequency = 100.0, 4_096, 2_048, 5.13
+    time = np.arange(n) / fs
+    signal = np.sin(2.0 * np.pi * frequency * time)
+    data = tm.MultiChannelData(
+        np.column_stack((signal, 0.4 * signal)),
+        sampling_hz=fs,
+        channel_ids=["a", "b"],
+        units=["g", "g"],
+    )
+    stiffness = 1.0e5
+    mass = stiffness / (2.0 * np.pi * frequency) ** 2
+    result = tm.monitor(
+        tm.Structure(story_masses_kg=[mass], story_stiffness_n_m=[stiffness]),
+        data,
+        nperseg=nperseg,
+        max_modes=1,
+        min_frequency_hz=2.0,
+    )
+
+    assert isinstance(result.modal, tm.FDDResult)
+    assert result.modal.nperseg == nperseg
+    assert result.modal.frequencies_hz == pytest.approx(
+        (frequency,), abs=result.modal.resolution_hz
+    )
+    assert result.health.modal_result is result.modal
+    assert result.health.status == "evidence_available"
+    assert result.structure.update_status == "updated"
+    assert result.structure.update_scale_factor == pytest.approx(1.0, abs=0.01)
+    assert abs(result.health.mode_changes[0].change_pct) < 0.5
+    with pytest.raises(TypeError, match="SensorData or MultiChannelData"):
+        tm.monitor(tm.Structure(story_masses_kg=[mass], story_stiffness_n_m=[stiffness]), signal)
+    assert "Mode 1" in tm.report.to_html(result)
+    assert result.to_dict()["modal"]["method"] == "welch_frequency_domain_decomposition"
 
 
 def test_load_sensors_csv_json_and_array(tmp_path):
