@@ -770,6 +770,15 @@ def _condense_rotational_releases(
     return result_stiffness, result_load
 
 
+def _shear_parameter(member: FrameMember, length: float) -> float:
+    """Ratio 12 E I / (G A_s L^2) of bending to shear stiffness; zero without a shear area."""
+    material, section = member.material, member.section
+    if section.shear_area_local_y_m2 is None:
+        return 0.0
+    ei = material.youngs_modulus_pa * section.second_moment_local_z_m4
+    return 12.0 * ei / (material.shear_modulus_pa * section.shear_area_local_y_m2 * length**2)
+
+
 def _local_stiffness(member: FrameMember | AxialMember, length: float) -> np.ndarray:
     if isinstance(member, AxialMember):
         result = np.zeros((6, 6), dtype=float)
@@ -779,9 +788,7 @@ def _local_stiffness(member: FrameMember | AxialMember, length: float) -> np.nda
     material, section = member.material, member.section
     ea_l = material.youngs_modulus_pa * section.area_m2 / length
     ei = material.youngs_modulus_pa * section.second_moment_local_z_m4
-    phi = 0.0
-    if section.shear_area_local_y_m2 is not None:
-        phi = 12.0 * ei / (material.shear_modulus_pa * section.shear_area_local_y_m2 * length**2)
+    phi = _shear_parameter(member, length)
     scale = 1.0 / (1.0 + phi)
     bending = scale * np.array(
         [[12.0, 6.0 * length, -12.0, 6.0 * length],
@@ -841,6 +848,10 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
     qy = member.uniform_load_local_y_n_m
     result += np.asarray((0.0, qy * length / 2.0, qy * length**2 / 12.0,
                           0.0, qy * length / 2.0, -qy * length**2 / 12.0))
+    # Shape functions of the shear-flexible member, consistent with
+    # _local_stiffness: deflection for a force, section rotation for a moment.
+    # Both reduce to the Hermite cubics when phi is zero.
+    phi = _shear_parameter(member, length)
     for point in member.point_loads:
         location = point.distance_from_i_m
         if not 0.0 <= location <= length:
@@ -848,16 +859,16 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
         ratio = location / length
         result[0] += point.force_local_x_n * (1.0 - ratio)
         result[3] += point.force_local_x_n * ratio
-        shape = np.asarray((1.0 - 3 * ratio**2 + 2 * ratio**3,
-                            length * (ratio - 2 * ratio**2 + ratio**3),
-                            3 * ratio**2 - 2 * ratio**3,
-                            length * (-ratio**2 + ratio**3)))
+        shape = np.asarray((1.0 - 3 * ratio**2 + 2 * ratio**3 + phi * (1.0 - ratio),
+                            length * (ratio - 2 * ratio**2 + ratio**3 + 0.5 * phi * (ratio - ratio**2)),
+                            3 * ratio**2 - 2 * ratio**3 + phi * ratio,
+                            length * (-ratio**2 + ratio**3 - 0.5 * phi * (ratio - ratio**2)))) / (1.0 + phi)
         result[np.asarray((1, 2, 4, 5))] += point.force_local_y_n * shape
-        derivative = np.asarray(((-6 * ratio + 6 * ratio**2) / length,
-                                 1.0 - 4 * ratio + 3 * ratio**2,
-                                 (6 * ratio - 6 * ratio**2) / length,
-                                 -2 * ratio + 3 * ratio**2))
-        result[np.asarray((1, 2, 4, 5))] += point.moment_local_z_n_m * derivative
+        rotation = np.asarray(((-6 * ratio + 6 * ratio**2) / length,
+                               1.0 - 4 * ratio + 3 * ratio**2 + phi * (1.0 - ratio),
+                               (6 * ratio - 6 * ratio**2) / length,
+                               -2 * ratio + 3 * ratio**2 + phi * ratio)) / (1.0 + phi)
+        result[np.asarray((1, 2, 4, 5))] += point.moment_local_z_n_m * rotation
     return result
 
 

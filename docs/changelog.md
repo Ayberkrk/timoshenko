@@ -19,6 +19,10 @@ change is listed here.
 - Added principal inertias and elastic coupled bending stress for polygon
   sections.
 - Added verification examples and documented analysis assumptions and scope.
+- Member point forces and point moments on a frame member with a shear area
+  use equivalent nodal loads consistent with the shear-flexible stiffness.
+  The cubic Euler-Bernoulli equivalents used before gave wrong displacements,
+  reactions and end actions for off-centre loads on such members.
 
 ## 2.0.3
 

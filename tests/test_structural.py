@@ -178,6 +178,66 @@ def test_concentrated_member_moment_has_correct_support_couple():
     assert result.global_equilibrium_residual == pytest.approx((0.0, 0.0, 0.0), abs=1e-7)
 
 
+def test_shear_flexible_cantilever_off_centre_point_load_matches_closed_form():
+    # Timoshenko cantilever loaded at a: w(L) = P a^2 (3L - a) / (6 E I) + P a / (G A_s),
+    # and the tip rotation P a^2 / (2 E I) is unchanged by shear.
+    length, location, force, shear_area = 3.0, 0.75, -12_000.0, 0.0002
+    model = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
+        members=(tm.FrameMember(
+            0, 1, MATERIAL, tm.FrameSection(AREA, INERTIA, shear_area),
+            point_loads=(tm.FramePointLoad(location, force_local_y_n=force),),
+        ),),
+        restraints=((True, True, True), (False, False, False)),
+    )
+    result = tm.analyze_linear_static(model)
+    bending = force * location**2 * (3 * length - location) / (6 * E * INERTIA)
+    shear = force * location / (G * shear_area)
+    assert abs(shear / bending) > 0.05
+    assert result.displacements[1][1] == pytest.approx(bending + shear)
+    assert result.displacements[1][2] == pytest.approx(force * location**2 / (2 * E * INERTIA))
+    assert result.reactions[0] == pytest.approx((0.0, -force, -force * location))
+
+
+@pytest.mark.parametrize("shear_area", [None, 0.004, 0.0005])
+@pytest.mark.parametrize("point_load", [
+    {"force_local_y_n": -12_000.0},
+    {"moment_local_z_n_m": 3_000.0},
+])
+@pytest.mark.parametrize("release_j", [False, True])
+def test_member_point_load_matches_model_split_at_the_load(shear_area, point_load, release_j):
+    # A nodal load is exact for this element, so a member split at the load is the reference.
+    length, location = 3.0, 0.75
+    section = tm.FrameSection(AREA, INERTIA, shear_area)
+    fixed, free = (True, True, True), (False, False, False)
+    single = tm.analyze_linear_static(tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(length, 0.0)),
+        members=(tm.FrameMember(
+            0, 1, MATERIAL, section,
+            point_loads=(tm.FramePointLoad(location, **point_load),),
+            release_rotation_j=release_j,
+        ),),
+        restraints=(fixed, fixed),
+    ))
+    split = tm.analyze_linear_static(tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(location, 0.0), tm.FrameNode(length, 0.0)),
+        members=(
+            tm.FrameMember(0, 1, MATERIAL, section),
+            tm.FrameMember(1, 2, MATERIAL, section, release_rotation_j=release_j),
+        ),
+        restraints=(fixed, free, fixed),
+        nodal_loads=(
+            (0.0, 0.0, 0.0),
+            (0.0, point_load.get("force_local_y_n", 0.0), point_load.get("moment_local_z_n_m", 0.0)),
+            (0.0, 0.0, 0.0),
+        ),
+    ))
+    assert single.reactions[0] == pytest.approx(split.reactions[0], abs=1e-6)
+    assert single.reactions[1] == pytest.approx(split.reactions[2], abs=1e-6)
+    assert single.member_end_forces_local[0][:3] == pytest.approx(split.member_end_forces_local[0][:3], abs=1e-6)
+    assert single.member_end_forces_local[0][3:] == pytest.approx(split.member_end_forces_local[1][3:], abs=1e-6)
+
+
 def test_axial_bar_and_prescribed_support_displacement():
     length, force = 2.0, 5_000.0
     bar = tm.StructuralModel(
