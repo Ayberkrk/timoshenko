@@ -429,7 +429,7 @@ def test_sensorthings_origin_treats_default_port_as_same_origin():
     "url, options, message",
     [
         ("", {}, "observations_url must be non-empty"),
-        ("/Observations", {}, "absolute HTTP(S)"),
+        ("/Observations", {}, "must be absolute HTTP"),
         ("https://user:secret@sta.example.org/Observations", {}, "embedded credentials"),
         ("https://sta.example.org/Observations#fragment", {}, "fragments"),
         ("https://sta.example.org:bad/Observations", {}, "invalid port"),
@@ -449,8 +449,10 @@ def test_sensorthings_origin_treats_default_port_as_same_origin():
     ],
 )
 def test_sensorthings_constructor_rejects_invalid_configuration(url, options, message):
+    arguments = {"sensor_id": "s", "unit": "g"}
+    arguments.update(options)
     with pytest.raises(ValueError, match=message):
-        tm.SensorThingsObservationSource(url, sensor_id="s", unit="g", **options)
+        tm.SensorThingsObservationSource(url, **arguments)
 
 
 @pytest.mark.parametrize(
@@ -480,11 +482,17 @@ def test_sensorthings_rejects_malformed_or_oversized_pages(payload, message):
 
 
 @pytest.mark.parametrize(
-    "phenomenon_time",
-    [None, "", "2024-01-01T00:00:00", "2024-01-01/2024-01-02", "not-a-time"],
+    "phenomenon_time, message",
+    [
+        (None, "phenomenonTime"),
+        ("", "phenomenonTime"),
+        ("2024-01-01T00:00:00", "phenomenonTime"),
+        ("2024-01-01/2024-01-02", "phenomenonTime"),
+        ("not-a-time", "invalid SensorThings observation page"),
+    ],
     ids=["missing", "empty", "timezone-naive", "interval", "malformed"],
 )
-def test_sensorthings_requires_an_instant_with_a_timezone(phenomenon_time):
+def test_sensorthings_requires_an_instant_with_a_timezone(phenomenon_time, message):
     payload = json.dumps({"value": [{"result": 2.0, "phenomenonTime": phenomenon_time}]}).encode()
     source = tm.SensorThingsObservationSource(
         "https://sta.example.org/Observations",
@@ -493,7 +501,7 @@ def test_sensorthings_requires_an_instant_with_a_timezone(phenomenon_time):
         fetcher=lambda request, timeout, limit: payload,
     )
     source.open()
-    with pytest.raises(SensorThingsSourceError, match="phenomenonTime"):
+    with pytest.raises(SensorThingsSourceError, match=message):
         source.read_batch()
 
 
