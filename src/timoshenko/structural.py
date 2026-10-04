@@ -13,19 +13,8 @@ from typing import Any, Sequence
 
 import numpy as np
 
-
-def _finite(name: str, value: float) -> float:
-    value = float(value)
-    if not math.isfinite(value):
-        raise ValueError(f"{name} must be finite")
-    return value
-
-
-def _positive(name: str, value: float) -> float:
-    value = _finite(name, value)
-    if value <= 0.0:
-        raise ValueError(f"{name} must be greater than zero")
-    return value
+from ._validation import finite as _finite
+from ._validation import positive as _positive
 
 
 def _json_ready(value: Any) -> Any:
