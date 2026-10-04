@@ -23,6 +23,7 @@ change is listed here.
   use equivalent nodal loads consistent with the shear-flexible stiffness.
   The cubic Euler-Bernoulli equivalents used before gave wrong displacements,
   reactions and end actions for off-centre loads on such members.
+- Added `to_dict()` serialization helpers to structural analysis result objects.
 
 ## 2.0.3
 
