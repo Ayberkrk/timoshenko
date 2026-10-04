@@ -171,6 +171,36 @@ class FramePointLoad:
         object.__setattr__(self, "moment_local_z_n_m", _finite("moment_local_z_n_m", self.moment_local_z_n_m))
 
 
+@dataclass(frozen=True)
+class FramePartialUniformLoad:
+    """A uniform local frame load over a bounded member interval."""
+
+    start_distance_from_i_m: float
+    end_distance_from_i_m: float
+    intensity_local_x_n_m: float = 0.0
+    intensity_local_y_n_m: float = 0.0
+
+    def __post_init__(self) -> None:
+        start = _finite("start_distance_from_i_m", self.start_distance_from_i_m)
+        end = _finite("end_distance_from_i_m", self.end_distance_from_i_m)
+        if start < 0.0:
+            raise ValueError("start_distance_from_i_m must be non-negative")
+        if end <= start:
+            raise ValueError("end_distance_from_i_m must be greater than start_distance_from_i_m")
+        object.__setattr__(self, "start_distance_from_i_m", start)
+        object.__setattr__(self, "end_distance_from_i_m", end)
+        object.__setattr__(
+            self,
+            "intensity_local_x_n_m",
+            _finite("intensity_local_x_n_m", self.intensity_local_x_n_m),
+        )
+        object.__setattr__(
+            self,
+            "intensity_local_y_n_m",
+            _finite("intensity_local_y_n_m", self.intensity_local_y_n_m),
+        )
+
+
 def _node_index(name: str, value: int) -> int:
     if isinstance(value, bool) or int(value) != value or value < 0:
         raise ValueError(f"{name} must be a non-negative integer")
@@ -182,7 +212,8 @@ class FrameMember:
     """A prismatic two-node frame member with local loads and end releases.
 
     ``uniform_load_local_x_n_m`` and ``uniform_load_local_y_n_m`` are
-    positive in the member's local axes. Point loads use the same local axes.
+    positive in the member's local axes. Partial uniform and point loads use
+    the same local axes.
     ``mass_per_length_kg_m`` is used by modal analysis and is not inferred
     from material or section data.
     """
@@ -197,6 +228,7 @@ class FrameMember:
     point_loads: Sequence[FramePointLoad] = ()
     release_rotation_i: bool = False
     release_rotation_j: bool = False
+    partial_uniform_loads: Sequence[FramePartialUniformLoad] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "node_i", _node_index("node_i", self.node_i))
@@ -210,9 +242,13 @@ class FrameMember:
         point_loads = tuple(self.point_loads)
         if any(not isinstance(load, FramePointLoad) for load in point_loads):
             raise TypeError("point_loads must contain FramePointLoad instances")
+        partial_uniform_loads = tuple(self.partial_uniform_loads)
+        if any(not isinstance(load, FramePartialUniformLoad) for load in partial_uniform_loads):
+            raise TypeError("partial_uniform_loads must contain FramePartialUniformLoad instances")
         if not isinstance(self.release_rotation_i, bool) or not isinstance(self.release_rotation_j, bool):
             raise TypeError("rotation releases must be booleans")
         object.__setattr__(self, "point_loads", point_loads)
+        object.__setattr__(self, "partial_uniform_loads", partial_uniform_loads)
         if self.mass_per_length_kg_m is not None:
             value = _finite("mass_per_length_kg_m", self.mass_per_length_kg_m)
             if value < 0.0:
@@ -345,6 +381,27 @@ class FrameAnalysisResult:
 
 
 @dataclass(frozen=True)
+class FrameMemberResponse:
+    """Recovered first-order section forces and deflection at member stations."""
+
+    member_index: int
+    stations_m: tuple[float, ...]
+    axial_forces_n: tuple[float, ...]
+    shear_forces_n: tuple[float, ...]
+    bending_moments_n_m: tuple[float, ...]
+    transverse_deflections_m: tuple[float, ...]
+    maximum_moment_n_m: float
+    maximum_moment_location_m: float
+    minimum_moment_n_m: float
+    minimum_moment_location_m: float
+    maximum_absolute_moment_n_m: float
+    maximum_absolute_moment_location_m: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return _json_ready(asdict(self))
+
+
+@dataclass(frozen=True)
 class ModalAnalysisResult:
     """Natural frequencies and peak-normalized mode shapes of a frame model."""
 
@@ -427,6 +484,209 @@ def analyze_linear_static(model: StructuralModel) -> FrameAnalysisResult:
         free_dof_residual_norm=residual_norm,
         member_end_normal_stresses_pa=member_stresses,
         global_equilibrium_residual=_global_equilibrium_residual(model, load + residual, displacements),
+    )
+
+
+def recover_member_response(
+    model: StructuralModel,
+    result: FrameAnalysisResult,
+    member_index: int,
+    stations_m: Sequence[float],
+) -> FrameMemberResponse:
+    """Recover first-order forces and transverse deflection along a frame member.
+
+    Stations use member-local x coordinates. Axial force is positive in
+    tension. Shear is the resultant along local +y of the forces acting on
+    the member between node i and the section, and bending moment is positive
+    in sagging, so that the moment slope equals the shear. At a
+    concentrated load, values use the right-hand limit; at the member end,
+    they include loads applied at that end. Moment extrema are found from the
+    shear roots, member ends, and both sides of concentrated moments.
+    """
+    if not isinstance(model, StructuralModel):
+        raise TypeError("model must be a StructuralModel")
+    if not isinstance(result, FrameAnalysisResult):
+        raise TypeError("result must be a FrameAnalysisResult")
+    if result.analysis_type != "first_order":
+        raise ValueError("member response recovery requires a first-order static result")
+    if isinstance(member_index, bool) or not isinstance(member_index, (int, np.integer)):
+        raise ValueError("member_index must be a non-negative integer")
+    member_index = int(member_index)
+    if not 0 <= member_index < len(model.members):
+        raise ValueError("member_index must refer to a member in the model")
+    member = model.members[member_index]
+    if not isinstance(member, FrameMember):
+        raise TypeError("member response recovery requires a FrameMember")
+    if len(result.displacements) != len(model.nodes):
+        raise ValueError("result displacements do not match the model nodes")
+    if len(result.member_end_forces_local) != len(model.members):
+        raise ValueError("result member end actions do not match the model members")
+    if any(len(row) != 3 for row in result.displacements):
+        raise ValueError("result displacements must contain three values per node")
+    if any(len(row) != 6 for row in result.member_end_forces_local):
+        raise ValueError("result member end actions must contain six values per member")
+    if isinstance(stations_m, (str, bytes)):
+        raise ValueError("stations_m must be a sequence of distances")
+    try:
+        stations = tuple(_finite("station", station) for station in stations_m)
+    except TypeError as exc:
+        raise ValueError("stations_m must be a sequence of distances") from exc
+    if any(station < 0.0 for station in stations):
+        raise ValueError("member response stations must be non-negative")
+
+    node_i, node_j = model.nodes[member.node_i], model.nodes[member.node_j]
+    length = math.hypot(node_j.x_m - node_i.x_m, node_j.y_m - node_i.y_m)
+    if length <= np.finfo(float).eps * max(
+        1.0, abs(node_i.x_m), abs(node_i.y_m), abs(node_j.x_m), abs(node_j.y_m)
+    ):
+        raise ValueError("frame member length must be greater than zero at the model coordinate scale")
+    if any(station > length for station in stations):
+        raise ValueError("member response stations must not exceed the member length")
+
+    cosine, sine = (node_j.x_m - node_i.x_m) / length, (node_j.y_m - node_i.y_m) / length
+    dofs = np.asarray(
+        (
+            3 * member.node_i,
+            3 * member.node_i + 1,
+            3 * member.node_i + 2,
+            3 * member.node_j,
+            3 * member.node_j + 1,
+            3 * member.node_j + 2,
+        ),
+        dtype=int,
+    )
+    global_displacements = np.asarray(result.displacements, dtype=float).reshape(-1)
+    local_displacement = _transformation(cosine, sine) @ global_displacements[dofs]
+    released = tuple(
+        dof for dof, flag in zip((2, 5), (member.release_rotation_i, member.release_rotation_j), strict=True) if flag
+    )
+    if released:
+        stiffness = _local_stiffness(member, length)
+        equivalent_load = _equivalent_local_load(member, length)
+        retained = tuple(dof for dof in range(6) if dof not in released)
+        released_displacement = np.linalg.solve(
+            stiffness[np.ix_(released, released)],
+            equivalent_load[list(released)]
+            - stiffness[np.ix_(released, retained)] @ local_displacement[list(retained)],
+        )
+        local_displacement[list(released)] = released_displacement
+
+    axial_i, shear_i, moment_i, _, _, _ = result.member_end_forces_local[member_index]
+    qx = member.uniform_load_local_x_n_m
+    qy = member.uniform_load_local_y_n_m
+    point_loads = tuple(member.point_loads)
+    if any(not 0.0 <= load.distance_from_i_m <= length for load in point_loads):
+        raise ValueError("point load distance must lie between the member ends")
+    partial_loads = tuple(member.partial_uniform_loads)
+    if any(load.end_distance_from_i_m > length for load in partial_loads):
+        raise ValueError("partial uniform load end distance must not exceed the member length")
+
+    ei = member.material.youngs_modulus_pa * member.section.second_moment_local_z_m4
+    shear_stiffness = None
+    if member.section.shear_area_local_y_m2 is not None:
+        shear_stiffness = member.material.shear_modulus_pa * member.section.shear_area_local_y_m2
+    local_v_i, local_theta_i = float(local_displacement[1]), float(local_displacement[2])
+
+    def state(x: float, *, include_couples_at_x: bool = True) -> tuple[float, float, float]:
+        axial = -axial_i - qx * x
+        shear = shear_i + qy * x
+        moment = -moment_i + shear_i * x + 0.5 * qy * x**2
+        for load in partial_loads:
+            start, end = load.start_distance_from_i_m, load.end_distance_from_i_m
+            loaded_length = max(0.0, min(x, end) - start)
+            axial -= load.intensity_local_x_n_m * loaded_length
+            shear += load.intensity_local_y_n_m * loaded_length
+            moment += load.intensity_local_y_n_m * loaded_length * (x - start - loaded_length / 2.0)
+        for point in point_loads:
+            distance = point.distance_from_i_m
+            if distance <= x:
+                axial -= point.force_local_x_n
+                shear += point.force_local_y_n
+                moment += point.force_local_y_n * (x - distance)
+                if distance < x or include_couples_at_x:
+                    moment -= point.moment_local_z_n_m
+        return axial, shear, moment
+
+    def deflection(x: float) -> float:
+        bending_integral = (
+            -moment_i * x**2 / 2.0
+            + shear_i * x**3 / 6.0
+            + qy * x**4 / 24.0
+        )
+        shear_integral = shear_i * x + qy * x**2 / 2.0
+        for load in partial_loads:
+            start, end = load.start_distance_from_i_m, load.end_distance_from_i_m
+            after_start = max(0.0, x - start)
+            after_end = max(0.0, x - end)
+            bending_integral += load.intensity_local_y_n_m * (
+                after_start**4 - after_end**4
+            ) / 24.0
+            shear_integral += load.intensity_local_y_n_m * (
+                after_start**2 - after_end**2
+            ) / 2.0
+        for point in point_loads:
+            distance = point.distance_from_i_m
+            span = max(0.0, x - distance)
+            if span:
+                bending_integral += point.force_local_y_n * span**3 / 6.0
+                bending_integral -= point.moment_local_z_n_m * span**2 / 2.0
+                shear_integral += point.force_local_y_n * span
+        value = local_v_i + local_theta_i * x + bending_integral / ei
+        if shear_stiffness is not None:
+            value -= shear_integral / shear_stiffness
+        return value
+
+    response_states = tuple(state(station) for station in stations)
+    moment_candidates: list[tuple[float, float]] = [
+        (0.0, state(0.0)[2]),
+        (length, state(length)[2]),
+    ]
+    breakpoints = sorted(
+        {
+            0.0,
+            length,
+            *(load.distance_from_i_m for load in point_loads),
+            *(load.start_distance_from_i_m for load in partial_loads),
+            *(load.end_distance_from_i_m for load in partial_loads),
+        }
+    )
+    moment_candidates.extend((location, state(location)[2]) for location in breakpoints[1:-1])
+    for start, end in zip(breakpoints, breakpoints[1:], strict=False):
+        if end <= start:
+            continue
+        midpoint = (start + end) / 2.0
+        shear_slope = qy + sum(
+            load.intensity_local_y_n_m
+            for load in partial_loads
+            if load.start_distance_from_i_m <= midpoint < load.end_distance_from_i_m
+        )
+        if shear_slope == 0.0:
+            continue
+        root = midpoint - state(midpoint)[1] / shear_slope
+        if start < root < end:
+            moment_candidates.append((root, state(root)[2]))
+    for point in point_loads:
+        if point.moment_local_z_n_m == 0.0:
+            continue
+        location = point.distance_from_i_m
+        moment_candidates.append((location, state(location, include_couples_at_x=False)[2]))
+        moment_candidates.append((location, state(location, include_couples_at_x=True)[2]))
+    maximum = max(moment_candidates, key=lambda item: item[1])
+    minimum = min(moment_candidates, key=lambda item: item[1])
+    absolute = max(moment_candidates, key=lambda item: abs(item[1]))
+    return FrameMemberResponse(
+        member_index=member_index,
+        stations_m=stations,
+        axial_forces_n=tuple(values[0] for values in response_states),
+        shear_forces_n=tuple(values[1] for values in response_states),
+        bending_moments_n_m=tuple(values[2] for values in response_states),
+        transverse_deflections_m=tuple(deflection(station) for station in stations),
+        maximum_moment_n_m=maximum[1],
+        maximum_moment_location_m=maximum[0],
+        minimum_moment_n_m=minimum[1],
+        minimum_moment_location_m=minimum[0],
+        maximum_absolute_moment_n_m=abs(absolute[1]),
+        maximum_absolute_moment_location_m=absolute[0],
     )
 
 
@@ -1060,6 +1320,8 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
     qy = member.uniform_load_local_y_n_m
     result += np.asarray((0.0, qy * length / 2.0, qy * length**2 / 12.0,
                           0.0, qy * length / 2.0, -qy * length**2 / 12.0))
+    for partial_load in member.partial_uniform_loads:
+        result += _equivalent_partial_uniform_load(member, length, partial_load)
     # Shape functions of the shear-flexible member, consistent with
     # _local_stiffness: deflection for a force, section rotation for a moment.
     # Both reduce to the Hermite cubics when phi is zero.
@@ -1081,6 +1343,59 @@ def _equivalent_local_load(member: FrameMember | AxialMember, length: float) -> 
                                (6 * ratio - 6 * ratio**2) / length,
                                -2 * ratio + 3 * ratio**2 + phi * ratio)) / (1.0 + phi)
         result[np.asarray((1, 2, 4, 5))] += point.moment_local_z_n_m * rotation
+    return result
+
+
+def _equivalent_partial_uniform_load(
+    member: FrameMember,
+    length: float,
+    load: FramePartialUniformLoad,
+) -> np.ndarray:
+    start, end = load.start_distance_from_i_m, load.end_distance_from_i_m
+    if end > length:
+        raise ValueError("partial uniform load end distance must not exceed the member length")
+    result = np.zeros(6, dtype=float)
+    span = end - start
+    result[0] += load.intensity_local_x_n_m * span * (1.0 - (start + end) / (2.0 * length))
+    result[3] += load.intensity_local_x_n_m * span * (start + end) / (2.0 * length)
+
+    if load.intensity_local_y_n_m == 0.0:
+        return result
+    ratio_i, ratio_j = start / length, end / length
+    phi = _shear_parameter(member, length)
+    denominator = 1.0 + phi
+
+    def integrated_shapes(ratio: float) -> tuple[float, float, float, float]:
+        ratio2, ratio3, ratio4 = ratio**2, ratio**3, ratio**4
+        n_i = ratio - ratio3 + 0.5 * ratio4 + phi * (ratio - 0.5 * ratio2)
+        theta_i = (
+            0.5 * ratio2
+            - (2.0 / 3.0) * ratio3
+            + 0.25 * ratio4
+            + 0.5 * phi * (0.5 * ratio2 - ratio3 / 3.0)
+        )
+        n_j = ratio3 - 0.5 * ratio4 + 0.5 * phi * ratio2
+        theta_j = (
+            -ratio3 / 3.0
+            + 0.25 * ratio4
+            - 0.5 * phi * (0.5 * ratio2 - ratio3 / 3.0)
+        )
+        return n_i, theta_i, n_j, theta_j
+
+    shape_integrals_i = integrated_shapes(ratio_i)
+    shape_integrals_j = integrated_shapes(ratio_j)
+    integrated_shapes_y = tuple(
+        (right - left) / denominator
+        for left, right in zip(shape_integrals_i, shape_integrals_j, strict=True)
+    )
+    result[np.asarray((1, 2, 4, 5))] += load.intensity_local_y_n_m * length * np.asarray(
+        (
+            integrated_shapes_y[0],
+            length * integrated_shapes_y[1],
+            integrated_shapes_y[2],
+            length * integrated_shapes_y[3],
+        )
+    )
     return result
 
 

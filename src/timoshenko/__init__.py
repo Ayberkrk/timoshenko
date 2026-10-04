@@ -104,7 +104,9 @@ from .structural import (
     FrameAnalysisResult,
     FrameMaterial,
     FrameMember,
+    FrameMemberResponse,
     FrameNode,
+    FramePartialUniformLoad,
     FramePointLoad,
     FrameSection,
     ModalAnalysisResult,
@@ -114,6 +116,7 @@ from .structural import (
     analyze_modes,
     analyze_p_delta,
     modal_assurance_criterion,
+    recover_member_response,
 )
 from .structure import Structure
 from .uncertainty import UncertaintyError, UncertaintyResult
@@ -172,6 +175,8 @@ __all__ = [
     "FrameMaterial",
     "FrameSection",
     "FrameMember",
+    "FrameMemberResponse",
+    "FramePartialUniformLoad",
     "FramePointLoad",
     "FrameAnalysisResult",
     "ModalAnalysisResult",
@@ -250,6 +255,7 @@ __all__ = [
     "analyze_p_delta",
     "analyze_linear_buckling",
     "modal_assurance_criterion",
+    "recover_member_response",
     "storage",
     "uncertainty",
     "load_project",

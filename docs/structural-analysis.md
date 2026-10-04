@@ -59,7 +59,20 @@ nodal response as the same member split at the load.
 
 The result reports three displacement components per node, support reactions,
 local member end actions ordered as axial force, shear force, moment at node i
-then node j, strain energy and the free-degree equilibrium residual. The
+then node j, strain energy and the free-degree equilibrium residual. End
+actions are forces and moments at the nodes; they are not section-diagram
+ordinates. ``tm.recover_member_response(model, result, member_index,
+stations_m)`` recovers axial force, shear, sagging-positive bending moment and
+local transverse deflection at requested distances from node i. Shear is the
+local +y resultant of the forces on the member between node i and the section,
+so the moment slope equals the shear. It also finds
+the signed minimum and maximum moment and the location of the largest absolute
+moment, including extrema between requested stations. At point forces shear
+uses its right-hand value and changes by the applied local-y force; at a point
+moment, bending moment changes by the negative of the applied local-z moment.
+Deflection includes Timoshenko shear deformation when an effective shear area
+is supplied. Recovery supports first-order static results for frame members;
+it does not recover truss transverse response or P-delta response. The
 analysis is a single linear load case. Combine loads and factors before
 analysis when superposition applies. Supply both local-y section moduli on
 ``FrameSection`` to request end normal stresses. The stress order is positive-y
@@ -68,6 +81,42 @@ Axial bars return uniform axial stress at both fibers. Stress capacity is not
 checked. ``global_equilibrium_residual`` reports the total force and moment
 resultant left by loads and support reactions; for P-delta results the moment
 is evaluated at the displaced nodal positions.
+
+Use ``FrameMember.partial_uniform_loads`` to apply uniform local x/y load
+intensities over bounded intervals without inserting nodes. Each
+``FramePartialUniformLoad`` gives ``start_distance_from_i_m``,
+``end_distance_from_i_m`` and optional ``intensity_local_x_n_m`` and
+``intensity_local_y_n_m`` values. Intervals are integrated against the same
+member shape functions as the stiffness, including the shear-flexible shapes
+when an effective shear area is supplied. The interval must lie within the
+member length. Full-span partial loads reproduce the existing full-span
+uniform load input.
+
+```python
+import timoshenko as tm
+
+steel = tm.FrameMaterial(200e9, 77e9)
+beam_section = tm.FrameSection(area_m2=0.01, second_moment_local_z_m4=8e-6)
+partial_load = tm.FramePartialUniformLoad(
+    start_distance_from_i_m=1.0,
+    end_distance_from_i_m=3.5,
+    intensity_local_y_n_m=-8_000.0,
+)
+member = tm.FrameMember(
+    0,
+    1,
+    steel,
+    beam_section,
+    partial_uniform_loads=(partial_load,),
+)
+model = tm.StructuralModel(
+    nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(4.0, 0.0)),
+    members=(member,),
+    restraints=((True, True, True), (False, False, False)),
+)
+result = tm.analyze_linear_static(model)
+response = tm.recover_member_response(model, result, 0, (0.0, 1.0, 3.5, 4.0))
+```
 
 ``tm.analyze_p_delta`` iterates an approximate geometric stiffness from the
 average axial force in each member. It reports the same result fields with
