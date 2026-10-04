@@ -52,7 +52,7 @@ estimate = tm.uncertainty.propagate(
 Monte Carlo samples a multivariate normal distribution with the supplied input
 means and covariance. It reports the sample mean, sample standard deviation,
 and empirical central coverage interval. The seed defaults to `0` for a
-repeatable result. The sample count is limited to 100–100,000 and uncertain
+repeatable result. The sample count is limited to 100 to 100,000 and uncertain
 input count to 32 to bound memory and runtime. It stops with an explicit error
 if any sample falls outside the wrapped equation's domain; it does not discard
 invalid samples.
