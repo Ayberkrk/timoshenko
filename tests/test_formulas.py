@@ -190,6 +190,7 @@ def test_sdof_vibration_matches_complex_transfer_function():
     omega = 2 * math.pi * freq
     transfer = 1.0 / complex(k - m * omega**2, c * omega)
     result = tm.harmonic_response(force, freq, m, k, c)
+    assert isinstance(result, tm.HarmonicResponse)
     assert result.displacement_amplitude_m == pytest.approx(abs(force * transfer))
     assert result.phase_lag_rad == pytest.approx(-math.atan2(transfer.imag, transfer.real))
     assert tm.natural_frequency_hz(m, k) == pytest.approx(math.sqrt(k / m) / (2 * math.pi))

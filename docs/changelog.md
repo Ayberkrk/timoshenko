@@ -4,6 +4,11 @@ Timoshenko follows [semantic versioning](https://semver.org/). While the
 package is alpha, minor releases may still refine the API, and any behavior
 change is listed here.
 
+## Unreleased
+
+- `tm.HarmonicResponse`, the result type of `tm.harmonic_response`, is
+  exported from the top-level package.
+
 ## 2.1.0
 
 Adds planar structural analysis: frames and trusses with static, P-delta,

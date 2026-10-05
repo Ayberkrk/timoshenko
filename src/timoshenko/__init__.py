@@ -123,6 +123,7 @@ from .uncertainty import UncertaintyError, UncertaintyResult
 from .uncertainty import propagate as propagate_uncertainty
 from .update import update
 from .vibration import (
+    HarmonicResponse,
     RayleighDampingResult,
     damping_ratio,
     harmonic_response,
@@ -184,6 +185,7 @@ __all__ = [
     "SectionProperties",
     "ThinWallCylinderResult",
     "RayleighDampingResult",
+    "HarmonicResponse",
     "PlaneStressResult",
     "PolygonSectionProperties",
     "ProjectManifest",
