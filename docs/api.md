@@ -176,6 +176,7 @@ Single-degree-of-freedom relations and proportional damping.
 | `tm.natural_frequency_hz` | Undamped natural frequency ``sqrt(k/m)/(2*pi)`` for an SDOF system. |
 | `tm.damping_ratio` | Viscous damping ratio ``c/(2*sqrt(k*m))``. |
 | `tm.harmonic_response` | Steady-state displacement amplitude and phase for a harmonically forced SDOF. |
+| `tm.HarmonicResponse` | Result of `tm.harmonic_response`: displacement amplitude, phase lag and frequency ratio. |
 | `tm.rayleigh_damping_coefficients` | Fit passive Rayleigh coefficients to two modal damping targets. |
 | `tm.RayleighDampingResult` | Two-frequency fit for mass- and stiffness-proportional viscous damping. |
 
