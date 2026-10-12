@@ -129,9 +129,9 @@ Ideal geometric properties in SI units.
 | `tm.circular_tube_section` | Return centroidal properties for a concentric circular hollow section. |
 | `tm.i_section` | Return centroidal properties of an ideal symmetric sharp-corner I-section. |
 | `tm.rectangular_tube_section` | Return centroidal properties of an ideal uniform-wall rectangular tube. |
-| `tm.SectionProperties` | Area, second moments, elastic section moduli and principal inertias for standard shape axes. |
+| `tm.SectionProperties` | Area, second moments, elastic section moduli and principal inertias for standard shape axes; `to_dict()` returns JSON-ready field values. |
 | `tm.polygon_section` | Calculate area, centroid, second moments, product moment and moduli. |
-| `tm.PolygonSectionProperties` | Geometric properties, principal second moments and principal-axis orientation of a uniform polygonal section (SI units). |
+| `tm.PolygonSectionProperties` | Geometric properties, principal second moments and principal-axis orientation of a uniform polygonal section (SI units); `to_dict()` returns JSON-ready field values. |
 | `tm.polygon_bending_stress_pa` | Calculate elastic axial and coupled biaxial bending stress at caller-supplied polygon coordinates. |
 
 For frame bending in the global x-y plane, pass the section's second moment
@@ -157,15 +157,15 @@ Closed-form linear elastic relations.
 | `tm.cantilever_uniform_load` | Free-end deflection of a cantilever under a full-span uniform load. |
 | `tm.simply_supported_midpoint_load` | Midspan deflection of a simply supported beam with a center point load. |
 | `tm.simply_supported_uniform_load` | Midspan deflection of a simply supported beam under full-span UDL. |
-| `tm.BeamDeflection` | Bending and shear deflection terms, with their sum as `total_m`. |
+| `tm.BeamDeflection` | Bending and shear deflection terms, with their sum as `total_m`; `to_dict()` returns JSON-ready field values. |
 | `tm.circular_shaft_torsion` | Return elastic outer-fiber shear stress and twist for a round shaft. |
-| `tm.CircularTorsionResult` | Polar moment, outer-fiber shear stress and twist angle of a circular shaft. |
+| `tm.CircularTorsionResult` | Polar moment, outer-fiber shear stress and twist angle of a circular shaft; `to_dict()` returns JSON-ready field values. |
 | `tm.euler_critical_load` | Euler elastic critical load ``pi^2 E I / (K L)^2`` in newtons. |
 | `tm.slenderness_ratio` | Geometric slenderness ``K L / r_g`` for one selected buckling axis. |
 | `tm.plane_stress` | Return principal stresses, in-plane max shear, and plane-stress von Mises. |
-| `tm.PlaneStressResult` | Principal stresses, maximum in-plane shear and von Mises equivalent stress. |
+| `tm.PlaneStressResult` | Principal stresses, maximum in-plane shear and von Mises equivalent stress; `to_dict()` returns JSON-ready field values. |
 | `tm.thin_wall_cylinder_stress` | Estimate membrane stresses in a closed-end thin cylindrical vessel. |
-| `tm.ThinWallCylinderResult` | Hoop and longitudinal membrane stresses and the thickness to radius ratio. |
+| `tm.ThinWallCylinderResult` | Hoop and longitudinal membrane stresses and the thickness to radius ratio; `to_dict()` returns JSON-ready field values. |
 
 ## Vibration and damping
 
@@ -176,7 +176,7 @@ Single-degree-of-freedom relations and proportional damping.
 | `tm.natural_frequency_hz` | Undamped natural frequency ``sqrt(k/m)/(2*pi)`` for an SDOF system. |
 | `tm.damping_ratio` | Viscous damping ratio ``c/(2*sqrt(k*m))``. |
 | `tm.harmonic_response` | Steady-state displacement amplitude and phase for a harmonically forced SDOF. |
-| `tm.HarmonicResponse` | Result of `tm.harmonic_response`: displacement amplitude, phase lag and frequency ratio. |
+| `tm.HarmonicResponse` | Result of `tm.harmonic_response`: displacement amplitude, phase lag and frequency ratio; `to_dict()` returns JSON-ready field values. |
 | `tm.rayleigh_damping_coefficients` | Fit passive Rayleigh coefficients to two modal damping targets. |
 | `tm.RayleighDampingResult` | Two-frequency fit for mass- and stiffness-proportional viscous damping. |
 

@@ -19,6 +19,15 @@ class SectionProperties:
     section_modulus_y_m3: float
     section_modulus_z_m3: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "area_m2": float(self.area_m2),
+            "second_moment_y_m4": float(self.second_moment_y_m4),
+            "second_moment_z_m4": float(self.second_moment_z_m4),
+            "section_modulus_y_m3": float(self.section_modulus_y_m3),
+            "section_modulus_z_m3": float(self.section_modulus_z_m3),
+        }
+
     @property
     def principal_second_moment_max_m4(self) -> float:
         """Larger principal second moment; the standard shape axes are principal."""

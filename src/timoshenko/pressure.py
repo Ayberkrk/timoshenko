@@ -13,6 +13,13 @@ class ThinWallCylinderResult:
     longitudinal_stress_pa: float
     thickness_to_mean_radius_ratio: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "hoop_stress_pa": float(self.hoop_stress_pa),
+            "longitudinal_stress_pa": float(self.longitudinal_stress_pa),
+            "thickness_to_mean_radius_ratio": float(self.thickness_to_mean_radius_ratio),
+        }
+
 
 def thin_wall_cylinder_stress(
     pressure_difference_pa: float, mean_radius_m: float, wall_thickness_m: float

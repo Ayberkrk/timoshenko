@@ -14,6 +14,13 @@ class CircularTorsionResult:
     maximum_shear_stress_pa: float
     twist_rad: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "polar_moment_m4": float(self.polar_moment_m4),
+            "maximum_shear_stress_pa": float(self.maximum_shear_stress_pa),
+            "twist_rad": float(self.twist_rad),
+        }
+
 
 def circular_shaft_torsion(
     torque_nm: float,

@@ -18,6 +18,9 @@ class BeamDeflection:
     bending_m: float
     shear_m: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {"bending_m": float(self.bending_m), "shear_m": float(self.shear_m)}
+
     @property
     def total_m(self) -> float:
         return self.bending_m + self.shear_m

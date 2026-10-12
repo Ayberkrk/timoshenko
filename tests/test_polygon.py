@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import math
 
 import numpy as np
@@ -162,3 +163,23 @@ def test_vertex_limit():
     ring = [(math.cos(2 * math.pi * i / 513), math.sin(2 * math.pi * i / 513)) for i in range(513)]
     with pytest.raises(ValueError):
         tm.polygon_section(ring)
+
+
+def test_polygon_section_properties_to_dict_is_json_ready():
+    result = tm.polygon_section([(0.0, 0.0), (0.2, 0.0), (0.0, 0.1)])
+    fields = [
+        "area_m2",
+        "centroid_x_m",
+        "centroid_y_m",
+        "second_moment_x_m4",
+        "second_moment_y_m4",
+        "product_moment_xy_m4",
+        "section_modulus_x_positive_m3",
+        "section_modulus_x_negative_m3",
+        "section_modulus_y_positive_m3",
+        "section_modulus_y_negative_m3",
+    ]
+    data = result.to_dict()
+    assert list(data) == fields
+    assert data == {name: getattr(result, name) for name in fields}
+    assert json.loads(json.dumps(data)) == data

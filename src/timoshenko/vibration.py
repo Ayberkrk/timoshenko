@@ -29,6 +29,13 @@ class HarmonicResponse:
     phase_lag_rad: float
     frequency_ratio: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "displacement_amplitude_m": float(self.displacement_amplitude_m),
+            "phase_lag_rad": float(self.phase_lag_rad),
+            "frequency_ratio": float(self.frequency_ratio),
+        }
+
 
 @dataclass(frozen=True)
 class RayleighDampingResult:

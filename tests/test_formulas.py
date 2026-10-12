@@ -5,6 +5,7 @@ stress-tensor eigenvalues, complex transfer functions) rather than from the
 same expressions used in the implementation.
 """
 
+import json
 import math
 
 import numpy as np
@@ -242,3 +243,55 @@ def test_rayleigh_rejects_non_passive_and_degenerate_targets():
         tm.rayleigh_damping_coefficients(1.0, 0.05, 10.0, 0.001)
     with pytest.raises(ValueError):
         tm.rayleigh_damping_coefficients(2.0, 0.02, 2.0, 0.03)
+
+
+def assert_json_ready_result(result, fields):
+    data = result.to_dict()
+    assert list(data) == fields
+    assert data == {name: getattr(result, name) for name in fields}
+    assert json.loads(json.dumps(data)) == data
+
+
+def test_beam_deflection_to_dict_is_json_ready():
+    assert_json_ready_result(tm.cantilever_tip_load(1e3, 2.0, E, INERTIA), ["bending_m", "shear_m"])
+
+
+def test_thin_wall_cylinder_result_to_dict_is_json_ready():
+    assert_json_ready_result(
+        tm.thin_wall_cylinder_stress(2e6, 0.5, 0.01),
+        ["hoop_stress_pa", "longitudinal_stress_pa", "thickness_to_mean_radius_ratio"],
+    )
+
+
+def test_circular_torsion_result_to_dict_is_json_ready():
+    assert_json_ready_result(
+        tm.circular_shaft_torsion(5e3, 2.0, 80e9, 0.08, 0.05),
+        ["polar_moment_m4", "maximum_shear_stress_pa", "twist_rad"],
+    )
+
+
+def test_plane_stress_result_to_dict_is_json_ready():
+    assert_json_ready_result(
+        tm.plane_stress(80e6, -20e6, 35e6),
+        ["principal_max_pa", "principal_min_pa", "maximum_in_plane_shear_pa", "von_mises_pa"],
+    )
+
+
+def test_harmonic_response_to_dict_is_json_ready():
+    assert_json_ready_result(
+        tm.harmonic_response(120.0, 5.5, 250.0, 4e5, 900.0),
+        ["displacement_amplitude_m", "phase_lag_rad", "frequency_ratio"],
+    )
+
+
+def test_section_properties_to_dict_is_json_ready():
+    assert_json_ready_result(
+        tm.rectangle_section(0.2, 0.5),
+        [
+            "area_m2",
+            "second_moment_y_m4",
+            "second_moment_z_m4",
+            "section_modulus_y_m3",
+            "section_modulus_z_m3",
+        ],
+    )

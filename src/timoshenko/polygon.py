@@ -34,6 +34,20 @@ class PolygonSectionProperties:
     section_modulus_y_positive_m3: float
     section_modulus_y_negative_m3: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "area_m2": float(self.area_m2),
+            "centroid_x_m": float(self.centroid_x_m),
+            "centroid_y_m": float(self.centroid_y_m),
+            "second_moment_x_m4": float(self.second_moment_x_m4),
+            "second_moment_y_m4": float(self.second_moment_y_m4),
+            "product_moment_xy_m4": float(self.product_moment_xy_m4),
+            "section_modulus_x_positive_m3": float(self.section_modulus_x_positive_m3),
+            "section_modulus_x_negative_m3": float(self.section_modulus_x_negative_m3),
+            "section_modulus_y_positive_m3": float(self.section_modulus_y_positive_m3),
+            "section_modulus_y_negative_m3": float(self.section_modulus_y_negative_m3),
+        }
+
     @property
     def principal_second_moment_max_m4(self) -> float:
         return (self.second_moment_x_m4 + self.second_moment_y_m4) / 2.0 + math.hypot(

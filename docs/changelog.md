@@ -14,6 +14,11 @@ change is listed here.
 - Validation errors from the pressure, shaft, stability and plane-stress
   formulas now name the offending argument.
 
+**Added**
+
+- JSON-ready `to_dict()` methods on the closed-form beam, pressure, shaft,
+  strength, vibration and section-property result classes.
+
 ## 2.1.0
 
 Adds planar structural analysis: frames and trusses with static, P-delta,

@@ -15,6 +15,14 @@ class PlaneStressResult:
     maximum_in_plane_shear_pa: float
     von_mises_pa: float
 
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "principal_max_pa": float(self.principal_max_pa),
+            "principal_min_pa": float(self.principal_min_pa),
+            "maximum_in_plane_shear_pa": float(self.maximum_in_plane_shear_pa),
+            "von_mises_pa": float(self.von_mises_pa),
+        }
+
 
 def plane_stress(sigma_x_pa: float, sigma_y_pa: float, tau_xy_pa: float) -> PlaneStressResult:
     """Return principal stresses, in-plane max shear, and plane-stress von Mises.
