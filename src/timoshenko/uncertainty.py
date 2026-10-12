@@ -268,7 +268,7 @@ def _evaluate(
     if isinstance(result, (bool, np.bool_)) or not np.isscalar(result):
         raise UncertaintyError(f"equation output for {label} must be a finite scalar number")
     try:
-        output = float(result)  # type: ignore[arg-type]
+        output = float(result)
     except (TypeError, ValueError) as error:
         raise UncertaintyError(
             f"equation output for {label} must be a finite scalar number"
