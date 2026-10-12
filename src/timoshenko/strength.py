@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+from ._validation import finite
+
 
 @dataclass(frozen=True)
 class PlaneStressResult:
@@ -20,9 +22,9 @@ def plane_stress(sigma_x_pa: float, sigma_y_pa: float, tau_xy_pa: float) -> Plan
     The third principal stress is assumed zero (plane stress). No material
     yield criterion, failure probability, or allowable stress is applied.
     """
-    sx, sy, txy = map(float, (sigma_x_pa, sigma_y_pa, tau_xy_pa))
-    if not all(math.isfinite(v) for v in (sx, sy, txy)):
-        raise ValueError("stress components must be finite")
+    sx = finite("sigma_x_pa", sigma_x_pa)
+    sy = finite("sigma_y_pa", sigma_y_pa)
+    txy = finite("tau_xy_pa", tau_xy_pa)
     center = (sx + sy) / 2.0
     radius = math.hypot((sx - sy) / 2.0, txy)
     von_mises = math.sqrt(max(0.0, sx**2 - sx * sy + sy**2 + 3.0 * txy**2))

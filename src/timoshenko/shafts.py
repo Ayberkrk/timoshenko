@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+from ._validation import finite, positive
+
 
 @dataclass(frozen=True)
 class CircularTorsionResult:
@@ -26,15 +28,15 @@ def circular_shaft_torsion(
     isotropic elastic behavior. An inner diameter of zero describes a solid
     shaft. Non-circular sections and restrained warping are not covered.
     """
-    torque, length = float(torque_nm), float(length_m)
-    shear = float(shear_modulus_pa)
-    outer, inner = float(outer_diameter_m), float(inner_diameter_m)
-    if not all(math.isfinite(v) for v in (torque, length, shear, outer, inner)):
-        raise ValueError("all inputs must be finite")
-    if length <= 0.0 or shear <= 0.0 or outer <= 0.0 or inner < 0.0 or inner >= outer:
-        raise ValueError(
-            "length, shear modulus, and outer diameter must be positive; inner diameter must be in [0, outer)"
-        )
+    torque = finite("torque_nm", torque_nm)
+    length = positive("length_m", length_m)
+    shear = positive("shear_modulus_pa", shear_modulus_pa)
+    outer = positive("outer_diameter_m", outer_diameter_m)
+    inner = finite("inner_diameter_m", inner_diameter_m)
+    if inner < 0.0:
+        raise ValueError("inner_diameter_m must be non-negative")
+    if inner >= outer:
+        raise ValueError("inner_diameter_m must be smaller than outer_diameter_m")
     polar = math.pi * (outer**4 - inner**4) / 32.0
     return CircularTorsionResult(
         polar_moment_m4=polar,

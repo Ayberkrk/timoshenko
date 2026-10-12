@@ -9,6 +9,11 @@ change is listed here.
 - `tm.HarmonicResponse`, the result type of `tm.harmonic_response`, is
   exported from the top-level package.
 
+**Changed**
+
+- Validation errors from the pressure, shaft, stability and plane-stress
+  formulas now name the offending argument.
+
 ## 2.1.0
 
 Adds planar structural analysis: frames and trusses with static, P-delta,

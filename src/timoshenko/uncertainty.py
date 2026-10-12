@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 from statistics import NormalDist
 from types import MappingProxyType
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence, cast
 
 import numpy as np
 
@@ -262,13 +262,13 @@ def _evaluate(
     label: str,
 ) -> float:
     try:
-        result = function(**dict(zip(names, values, strict=True)))
+        result: Any = function(**dict(zip(names, values, strict=True)))
     except Exception as error:
         raise UncertaintyError(f"equation evaluation failed for {label}: {error}") from error
     if isinstance(result, (bool, np.bool_)) or not np.isscalar(result):
         raise UncertaintyError(f"equation output for {label} must be a finite scalar number")
     try:
-        output = float(result)
+        output = float(cast(Any, result))
     except (TypeError, ValueError) as error:
         raise UncertaintyError(
             f"equation output for {label} must be a finite scalar number"

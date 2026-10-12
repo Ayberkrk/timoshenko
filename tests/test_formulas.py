@@ -153,6 +153,18 @@ def test_circular_torsion_polar_moment_is_twice_the_second_moment():
     assert result.twist_rad == pytest.approx(5e3 * 2.0 / (80e9 * 2 * inertia))
 
 
+def test_thin_wall_cylinder_validation_names_argument():
+    with pytest.raises(ValueError, match="mean_radius_m"):
+        tm.thin_wall_cylinder_stress(2e6, 0.0, 0.01)
+
+
+def test_circular_torsion_validation_names_argument():
+    with pytest.raises(ValueError, match="shear_modulus_pa"):
+        tm.circular_shaft_torsion(5e3, 2.0, 0.0, 0.08)
+    with pytest.raises(ValueError, match="inner_diameter_m must be smaller"):
+        tm.circular_shaft_torsion(5e3, 2.0, 80e9, 0.08, 0.08)
+
+
 def test_euler_buckling_and_slenderness():
     base = tm.euler_critical_load(200e9, 1e-6, 3.0)
     assert base == pytest.approx(math.pi**2 * 200e9 * 1e-6 / 9.0)
@@ -160,6 +172,16 @@ def test_euler_buckling_and_slenderness():
         base / 4
     )
     assert tm.slenderness_ratio(3.0, 1.0, 4e-3, 1e-6) == pytest.approx(3.0 / math.sqrt(1e-6 / 4e-3))
+
+
+def test_euler_critical_load_validation_names_argument():
+    with pytest.raises(ValueError, match="second_moment_m4"):
+        tm.euler_critical_load(200e9, 0.0, 3.0)
+
+
+def test_slenderness_ratio_validation_names_argument():
+    with pytest.raises(ValueError, match="area_m2"):
+        tm.slenderness_ratio(3.0, 1.0, 0.0, 1e-6)
 
 
 @pytest.mark.parametrize(
@@ -176,6 +198,11 @@ def test_plane_stress_matches_tensor_eigenvalues(sx, sy, txy):
     s1, s2, s3 = principal[1], principal[0], 0.0
     von_mises = math.sqrt(((s1 - s2) ** 2 + (s2 - s3) ** 2 + (s3 - s1) ** 2) / 2)
     assert result.von_mises_pa == pytest.approx(von_mises, abs=1.0)
+
+
+def test_plane_stress_validation_names_argument():
+    with pytest.raises(ValueError, match="tau_xy_pa"):
+        tm.plane_stress(80e6, -20e6, math.inf)
 
 
 def test_thin_wall_cylinder():
