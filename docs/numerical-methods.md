@@ -27,6 +27,15 @@ The shear split is an engineering approximation. Timoshenko beam theory adds tra
 
 For positive lumped mass `m`, stiffness `k`, and nonnegative viscous damping `c`, the package calculates `f_n = sqrt(k/m)/(2 pi)` and `zeta = c/(2 sqrt(k m))`. Harmonic response uses `r = omega/omega_n`, displacement amplitude `|F_0|/k / sqrt((1-r^2)^2+(2 zeta r)^2)`, and phase lag `atan2(2 zeta r, 1-r^2)`. It is a steady-state SDOF solution, not a transient integrator or a multi-degree-of-freedom modal solver.
 
+For a runnable walkthrough, `examples/harmonic_response.py` sweeps the
+excitation across the resonance of a 5% damped oscillator, tabulates the
+dynamic amplification `|x|/(F/k)` and phase lag, and checks the printed
+sweep peak against the closed-form `1 / (2 zeta sqrt(1 - zeta^2))`:
+
+```
+python examples/harmonic_response.py
+```
+
 ## Torsion, elastic stability, plane stress, and pressure
 
 For a solid or concentric hollow circular shaft, the polar area moment is `J = pi (D_o^4-D_i^4)/32`. Under uniform Saint-Venant torsion, the API reports outer-fiber stress `tau_max = T (D_o/2)/J` and twist `phi = T L/(G J)`. It does not accept non-circular sections, restrained warping, variable torque/section, or plastic torsion. Classical Saint-Venant torsion is reviewed in engineering mechanics literature; the circular-section assumptions are materially narrower than arbitrary-section torsion ([UBC mechanics note](https://civil-terje.sites.olt.ubc.ca/files/2023/08/Saint-Venant-Torsion.pdf), with later work on section torsion factors [arXiv:0912.2622](https://arxiv.org/abs/0912.2622)).

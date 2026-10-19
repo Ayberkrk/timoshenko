@@ -24,6 +24,9 @@ change is listed here.
   three-story shear building whose modes are identified with
   `tm.identify_fdd` and checked against the analytical model with the modal
   assurance criterion.
+- SDOF harmonic response example `examples/harmonic_response.py`: a 5%
+  damped oscillator swept through resonance, whose peak dynamic
+  amplification is checked against the closed-form value.
 
 ## 2.1.0
 
