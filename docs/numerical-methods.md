@@ -89,12 +89,16 @@ Damping is estimated separately from the frequency. A single periodogram of ambi
 
 The `MultiChannelData` contract stores synchronized, regularly sampled rows with one common sample rate and channel metadata. `identify_fdd` removes each segment's mean, multiplies by a Hann window, estimates a one-sided Welch cross-spectral density matrix, and computes its Hermitian eigendecomposition at each frequency. The implementation searches local maxima in up to four leading singular-value curves; the matching eigenvector becomes the normalized complex mode-shape estimate. Peak frequencies are refined between bins by fitting a parabola to the log singular values at the peak and its neighbors; `resolution_hz` remains `fs/nperseg`. Secondary curves are screened against the maximum of the leading curve and candidate singular values are also compared locally with the leading value. Overlap changes the number of spectral averages. At least two segments are required. The initial API bounds one analysis to 32 channels and 4096 samples per FFT segment to keep temporary memory predictable.
 
-FDD expects synchronized channels measuring the same physical quantity in the same units. Missing samples, asynchronous channels, unknown clock offsets, channel gain calibration, and resampling must be handled before constructing `MultiChannelData`. Unit labels are carried into the output but are not converted. A peak is a candidate mode, not automatically a structural mode: close/repeated modes, strong harmonics, low excitation, sensor nodes, nonstationarity, and operating/environmental variation need engineering review. This first FDD implementation does not estimate damping, use an SSI stabilization diagram, identify damage, or normalize temperature effects. See [FDD (Brincker et al., 2001)](https://doi.org/10.1088/0964-1726/10/3/303) and later automated FDD/MAC work [(Cardoni et al., 2025)](https://doi.org/10.1016/j.engstruct.2024.119210).
+FDD expects synchronized channels measuring the same physical quantity in the same units. `tm.align_multichannel` can apply explicit per-channel clock offsets, calibration and band-limited resampling before constructing `MultiChannelData`; it preserves larger gaps as segment boundaries and does not estimate clock drift. A peak is a candidate mode, not automatically a structural mode: close/repeated modes, strong harmonics, low excitation, sensor nodes, nonstationarity, and operating/environmental variation need engineering review. Optional EFDD estimates damping only when its modal bell is sufficiently resolved. `tm.identify_ssi` provides a covariance-driven subspace method with adjacent-order pole stability indicators. Those indicators screen candidates; they do not prove a pole is structural. Neither method identifies damage. See [FDD (Brincker et al., 2001)](https://doi.org/10.1088/0964-1726/10/3/303) and later automated FDD/MAC work [(Cardoni et al., 2025)](https://doi.org/10.1016/j.engstruct.2024.119210), as well as [advanced OMA and alignment](advanced-oma.md).
 
 For a runnable end-to-end walkthrough, `examples/multichannel_fdd.py` synthesizes
 three synchronized channels for a three-story shear building, identifies its modes
 with `tm.identify_fdd`, and compares frequencies and mode shapes with the
 analytical model through the modal assurance criterion:
+
+```bash
+python examples/multichannel_fdd.py
+```
 
 ## Story stiffness updating
 
@@ -135,9 +139,9 @@ normalized_hz = baseline.normalize(
 )
 ```
 
-```
-python examples/multichannel_fdd.py
-```
+The runnable example combines story stiffness fitting with a synthetic
+temperature and humidity correction:
+`python examples/model_update_and_environmental_normalization.py`.
 
 ## Interpretation and validation
 

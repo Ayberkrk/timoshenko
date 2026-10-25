@@ -29,15 +29,23 @@ class EnvironmentalFrequencyBaseline:
         features = tuple(str(name).strip() for name in self.feature_names)
         reference = tuple(float(value) for value in self.reference_environment)
         frequencies = tuple(float(value) for value in self.reference_frequencies_hz)
-        coefficients = tuple(tuple(float(value) for value in row) for row in self.coefficients_hz_per_unit)
+        coefficients = tuple(
+            tuple(float(value) for value in row) for row in self.coefficients_hz_per_unit
+        )
         residual_std = tuple(float(value) for value in self.residual_std_hz)
-        if not features or any(not name for name in features) or len(set(features)) != len(features):
+        if (
+            not features
+            or any(not name for name in features)
+            or len(set(features)) != len(features)
+        ):
             raise ValueError("feature_names must contain distinct non-empty names")
         if len(reference) != len(features) or not np.isfinite(reference).all():
             raise ValueError("reference_environment must contain one finite value per feature")
         if not frequencies or any(not np.isfinite(value) or value <= 0.0 for value in frequencies):
             raise ValueError("reference_frequencies_hz must contain finite positive values")
-        if len(coefficients) != len(frequencies) or any(len(row) != len(features) for row in coefficients):
+        if len(coefficients) != len(frequencies) or any(
+            len(row) != len(features) for row in coefficients
+        ):
             raise ValueError("coefficients must have one row per mode and one column per feature")
         if not np.isfinite(np.asarray(coefficients, dtype=float)).all():
             raise ValueError("coefficients must be finite")
@@ -53,7 +61,9 @@ class EnvironmentalFrequencyBaseline:
         object.__setattr__(self, "coefficients_hz_per_unit", coefficients)
         object.__setattr__(self, "residual_std_hz", residual_std)
 
-    def normalize(self, frequencies_hz: Sequence[float], environment: Sequence[float]) -> tuple[float, ...]:
+    def normalize(
+        self, frequencies_hz: Sequence[float], environment: Sequence[float]
+    ) -> tuple[float, ...]:
         """Map measured frequencies to the fitted reference environment."""
         frequencies = np.asarray(tuple(frequencies_hz), dtype=float)
         covariates = np.asarray(tuple(environment), dtype=float)
@@ -114,7 +124,9 @@ def fit_environmental_baseline(
     design = np.column_stack((np.ones(x.shape[0]), x - reference_environment))
     coefficients, _, rank, _ = np.linalg.lstsq(design, y, rcond=None)
     if rank != design.shape[1]:
-        raise ValueError("environmental covariates are rank-deficient; baseline fit is not identifiable")
+        raise ValueError(
+            "environmental covariates are rank-deficient; baseline fit is not identifiable"
+        )
     fitted = design @ coefficients
     residual = y - fitted
     return EnvironmentalFrequencyBaseline(

@@ -131,7 +131,9 @@ def update_story_stiffness(
             log_scale, current = candidate_parameters, candidate_residual
             damping = max(damping / 3.0, 1e-12)
             iterations = iteration
-            if float(np.linalg.norm(delta, ord=np.inf)) <= tolerance_value or improvement <= tolerance_value**2:
+            if float(np.linalg.norm(delta, ord=np.inf)) <= tolerance_value or improvement <= (
+                tolerance_value**2
+            ):
                 converged = True
                 break
         else:

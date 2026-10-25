@@ -13,6 +13,14 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 |---|---|
 | `tm.Structure` | A shear-building model with one lateral degree of freedom per floor. |
 | `tm.StructuralModel` | A planar truss/frame with nodes, prismatic members, restraints, prescribed support displacements, nodal loads and optional lumped masses. |
+| `tm.StructuralModel3D` | Separate small, linear 3D truss/frame model with six degrees of freedom per node. |
+| `tm.FrameNode3D` | A 3D node with x, y and z coordinates. |
+| `tm.FrameMaterial3D` / `tm.FrameSection3D` | Isotropic elastic moduli and prismatic 3D section properties. |
+| `tm.FrameMember3D` / `tm.TrussMember3D` | 3D frame and axial truss inputs, including explicit member local-axis orientation. |
+| `tm.analyze_linear_static_3d` / `tm.analyze_modes_3d` / `tm.analyze_linear_buckling_3d` | Dense-matrix 3D static, modal and ideal linear buckling analyses. |
+| `tm.StaticAnalysis3DResult` / `tm.ModalAnalysis3DResult` | 3D nodal static response or undamped modal frequencies, shapes and participation data. |
+| `tm.BucklingAnalysis3DResult` | 3D ideal buckling factors, mode shapes and reference member axial forces. |
+| `tm.assemble_matrices_3d` | Assemble global 3D stiffness and mass matrices for advanced caller workflows. |
 | `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
 | `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
@@ -29,6 +37,8 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.ModalAnalysisResult` | Natural frequencies, peak-normalized mode shapes, generalized and effective modal masses, and directional participation ratios. |
 | `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
 | `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
+| `tm.analyze_time_history` | Integrate a 2D or 3D linear model with Newmark average acceleration and optional Rayleigh damping/base acceleration. |
+| `tm.TimeHistoryResult` | Nodal displacement, velocity, acceleration and reaction histories. |
 | `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
 | `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT and sub-bin peak interpolation. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
@@ -51,6 +61,11 @@ Frequency domain decomposition for synchronized channels.
 | `tm.MultiChannelData` | Aligned array shaped ``(sample, channel)`` with explicit metadata. |
 | `tm.load_multichannel_csv` | Read aligned numeric channels from a headered CSV file. |
 | `tm.identify_fdd` | Estimate modal frequencies with sub-bin peak interpolation and complex mode shapes with Welch FDD. |
+| `tm.identify_ssi` | Estimate stable modal frequencies, damping and mode shapes with covariance-driven SSI. |
+| `tm.SSIMode` / `tm.SSIResult` | SSI modal estimates with stability counts/scores and input metadata. |
+| `tm.TimedChannel` / `tm.align_multichannel` | Apply explicit clock offsets and calibration, then resample asynchronous channels onto contiguous shared grids. |
+| `tm.AlignmentResult` / `tm.AlignedSegment` | Aligned multi-channel segments with timestamps and dropped-grid-point diagnostics. |
+| `tm.identify_fdd(..., estimate_damping=True)` | Optionally estimate FDD damping with EFDD; unresolved damping is returned as `None`. |
 | `tm.FDDResult` | Multi-channel FDD result: modes, resolution, segment settings, channels and notes. |
 | `tm.FDDMode` | One FDD mode: frequency, singular value, and complex mode shape normalized to unit peak magnitude. |
 

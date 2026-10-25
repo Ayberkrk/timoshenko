@@ -2,9 +2,11 @@
 
 from . import (
     adapters,
+    alignment,
     assets,
     beams,
     csv_source,
+    dynamics,
     environmental,
     health,
     mechanics,
@@ -21,15 +23,18 @@ from . import (
     sections,
     sensorthings,
     session,
+    ssi,
     shafts,
     stability,
     storage,
     strength,
     structural,
+    structural_3d,
     uncertainty,
     vibration,
 )
 from .adapters import AcknowledgingObservationSource, ObservationSource, SessionRunner
+from .alignment import AlignmentResult, AlignedSegment, TimedChannel, align_multichannel
 from .assets import Asset, Relation
 from .beams import (
     BeamDeflection,
@@ -39,6 +44,7 @@ from .beams import (
     simply_supported_uniform_load,
 )
 from .csv_source import CSVObservationSource, CSVSourceError
+from .dynamics import TimeHistoryResult, analyze_time_history
 from .health import HealthAssessment
 from .environmental import EnvironmentalFrequencyBaseline, fit_environmental_baseline
 from .mechanics import (
@@ -92,6 +98,7 @@ from .sensorthings import (
     SensorThingsPlugin,
     SensorThingsSourceError,
 )
+from .ssi import SSIMode, SSIResult, identify_ssi
 from .session import (
     MonitoringSession,
     SessionIngestResult,
@@ -122,6 +129,21 @@ from .structural import (
     modal_assurance_criterion,
     recover_member_response,
 )
+from .structural_3d import (
+    BucklingAnalysis3DResult,
+    FrameMaterial3D,
+    FrameMember3D,
+    FrameNode3D,
+    FrameSection3D,
+    ModalAnalysis3DResult,
+    StaticAnalysis3DResult,
+    StructuralModel3D,
+    TrussMember3D,
+    analyze_linear_buckling_3d,
+    analyze_linear_static_3d,
+    analyze_modes_3d,
+    assemble_matrices_3d,
+)
 from .structure import Structure
 from .uncertainty import UncertaintyError, UncertaintyResult
 from .uncertainty import propagate as propagate_uncertainty
@@ -138,6 +160,13 @@ from .vibration import (
 __version__ = "2.1.0"
 
 __all__ = [
+    "AlignmentResult",
+    "AlignedSegment",
+    "BucklingAnalysis3DResult",
+    "FrameMaterial3D",
+    "FrameMember3D",
+    "FrameNode3D",
+    "FrameSection3D",
     "HealthAssessment",
     "EnvironmentalFrequencyBaseline",
     "StoryUpdateResult",
@@ -155,6 +184,7 @@ __all__ = [
     "ModalResult",
     "Mode",
     "MonitoringSession",
+    "ModalAnalysis3DResult",
     "MqttObservationSource",
     "MQTTSourceError",
     "FDDMode",
@@ -198,15 +228,29 @@ __all__ = [
     "ProjectRunResult",
     "Relation",
     "SQLiteStore",
+    "SSIMode",
+    "SSIResult",
     "SessionIngestResult",
     "SessionReport",
     "SessionRestoreResult",
     "SessionRunner",
+    "StaticAnalysis3DResult",
+    "StructuralModel3D",
+    "TimeHistoryResult",
+    "TimedChannel",
+    "TrussMember3D",
     "axial_strain",
     "axial_stress",
     "average_shear_stress",
     "bending_stress",
     "beams",
+    "alignment",
+    "align_multichannel",
+    "analyze_linear_buckling_3d",
+    "analyze_linear_static_3d",
+    "analyze_modes_3d",
+    "analyze_time_history",
+    "assemble_matrices_3d",
     "csv_source",
     "cantilever_tip_load",
     "cantilever_uniform_load",
@@ -246,6 +290,8 @@ __all__ = [
     "read_manifest",
     "sections",
     "sensorthings",
+    "ssi",
+    "identify_ssi",
     "session",
     "shafts",
     "simply_supported_midpoint_load",
@@ -262,6 +308,7 @@ __all__ = [
     "assets",
     "adapters",
     "structural",
+    "structural_3d",
     "analyze_linear_static",
     "analyze_modes",
     "analyze_p_delta",

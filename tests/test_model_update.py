@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 
 from timoshenko.model_update import update_story_stiffness
@@ -42,4 +41,8 @@ def test_story_update_reports_non_convergence_at_iteration_limit() -> None:
     model = Structure(story_masses_kg=(1000.0, 800.0), story_stiffness_n_m=(1e6, 0.8e6))
     changed = Structure(story_masses_kg=model.story_masses_kg, story_stiffness_n_m=(0.4e6, 1.4e6))
     result = update_story_stiffness(model, changed.natural_frequencies_hz, maximum_iterations=1)
-    assert result.updated_structure.update_status in {"updated_local", "updated_local_not_converged"}
+    assert result.iterations <= 1
+    assert result.updated_structure.update_status in {
+        "updated_local",
+        "updated_local_not_converged",
+    }

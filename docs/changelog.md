@@ -6,6 +6,10 @@ change is listed here.
 
 ## Unreleased
 
+- Added covariance-driven SSI, optional EFDD damping and calibrated timestamp
+  alignment for asynchronous multi-channel records.
+- Added linear 3D truss/frame analyses and Newmark time-history response for
+  2D and 3D structural models.
 - Added per-story stiffness fitting for complete shear-building modal sets and
   linear environmental frequency normalization from caller-supplied baseline
   records and covariates.
