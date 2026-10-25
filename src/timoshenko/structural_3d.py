@@ -204,23 +204,15 @@ class BucklingAnalysis3DResult:
         return asdict(self)
 
 
+def _node_xyz(node: FrameNode3D) -> np.ndarray:
+    return np.array((node.x_m, node.y_m, node.z_m))
+
+
 def _element_basis(
     model: StructuralModel3D, member: FrameMember3D | TrussMember3D
 ) -> tuple[float, np.ndarray]:
-    ni = np.array(
-        [
-            model.nodes[member.node_i].x_m,
-            model.nodes[member.node_i].y_m,
-            model.nodes[member.node_i].z_m,
-        ]
-    )
-    nj = np.array(
-        [
-            model.nodes[member.node_j].x_m,
-            model.nodes[member.node_j].y_m,
-            model.nodes[member.node_j].z_m,
-        ]
-    )
+    ni = _node_xyz(model.nodes[member.node_i])
+    nj = _node_xyz(model.nodes[member.node_j])
     delta = nj - ni
     length = float(np.linalg.norm(delta))
     scale = max(1.0, float(np.max(np.abs(ni))), float(np.max(np.abs(nj))))
@@ -288,6 +280,30 @@ def _transform(basis: np.ndarray) -> np.ndarray:
     return result
 
 
+def _member_dofs(member: FrameMember3D | TrussMember3D) -> np.ndarray:
+    return np.r_[
+        np.arange(6 * member.node_i, 6 * member.node_i + 6),
+        np.arange(6 * member.node_j, 6 * member.node_j + 6),
+    ]
+
+
+def _check_mode_count(mode_count: int) -> None:
+    if isinstance(mode_count, bool) or int(mode_count) != mode_count or mode_count < 1:
+        raise ValueError("mode_count must be a positive integer")
+
+
+def _solve_restrained(stiffness: np.ndarray, load: np.ndarray, free: np.ndarray) -> np.ndarray:
+    displacement = np.zeros_like(load)
+    if len(free):
+        try:
+            displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
+        except np.linalg.LinAlgError as exc:
+            raise ValueError(
+                "restrained 3D stiffness is singular; check supports and connectivity"
+            ) from exc
+    return displacement
+
+
 def assemble_matrices_3d(model: StructuralModel3D) -> tuple[np.ndarray, np.ndarray]:
     """Assemble dense stiffness and lumped translational mass matrices."""
     if not isinstance(model, StructuralModel3D):
@@ -299,10 +315,7 @@ def assemble_matrices_3d(model: StructuralModel3D) -> tuple[np.ndarray, np.ndarr
         length, basis = _element_basis(model, member)
         transform = _transform(basis)
         local = _element_stiffness(member, length)
-        dofs = np.r_[
-            np.arange(6 * member.node_i, 6 * member.node_i + 6),
-            np.arange(6 * member.node_j, 6 * member.node_j + 6),
-        ]
+        dofs = _member_dofs(member)
         stiffness[np.ix_(dofs, dofs)] += transform.T @ local @ transform
         member_mass = member.mass_per_length_kg_m * length / 2.0
         for node in (member.node_i, member.node_j):
@@ -320,14 +333,7 @@ def analyze_linear_static_3d(model: StructuralModel3D) -> StaticAnalysis3DResult
     restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
     free = np.flatnonzero(~restrained)
     load = np.asarray(model.nodal_loads, dtype=float).reshape(-1)
-    displacement = np.zeros_like(load)
-    if len(free):
-        try:
-            displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
-        except np.linalg.LinAlgError as exc:
-            raise ValueError(
-                "restrained 3D stiffness is singular; check supports and connectivity"
-            ) from exc
+    displacement = _solve_restrained(stiffness, load, free)
     residual = stiffness @ displacement - load
     nodes = displacement.reshape((-1, 6))
     reactions = residual.reshape((-1, 6))
@@ -369,8 +375,7 @@ def _condense_massless(
 
 def analyze_modes_3d(model: StructuralModel3D, *, mode_count: int = 6) -> ModalAnalysis3DResult:
     """Solve undamped generalized modes with lumped translational mass."""
-    if isinstance(mode_count, bool) or int(mode_count) != mode_count or mode_count < 1:
-        raise ValueError("mode_count must be a positive integer")
+    _check_mode_count(mode_count)
     stiffness, mass = assemble_matrices_3d(model)
     restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
     free = np.flatnonzero(~restrained)
@@ -426,29 +431,19 @@ def analyze_linear_buckling_3d(
     model: StructuralModel3D, *, mode_count: int = 6
 ) -> BucklingAnalysis3DResult:
     """Estimate ideal elastic proportional buckling factors for a nodal load pattern."""
-    if isinstance(mode_count, bool) or int(mode_count) != mode_count or mode_count < 1:
-        raise ValueError("mode_count must be a positive integer")
+    _check_mode_count(mode_count)
     stiffness, _ = assemble_matrices_3d(model)
     load = np.asarray(model.nodal_loads, dtype=float).reshape(-1)
     restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
     free = np.flatnonzero(~restrained)
     if not len(free):
         raise ValueError("buckling analysis requires at least one free degree of freedom")
-    try:
-        displacement = np.zeros_like(load)
-        displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
-    except np.linalg.LinAlgError as exc:
-        raise ValueError(
-            "restrained 3D stiffness is singular; check supports and connectivity"
-        ) from exc
+    displacement = _solve_restrained(stiffness, load, free)
     geometric = np.zeros_like(stiffness)
     axial_forces: list[float] = []
     for member in model.members:
         length, basis = _element_basis(model, member)
-        dofs = np.r_[
-            np.arange(6 * member.node_i, 6 * member.node_i + 6),
-            np.arange(6 * member.node_j, 6 * member.node_j + 6),
-        ]
+        dofs = _member_dofs(member)
         local_u = _transform(basis) @ displacement[dofs]
         if isinstance(member, TrussMember3D):
             force = member.youngs_modulus_pa * member.area_m2 / length * (local_u[6] - local_u[0])
