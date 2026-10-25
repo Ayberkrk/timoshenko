@@ -202,10 +202,18 @@ def identify_ssi(
     stable.sort(key=lambda mode: (-mode.stability_score, mode.frequency_hz))
     deduplicated: list[SSIMode] = []
     for mode in stable:
-        if all(
-            abs(mode.frequency_hz - other.frequency_hz) > max(0.02, fmin * 0.01)
+        mode_shape = np.asarray(mode.shape_real) + 1j * np.asarray(mode.shape_imag)
+        duplicate_frequency = max(0.02, fmin * 0.01)
+        is_duplicate = any(
+            abs(mode.frequency_hz - other.frequency_hz) <= duplicate_frequency
+            and _mac(
+                mode_shape,
+                np.asarray(other.shape_real) + 1j * np.asarray(other.shape_imag),
+            )
+            >= 0.95
             for other in deduplicated
-        ):
+        )
+        if not is_duplicate:
             deduplicated.append(mode)
         if len(deduplicated) >= max_modes:
             break

@@ -85,7 +85,11 @@ transients, and strongly irregular sampling only approximates ideal
 band-limited reconstruction. Set `max_gap_s` to a value appropriate to the
 source; grid points whose interpolation stencil crosses a larger gap are
 dropped. Gaps are returned as segment boundaries, never interpolated across.
-Segments shorter than eight samples are discarded.
+Segments shorter than eight samples are discarded and included in
+`dropped_grid_points`. Each input channel is limited to 1,000,000 samples;
+the aligned grid defaults to 262,144 points. Pass `max_grid_points` to choose a
+different limit up to 1,000,000 points. Longer records should be aligned in
+shorter time windows to bound memory and runtime.
 
 ## API and test status
 

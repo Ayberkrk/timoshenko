@@ -53,8 +53,10 @@ def analyze_time_history(
     equivalent inertia loads using the assembled mass matrix. The time vector
     must be uniformly spaced. Damping is ``alpha*M + beta*K``. The method is
     unconditionally stable for the linear system, but accuracy still depends
-    on the selected time step. Initial accelerations at zero-mass coordinates
-    are reported as zero; subsequent values follow the integrated displacement.
+    on the selected time step. With base acceleration, displacement, velocity
+    and acceleration histories are relative to the moving base; absolute
+    translational acceleration is relative acceleration plus ground acceleration
+    in the selected direction.
     """
     is_3d = isinstance(model, StructuralModel3D)
     if not is_3d and not isinstance(model, StructuralModel):
@@ -140,12 +142,18 @@ def analyze_time_history(
         initial_u = np.asarray(initial_displacements_m, dtype=float)
         if initial_u.shape != (dof_count,) or not np.all(np.isfinite(initial_u)):
             raise ValueError(f"initial_displacements_m must have shape ({dof_count},)")
-        u[0] = np.pad(initial_u, (0, released_count))[free]
+        initial_full = np.pad(initial_u, (0, released_count))
+        if np.any(initial_full[restrained] != 0.0):
+            raise ValueError("initial displacements must be zero at restrained degrees of freedom")
+        u[0] = initial_full[free]
     if initial_velocities_m_s is not None:
         initial_v = np.asarray(initial_velocities_m_s, dtype=float)
         if initial_v.shape != (dof_count,) or not np.all(np.isfinite(initial_v)):
             raise ValueError(f"initial_velocities_m_s must have shape ({dof_count},)")
-        v[0] = np.pad(initial_v, (0, released_count))[free]
+        initial_full = np.pad(initial_v, (0, released_count))
+        if np.any(initial_full[restrained] != 0.0):
+            raise ValueError("initial velocities must be zero at restrained degrees of freedom")
+        v[0] = initial_full[free]
     try:
         initial_rhs = p[0] - cff @ v[0] - kff @ u[0]
         massful = np.flatnonzero(np.diag(mff) > 0.0)

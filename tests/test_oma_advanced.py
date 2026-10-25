@@ -7,6 +7,7 @@ from timoshenko.alignment import TimedChannel, align_multichannel
 from timoshenko.multichannel import MultiChannelData
 from timoshenko.oma import identify_fdd
 from timoshenko.session import MonitoringSession
+import timoshenko.ssi as ssi_module
 from timoshenko.ssi import identify_ssi
 from timoshenko.structure import Structure
 
@@ -46,7 +47,9 @@ def test_ssi_covariance_identifies_stable_noisy_modes_and_shapes():
     assert result.status == "ok"
     assert result.frequencies_hz == pytest.approx([3.2, 8.1], abs=0.2)
     assert all(mode.stable_order_count >= 3 for mode in result.modes)
-    assert all(0.0 <= mode.damping_ratio <= 0.5 for mode in result.modes)
+    expected_damping = (0.025, 0.04)
+    for mode, damping in zip(result.modes, expected_damping, strict=True):
+        assert mode.damping_ratio == pytest.approx(damping, abs=0.015)
     expected = (shape1, shape2)
     for mode, expected_shape in zip(result.modes, expected, strict=True):
         estimated = np.array(mode.shape_real) + 1j * np.array(mode.shape_imag)
@@ -72,6 +75,26 @@ def test_ssi_rejects_bad_order_configuration_and_mixed_units():
     )
     with pytest.raises(ValueError, match="bound SSI memory"):
         identify_ssi(many_channels, block_rows=65)
+
+
+def test_ssi_keeps_close_orthogonal_modes(monkeypatch):
+    values = np.random.default_rng(4).standard_normal((128, 2))
+    data = MultiChannelData(values, 100.0, ["x", "y"], ["g", "g"])
+    poles = [
+        ssi_module._Pole(10.01, 0.02, np.array([1.0 + 0j, 0.0 + 0j])),
+        ssi_module._Pole(10.06, 0.025, np.array([0.0 + 0j, 1.0 + 0j])),
+    ]
+    monkeypatch.setattr(ssi_module, "_identify_order", lambda *args: poles)
+
+    result = identify_ssi(
+        data,
+        block_rows=2,
+        model_orders=(2, 4),
+        min_frequency_hz=10.0,
+        max_frequency_hz=20.0,
+    )
+
+    assert result.frequencies_hz == pytest.approx((10.01, 10.06))
 
 
 def test_fdd_efdd_reports_damping_for_stochastic_damped_mode():
@@ -154,6 +177,36 @@ def test_alignment_splits_large_gaps_and_rejects_extrapolation():
     short = TimedChannel("b", "g", t[10:], np.cos(2 * np.pi * 2 * t[10:]))
     overlap = align_multichannel((a, short), sampling_hz=20.0, sinc_half_width=4)
     assert overlap.segments[0].timestamps_s[0] >= t[10]
+
+
+def test_alignment_counts_short_valid_runs_as_dropped_points():
+    t_a = np.arange(21) / 20.0
+    t_b = np.concatenate((np.arange(5) / 20.0, np.arange(10, 21) / 20.0))
+    result = align_multichannel(
+        (
+            TimedChannel("a", "g", t_a, np.sin(t_a)),
+            TimedChannel("b", "g", t_b, np.sin(t_b)),
+        ),
+        sampling_hz=20.0,
+        max_gap_s=0.075,
+        sinc_half_width=4,
+    )
+    returned_points = sum(segment.data.sample_count for segment in result.segments)
+    assert result.dropped_grid_points == len(t_a) - returned_points
+
+
+def test_alignment_rejects_input_and_output_records_over_memory_bounds():
+    timestamps = np.arange(1_000_001, dtype=float)
+    with pytest.raises(ValueError, match="maximum of 1000000"):
+        TimedChannel("large", "g", timestamps, timestamps)
+
+    times = np.arange(500_000, dtype=float) / 10.0
+    channels = (
+        TimedChannel("a", "g", times, np.sin(times)),
+        TimedChannel("b", "g", times, np.cos(times)),
+    )
+    with pytest.raises(ValueError, match="max_grid_points"):
+        align_multichannel(channels, sampling_hz=10.0)
 
 
 def test_alignment_validates_sampling_and_input_timestamps():

@@ -45,17 +45,29 @@ def test_3d_modes_condense_zero_mass_rotations_and_report_frequencies():
     assert all(frequency > 0.0 for frequency in result.frequencies_hz)
     assert result.mode_shapes[0][1][1] != 0.0
     assert all(math.isfinite(mass) and mass > 0.0 for mass in result.generalized_masses_kg)
+    _, mass_matrix = assemble_matrices_3d(model)
+    for shape, generalized_mass in zip(
+        result.mode_shapes, result.generalized_masses_kg, strict=True
+    ):
+        vector = np.asarray(shape, dtype=float).reshape(-1)
+        assert vector @ mass_matrix @ vector == pytest.approx(generalized_mass)
 
 
 def test_3d_time_history_supports_massless_rotations_and_z_base_acceleration():
     model = cantilever_3d(mass_per_length=12.0)
     times = np.linspace(0.0, 0.2, 41)
+    ground_acceleration = np.ones_like(times)
     result = analyze_time_history(
-        model, times, base_acceleration_m_s2=np.ones_like(times), direction="z"
+        model, times, base_acceleration_m_s2=ground_acceleration, direction="z"
     )
     assert len(result.displacements[0][0]) == 6
     assert result.displacements[-1][1][2] < 0.0
     assert max(result.free_dof_residual_norms) < 1e-5
+    relative = result.accelerations[0][1][2]
+    assert relative == pytest.approx(-1.0)
+    assert relative + ground_acceleration[0] == pytest.approx(
+        0.0
+    )  # absolute response = relative + ground
 
 
 def test_3d_truss_static_supports_arbitrary_axis():
@@ -70,6 +82,31 @@ def test_3d_truss_static_supports_arbitrary_axis():
     expected_extension = 3.0 / 1000.0
     projected = sum(result.displacements[1][i] / math.sqrt(3.0) for i in range(3))
     assert projected == pytest.approx(expected_extension)
+
+
+@pytest.mark.parametrize("axis", ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)))
+def test_3d_truss_assembly_accepts_global_axis_aligned_members(axis):
+    model = StructuralModel3D(
+        nodes=(FrameNode3D(0.0, 0.0, 0.0), FrameNode3D(*axis)),
+        members=(TrussMember3D(0, 1, 1000.0, 2.0),),
+        restraints=((True,) * 6, (True,) * 6),
+    )
+    stiffness, _ = assemble_matrices_3d(model)
+    direction = np.asarray(axis)
+    assert stiffness[:3, :3] == pytest.approx(2000.0 * np.outer(direction, direction))
+
+
+def test_3d_static_fully_restrained_model_returns_support_reactions():
+    load = (1.0, -2.0, 3.0, 4.0, -5.0, 6.0)
+    model = StructuralModel3D(
+        nodes=(FrameNode3D(0.0, 0.0, 0.0), FrameNode3D(1.0, 0.0, 0.0)),
+        members=(TrussMember3D(0, 1, 1000.0, 1.0),),
+        restraints=((True,) * 6, (True,) * 6),
+        nodal_loads=((0.0,) * 6, load),
+    )
+    result = analyze_linear_static_3d(model)
+    assert result.displacements == ((0.0,) * 6, (0.0,) * 6)
+    assert result.reactions[1] == pytest.approx(tuple(-value for value in load))
 
 
 def test_3d_member_orientation_and_model_validation():

@@ -70,3 +70,17 @@ def test_force_history_shape_and_rayleigh_parameters_are_validated():
         analyze_time_history(model, times, force_history_n=np.zeros((2, 5)))
     with pytest.raises(ValueError, match="rayleigh_mass_per_s"):
         analyze_time_history(model, times, rayleigh_mass_per_s=-1.0)
+
+
+@pytest.mark.parametrize(
+    ("parameter", "message"),
+    (
+        ("initial_displacements_m", "initial displacements"),
+        ("initial_velocities_m_s", "initial velocities"),
+    ),
+)
+def test_initial_conditions_on_restrained_dofs_are_rejected(parameter, message):
+    model, _, _ = axial_oscillator()
+    options = {parameter: np.asarray([1.0, 0.0, 0.0, 0.0, 0.0, 0.0])}
+    with pytest.raises(ValueError, match=message):
+        analyze_time_history(model, [0.0, 0.1], **options)

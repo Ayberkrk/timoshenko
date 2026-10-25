@@ -214,10 +214,12 @@ def _element_basis(
     if length <= np.finfo(float).eps * scale:
         raise ValueError("member length must be greater than zero at the model coordinate scale")
     ex = delta / length
-    ref = np.asarray(
-        member.local_y_reference if isinstance(member, FrameMember3D) else (0.0, 1.0, 0.0),
-        dtype=float,
-    )
+    if isinstance(member, FrameMember3D):
+        ref = np.asarray(member.local_y_reference, dtype=float)
+    else:
+        # Trusses have no member bending axes. Pick a stable perpendicular
+        # vector so members aligned with a global basis axis remain valid.
+        ref = np.eye(3)[int(np.argmin(np.abs(ex)))]
     ey = ref - np.dot(ref, ex) * ex
     if np.linalg.norm(ey) <= 1e-10 * np.linalg.norm(ref):
         raise ValueError("local_y_reference must not be parallel to the member axis")
@@ -304,16 +306,15 @@ def analyze_linear_static_3d(model: StructuralModel3D) -> StaticAnalysis3DResult
     stiffness, _ = assemble_matrices_3d(model)
     restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
     free = np.flatnonzero(~restrained)
-    if not len(free):
-        raise ValueError("static analysis requires at least one free degree of freedom")
     load = np.asarray(model.nodal_loads, dtype=float).reshape(-1)
     displacement = np.zeros_like(load)
-    try:
-        displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
-    except np.linalg.LinAlgError as exc:
-        raise ValueError(
-            "restrained 3D stiffness is singular; check supports and connectivity"
-        ) from exc
+    if len(free):
+        try:
+            displacement[free] = np.linalg.solve(stiffness[np.ix_(free, free)], load[free])
+        except np.linalg.LinAlgError as exc:
+            raise ValueError(
+                "restrained 3D stiffness is singular; check supports and connectivity"
+            ) from exc
     residual = stiffness @ displacement - load
     nodes = displacement.reshape((-1, 6))
     reactions = residual.reshape((-1, 6))
@@ -392,9 +393,11 @@ def analyze_modes_3d(model: StructuralModel3D, *, mode_count: int = 6) -> ModalA
         peak = float(np.max(np.abs(shape.reshape((-1, 6))[:, :3])))
         if peak > 0:
             shape /= peak
+            free_shape /= peak
         pivot = int(np.argmax(np.abs(shape)))
         if shape[pivot] < 0:
             shape *= -1
+            free_shape *= -1
         frequencies.append(math.sqrt(float(eig[index])) / (2 * math.pi))
         shapes.append(
             cast(

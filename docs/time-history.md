@@ -14,12 +14,24 @@ record can be supplied in `direction="x"`, `"y"`, or (3D only) `"z"`; it is
 converted to inertia loads with the assembled mass matrix. Direct forces and
 base acceleration can be combined.
 
+Optional `initial_displacements_m` and `initial_velocities_m_s` each contain
+one value per model degree of freedom in the same node order. Values at
+restrained degrees of freedom must be zero because moving supports are not
+modeled.
+
 Rayleigh damping uses `C = alpha M + beta K`, configured with
 `rayleigh_mass_per_s` and `rayleigh_stiffness_s`. The returned result contains
 displacement, velocity, acceleration and reaction histories at all nodes, plus
 free-degree residual norms. At zero-mass free coordinates, initial acceleration
 is reported as zero; later acceleration values are recovered from the
 integrated displacement history.
+
+When `base_acceleration_m_s2` is supplied, the returned displacement,
+velocity and acceleration histories are relative to the moving base. Convert
+the acceleration to absolute sensor acceleration by adding the ground
+acceleration in the selected translational direction:
+`a_absolute = a_relative + a_ground`. The result does not add a separate
+absolute-acceleration field.
 
 The average-acceleration scheme is unconditionally stable for a linear system,
 but that does not guarantee accurate peaks or phase: choose the time step to

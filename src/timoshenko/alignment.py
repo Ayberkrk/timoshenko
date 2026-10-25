@@ -10,6 +10,10 @@ import numpy as np
 
 from .multichannel import MultiChannelData
 
+_MAX_TIMED_CHANNEL_SAMPLES = 1_000_000
+_DEFAULT_MAX_GRID_POINTS = 262_144
+_MAX_GRID_POINTS = 1_000_000
+
 
 @dataclass(frozen=True)
 class TimedChannel:
@@ -22,6 +26,13 @@ class TimedChannel:
 
     def __post_init__(self) -> None:
         channel_id, unit = str(self.channel_id).strip(), str(self.unit).strip()
+        if (
+            len(self.timestamps_s) > _MAX_TIMED_CHANNEL_SAMPLES
+            or len(self.samples) > _MAX_TIMED_CHANNEL_SAMPLES
+        ):
+            raise ValueError(
+                f"timed channels support a maximum of {_MAX_TIMED_CHANNEL_SAMPLES} samples"
+            )
         times = np.asarray(self.timestamps_s, dtype=np.float64)
         values = np.asarray(self.samples, dtype=np.float64)
         if not channel_id or not unit:
@@ -90,6 +101,7 @@ def align_multichannel(
     calibration_offsets: Mapping[str, float] | None = None,
     max_gap_s: float | None = None,
     sinc_half_width: int = 8,
+    max_grid_points: int = _DEFAULT_MAX_GRID_POINTS,
 ) -> AlignmentResult:
     """Synchronize irregularly timed channels using windowed-sinc resampling.
 
@@ -126,6 +138,13 @@ def align_multichannel(
         or not 4 <= half_width <= 32
     ):
         raise ValueError("sinc_half_width must be an integer between 4 and 32")
+    grid_limit = int(max_grid_points)
+    if (
+        isinstance(max_grid_points, bool)
+        or grid_limit != max_grid_points
+        or not 8 <= grid_limit <= _MAX_GRID_POINTS
+    ):
+        raise ValueError(f"max_grid_points must be an integer between 8 and {_MAX_GRID_POINTS}")
     offsets = dict(time_offsets_s or {})
     scales = dict(calibration_scales or {})
     value_offsets = dict(calibration_offsets or {})
@@ -166,8 +185,14 @@ def align_multichannel(
     end = min(float(times[-1]) for times, _, _ in corrected)
     first_index = math.ceil(start * rate - 1e-9)
     last_index = math.floor(end * rate + 1e-9)
-    if last_index - first_index + 1 < 8:
+    grid_count = last_index - first_index + 1
+    if grid_count < 8:
         raise ValueError("channels have fewer than 8 overlapping target grid points")
+    if grid_count > grid_limit:
+        raise ValueError(
+            f"aligned grid would contain {grid_count} points, exceeding max_grid_points="
+            f"{grid_limit}; process the record in shorter time windows"
+        )
     grid = np.arange(first_index, last_index + 1, dtype=float) / rate
     matrix = np.empty((len(grid), len(items)), dtype=float)
     valid = np.ones(len(grid), dtype=bool)
@@ -191,8 +216,10 @@ def align_multichannel(
 
     runs = _contiguous_runs(valid)
     segments: list[AlignedSegment] = []
+    dropped_points = int(np.count_nonzero(~valid))
     for begin, finish in runs:
         if finish - begin < 8:
+            dropped_points += finish - begin
             continue
         segment_grid = grid[begin:finish]
         data = MultiChannelData(
@@ -209,10 +236,11 @@ def align_multichannel(
         sampling_hz=rate,
         channel_ids=ids,
         units=units,
-        dropped_grid_points=int(np.count_nonzero(~valid)),
+        dropped_grid_points=dropped_points,
         notes=(
             "A finite Kaiser-windowed sinc stencil is used; boundary transients are possible within sinc_half_width source samples.",
-            "No extrapolation or gap filling is performed; short valid runs with fewer than 8 samples are discarded.",
+            "No extrapolation or gap filling is performed; short valid runs with fewer than 8 samples are discarded and included in dropped_grid_points.",
+            "Each input channel is limited to 1,000,000 samples; the aligned grid defaults to 262,144 points and supports a caller limit up to 1,000,000.",
             "Clock offsets and calibration coefficients are caller-supplied; they are not estimated from the signals.",
         ),
     )

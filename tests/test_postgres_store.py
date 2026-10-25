@@ -28,7 +28,7 @@ def store():
         yield value
     finally:
         if value._connection is None:
-            cleanup_connection = import_module("psycopg").connect(POSTGRES_DSN)
+            cleanup_connection = import_module("psycopg").connect(POSTGRES_DSN, autocommit=True)
         else:
             cleanup_connection = value._db
         with cleanup_connection.cursor() as cursor:
@@ -77,6 +77,34 @@ def test_postgres_store_observation_idempotency_filtering_pruning_and_session(st
         store=store,
     )
     assert session.restore().restored_samples == 1
+
+
+def test_session_ingest_is_committed_and_visible_after_reopen(store):
+    batch = _batch("session-visible")
+    session = tm.MonitoringSession(
+        tm.Structure([100_000.0], [20_000_000.0]),
+        sensor_ids=["sensor-a"],
+        units=["m/s^2"],
+        sampling_hz=1.0,
+        window_samples=16,
+        store=store,
+    )
+    session.ingest(batch)
+
+    observer = PostgresStore(POSTGRES_DSN, schema=store.schema)
+    try:
+        assert observer.has_batch(batch)
+        assert len(observer.observations(sensor_id="sensor-a")) == 2
+    finally:
+        observer.close()
+
+    store.close()
+    reopened = PostgresStore(POSTGRES_DSN, schema=store.schema)
+    try:
+        assert reopened.has_batch(batch)
+        assert len(reopened.observations(sensor_id="sensor-a")) == 2
+    finally:
+        reopened.close()
 
 
 def test_postgres_store_assets_relations_and_foreign_key_rollback(store):

@@ -58,7 +58,10 @@ class PostgresStore:
         self.schema = identifier
         self._quoted_schema = f'"{identifier}"'
         self._connection: Any = psycopg.connect(
-            str(dsn), connect_timeout=max(1, math.ceil(timeout)), row_factory=rows.dict_row
+            str(dsn),
+            autocommit=True,
+            connect_timeout=max(1, math.ceil(timeout)),
+            row_factory=rows.dict_row,
         )
         self._initialize()
 
