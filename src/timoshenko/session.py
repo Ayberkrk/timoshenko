@@ -179,6 +179,7 @@ class MonitoringSession:
                 "max_frequency_hz",
                 "min_peak_ratio",
                 "min_singular_value_ratio",
+                "estimate_damping",
             }
         )
         unexpected = set(self._options) - allowed
