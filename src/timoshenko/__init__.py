@@ -5,9 +5,11 @@ from . import (
     assets,
     beams,
     csv_source,
+    environmental,
     health,
     mechanics,
     modal,
+    model_update,
     mqtt,
     observations,
     oma,
@@ -38,6 +40,7 @@ from .beams import (
 )
 from .csv_source import CSVObservationSource, CSVSourceError
 from .health import HealthAssessment
+from .environmental import EnvironmentalFrequencyBaseline, fit_environmental_baseline
 from .mechanics import (
     average_shear_stress,
     axial_strain,
@@ -48,6 +51,7 @@ from .mechanics import (
     youngs_modulus_from_shear,
 )
 from .modal import ModalResult, Mode
+from .model_update import StoryUpdateResult, update_story_stiffness
 from .monitor import MonitoringResult, monitor
 from .mqtt import MqttObservationSource, MQTTSourceError
 from .multichannel import MultiChannelData, load_multichannel_csv
@@ -135,6 +139,8 @@ __version__ = "2.1.0"
 
 __all__ = [
     "HealthAssessment",
+    "EnvironmentalFrequencyBaseline",
+    "StoryUpdateResult",
     "Asset",
     "BatchAppendResult",
     "CSVObservationSource",
@@ -208,6 +214,8 @@ __all__ = [
     "circular_tube_section",
     "damping_ratio",
     "euler_critical_load",
+    "environmental",
+    "fit_environmental_baseline",
     "harmonic_response",
     "health",
     "i_section",
@@ -215,6 +223,7 @@ __all__ = [
     "load_multichannel_csv",
     "mechanics",
     "modal",
+    "model_update",
     "mqtt",
     "monitor",
     "natural_frequency_hz",
@@ -248,6 +257,7 @@ __all__ = [
     "thermal_strain",
     "thin_wall_cylinder_stress",
     "update",
+    "update_story_stiffness",
     "vibration",
     "assets",
     "adapters",

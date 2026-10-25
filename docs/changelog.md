@@ -6,6 +6,10 @@ change is listed here.
 
 ## Unreleased
 
+- Added per-story stiffness fitting for complete shear-building modal sets and
+  linear environmental frequency normalization from caller-supplied baseline
+  records and covariates.
+
 - `tm.HarmonicResponse`, the result type of `tm.harmonic_response`, is
   exported from the top-level package.
 - `python -m pytest --cov` now fails when total line coverage drops below 90%

@@ -96,6 +96,45 @@ three synchronized channels for a three-story shear building, identifies its mod
 with `tm.identify_fdd`, and compares frequencies and mode shapes with the
 analytical model through the modal assurance criterion:
 
+## Story stiffness updating
+
+`tm.update` applies one shared scale to all story stiffnesses. When a complete
+set of ascending modal frequencies is available, `tm.update_story_stiffness`
+fits an individual positive scale for every story by minimizing log-frequency
+residuals in log-stiffness space. A small Tikhonov term favors the supplied
+model where frequency data are weakly informative. The result reports each
+scale, fitted frequencies, RMS frequency residual and convergence status.
+This method uses frequency order supplied by the caller; it does not pair
+modes, consume mode shapes, or infer a damage location. A fit is an inverse
+model estimate, not a damage verdict. Validate identifiability and sensitivity
+for the structure and sensor arrangement before interpreting individual story
+scales.
+
+## Environmental frequency normalization
+
+`tm.fit_environmental_baseline` fits an ordinary least-squares linear model
+from named environmental covariates to each measured modal frequency. It uses
+the training-period mean covariates and predicted modal frequencies as its
+reference point. `EnvironmentalFrequencyBaseline.normalize` removes the
+predicted linear shift from a new record, and the model reports per-mode
+residual standard deviation. The fit rejects rank-deficient covariates; it
+requires the caller to choose a healthy, representative training period and
+to reserve data for validation. It does not establish causality, detect a
+change in the environmental relationship, or account for nonlinear and
+interacting effects.
+
+```python
+baseline = tm.fit_environmental_baseline(
+    environmental_covariates=temperature_and_humidity,
+    measured_frequencies_hz=baseline_mode_records,
+    feature_names=("temperature_c", "humidity_pct"),
+)
+normalized_hz = baseline.normalize(
+    measured_frequencies_hz=current_mode_frequencies,
+    environment=current_temperature_and_humidity,
+)
+```
+
 ```
 python examples/multichannel_fdd.py
 ```

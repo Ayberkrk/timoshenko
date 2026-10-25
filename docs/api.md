@@ -35,6 +35,8 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
 | `tm.Mode` | One identified peak: frequency, spectral amplitude and damping ratio (`None` when not resolvable). |
 | `tm.update` | Scale all story stiffnesses uniformly to fit identified frequencies. |
+| `tm.update_story_stiffness` | Estimate individual shear-building story stiffness scales from a complete set of observed modal frequencies. |
+| `tm.StoryUpdateResult` | Local story update, fitted frequencies, residual and convergence status. |
 | `tm.health.assess` | Compare observed frequencies with the structure's preserved baseline. |
 | `tm.HealthAssessment` | Paired mode changes against the baseline, evidence status, optional review flag and interpretation limits. |
 | `tm.monitor` | Run single-channel FFT or multi-channel FDD identification, uniform model update, then health comparison; forward estimator options as keyword arguments. |
@@ -51,6 +53,13 @@ Frequency domain decomposition for synchronized channels.
 | `tm.identify_fdd` | Estimate modal frequencies with sub-bin peak interpolation and complex mode shapes with Welch FDD. |
 | `tm.FDDResult` | Multi-channel FDD result: modes, resolution, segment settings, channels and notes. |
 | `tm.FDDMode` | One FDD mode: frequency, singular value, and complex mode shape normalized to unit peak magnitude. |
+
+Environmental normalization fits repeated modal-frequency records against explicit environmental covariates:
+
+| Name | Description |
+|---|---|
+| `tm.fit_environmental_baseline` | Fit per-mode linear frequency trends against named environmental features. |
+| `tm.EnvironmentalFrequencyBaseline` | Fitted baseline, reference environment, frequency scatter and normalization method. |
 
 ## Sensor data
 
