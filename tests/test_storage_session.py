@@ -128,9 +128,10 @@ def test_prune_before_retains_batch_receipts_for_idempotent_replay():
 
 def test_wal_allows_independent_connections_and_obeys_busy_timeout(tmp_path):
     path = tmp_path / "concurrent.db"
-    with tm.SQLiteStore(path, timeout_seconds=0.05) as writer, tm.SQLiteStore(
-        path, timeout_seconds=0.05
-    ) as contender:
+    with (
+        tm.SQLiteStore(path, timeout_seconds=0.05) as writer,
+        tm.SQLiteStore(path, timeout_seconds=0.05) as contender,
+    ):
         assert writer._db.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
         writer._db.execute("BEGIN IMMEDIATE")
         with pytest.raises(sqlite3.OperationalError, match="locked"):

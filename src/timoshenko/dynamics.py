@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import math
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 import numpy as np
 
@@ -86,13 +86,15 @@ def analyze_time_history(
         loads = loads.copy()
 
     if is_3d:
-        stiffness, mass = assemble_matrices_3d(model)
+        model_3d = cast(StructuralModel3D, model)
+        stiffness, mass = assemble_matrices_3d(model_3d)
         released_count = 0
     else:
-        stiffness, mass_value, _, _, _ = _assemble_released_system(model, include_mass=True)
+        model_2d = cast(StructuralModel, model)
+        stiffness, mass_value, _, _, _ = _assemble_released_system(model_2d, include_mass=True)
         assert mass_value is not None
         mass = mass_value
-        for node_index, lumped_mass in enumerate(model.nodal_lumped_masses_kg):
+        for node_index, lumped_mass in enumerate(model_2d.nodal_lumped_masses_kg):
             mass[3 * node_index, 3 * node_index] += lumped_mass
             mass[3 * node_index + 1, 3 * node_index + 1] += lumped_mass
         released_count = stiffness.shape[0] - dof_count
@@ -115,9 +117,9 @@ def analyze_time_history(
         raise ValueError("direction must name a translational axis supported by the model")
 
     if is_3d:
-        restrained = np.asarray(model.restraints, dtype=bool).reshape(-1)
+        restrained = np.asarray(model_3d.restraints, dtype=bool).reshape(-1)
     else:
-        restrained, prescribed = _constraint_arrays(model)
+        restrained, prescribed = _constraint_arrays(model_2d)
         if np.any(np.abs(prescribed[restrained]) > 0.0):
             raise ValueError("time-history analysis requires zero prescribed support displacements")
         if released_count:

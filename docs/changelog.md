@@ -10,6 +10,8 @@ change is listed here.
   alignment for asynchronous multi-channel records.
 - Added linear 3D truss/frame analyses and Newmark time-history response for
   2D and 3D structural models.
+- Added a common history-store protocol, SQLite v1→v2 migration and pruning,
+  plus an optional PostgreSQL backend with a dedicated CI integration service.
 - Added per-story stiffness fitting for complete shear-building modal sets and
   linear environmental frequency normalization from caller-supplied baseline
   records and covariates.

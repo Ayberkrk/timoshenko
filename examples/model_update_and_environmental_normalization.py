@@ -4,7 +4,6 @@ import numpy as np
 
 import timoshenko as tm
 
-
 reference = tm.Structure(
     structure_id="three-story-reference",
     story_masses_kg=(120_000.0, 110_000.0, 100_000.0),
@@ -24,9 +23,9 @@ humidity = 20.0 + 60.0 * np.linspace(0.0, 1.0, 40) ** 2
 environment = np.column_stack((temperature, humidity))
 reference_modes_hz = np.array([2.0, 5.0])
 trend_hz_per_unit = np.array([[0.002, -0.001], [-0.01, 0.004]])
-baseline_records = reference_modes_hz + (
-    environment - environment.mean(axis=0)
-) @ trend_hz_per_unit.T
+baseline_records = (
+    reference_modes_hz + (environment - environment.mean(axis=0)) @ trend_hz_per_unit.T
+)
 baseline = tm.fit_environmental_baseline(
     environment,
     baseline_records,

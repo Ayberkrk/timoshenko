@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 import os
 import uuid
-from importlib import import_module
 
 import pytest
 
 import timoshenko as tm
 from timoshenko.postgres import PostgresStore
 from timoshenko.storage import HistoryStore
-
 
 POSTGRES_DSN = os.environ.get("TIMOSHENKO_POSTGRES_DSN")
 pytestmark = pytest.mark.skipif(

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import math
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 import numpy as np
 
@@ -318,8 +318,14 @@ def analyze_linear_static_3d(model: StructuralModel3D) -> StaticAnalysis3DResult
     nodes = displacement.reshape((-1, 6))
     reactions = residual.reshape((-1, 6))
     return StaticAnalysis3DResult(
-        displacements=tuple(tuple(float(v) for v in row) for row in nodes),
-        reactions=tuple(tuple(float(v) for v in row) for row in reactions),
+        displacements=cast(
+            tuple[tuple[float, float, float, float, float, float], ...],
+            tuple(tuple(float(v) for v in row) for row in nodes),
+        ),
+        reactions=cast(
+            tuple[tuple[float, float, float, float, float, float], ...],
+            tuple(tuple(float(v) for v in row) for row in reactions),
+        ),
         strain_energy_j=float(0.5 * displacement @ stiffness @ displacement),
         free_dof_residual_norm=float(np.linalg.norm(residual[free])),
     )
@@ -390,7 +396,12 @@ def analyze_modes_3d(model: StructuralModel3D, *, mode_count: int = 6) -> ModalA
         if shape[pivot] < 0:
             shape *= -1
         frequencies.append(math.sqrt(float(eig[index])) / (2 * math.pi))
-        shapes.append(tuple(tuple(float(v) for v in row) for row in shape.reshape((-1, 6))))
+        shapes.append(
+            cast(
+                tuple[tuple[float, float, float, float, float, float], ...],
+                tuple(tuple(float(v) for v in row) for row in shape.reshape((-1, 6))),
+            )
+        )
         generalized.append(float(free_shape @ mff @ free_shape))
     return ModalAnalysis3DResult(tuple(frequencies), tuple(shapes), tuple(generalized))
 
@@ -480,7 +491,12 @@ def analyze_linear_buckling_3d(
         if shape[pivot] < 0:
             shape *= -1
         factors.append(1.0 / float(eig[index]))
-        shapes.append(tuple(tuple(float(v) for v in row) for row in shape.reshape((-1, 6))))
+        shapes.append(
+            cast(
+                tuple[tuple[float, float, float, float, float, float], ...],
+                tuple(tuple(float(v) for v in row) for row in shape.reshape((-1, 6))),
+            )
+        )
     return BucklingAnalysis3DResult(tuple(factors), tuple(shapes), tuple(axial_forces))
 
 
