@@ -42,6 +42,10 @@ The distribution is named `timoshenko-engine`; the import package is
 python -m pip install "timoshenko-engine[mqtt]"
 ```
 
+For the synchronous PostgreSQL history backend, install
+`timoshenko-engine[postgres]`. SQLite is included with Python and needs no
+extra dependency.
+
 ## Quick start
 
 Compare measured vibration with a reference model. This example simulates a
@@ -118,11 +122,12 @@ for the stiffness, mass and scope assumptions.
 | Area | Components |
 |---|---|
 | Engineering calculations | Section properties (including polygons with holes), beam deflection with shear, torsion, Euler buckling, plane stress, thin-wall pressure, SDOF vibration, Rayleigh damping, and GUM / Monte Carlo uncertainty |
-| Structural models | Lumped-mass shear buildings and linear elastic planar trusses and frames with static, modal, P-delta and buckling analysis |
-| Modal analysis | Single-channel peak picking with resolution-checked damping, and multi-channel FDD with complex mode shapes |
-| Model comparison | Nearest-frequency mode pairing, global stiffness updating, and evidence-oriented health assessment |
-| Monitoring | Bounded rolling-window sessions, restart from local history, and source adapters for CSV, MQTT, and OGC SensorThings |
-| Data and reporting | Project manifests with SHA-256 provenance, local SQLite history, and standalone HTML reports |
+| Structural models | Lumped-mass shear buildings; linear 2D trusses and frames with static, modal, P-delta and buckling analysis; and linear 3D trusses and frames with static, modal and ideal buckling analysis |
+| Modal analysis | Single-channel peak picking, optional EFDD damping, multi-channel FDD, covariance-driven SSI and asynchronous channel alignment |
+| Model comparison | Frequency and MAC tools, global and per-story stiffness updating, environmental frequency normalization, and evidence-oriented health assessment |
+| Time history | Newmark average-acceleration response with optional Rayleigh damping and base acceleration for 2D and 3D models |
+| Monitoring | Bounded rolling-window sessions, restart from SQLite or PostgreSQL history, and source adapters for CSV, MQTT, and OGC SensorThings |
+| Data and reporting | Project manifests with SHA-256 provenance, SQLite and optional PostgreSQL history, and standalone HTML reports |
 
 Sensor collection, alarm policy, and engineering interpretation remain with the
 application that embeds Timoshenko.
@@ -130,7 +135,10 @@ application that embeds Timoshenko.
 ## Multi-channel modal analysis
 
 Frequency domain decomposition needs synchronized channels with a common
-sample rate and unit:
+sample rate and unit. FDD can optionally estimate damping with EFDD; use
+covariance-driven SSI when you also need a pole-stability screening indicator.
+For asynchronous sources, `tm.align_multichannel` can apply explicit clock
+offsets and calibration before resampling onto one shared grid:
 
 ```python
 signals = tm.load_multichannel_csv(
@@ -143,6 +151,9 @@ fdd = tm.identify_fdd(signals, nperseg=1024, max_modes=5)
 for mode in fdd.modes:
     print(mode.frequency_hz, mode.shape_real)
 ```
+
+Pass `estimate_damping=True` to request EFDD damping estimates; unresolved
+estimates are returned as `None`. See [advanced OMA and channel alignment](https://timoshenko.readthedocs.io/en/latest/advanced-oma/).
 
 ## Monitoring sessions
 
@@ -187,8 +198,9 @@ The full documentation is at
 - Timoshenko is alpha software and is not a structural safety certification tool.
 - The shear-building model is a small lumped-mass reference model, not a full FEM solver.
 - Modal identification is a screening estimate. A single sensor may miss a mode near a modal node; unpaired peaks are reported rather than compared with the wrong mode.
-- Damping is a coarse screening estimate, reported only when the averaged spectrum resolves the half-power bandwidth. FDD does not estimate damping.
-- The model update applies a single stiffness scale. It cannot locate or size local damage.
+- Damping is a screening estimate. Peak-picking requires a resolved half-power bandwidth; EFDD and SSI damping can be sensitive to record length, mode overlap and model settings.
+- `tm.update` applies one stiffness scale to all stories. `tm.update_story_stiffness` fits individual story scales from a complete ordered modal set, but neither method locates or sizes damage reliably without an identifiable model and engineering review.
+- The 3D solver uses dense matrices, prismatic Euler-Bernoulli frame members, ideal restraints and nodal loads. It does not analyze plates, shells, nonlinear response or design-code compliance.
 - A frequency shift is evidence for human review, not a damage verdict. Temperature, sensor placement, boundary conditions, and other effects also shift measured frequencies.
 - Closed-form mechanics and section functions rely on their documented ideal assumptions. They are not code-compliance checks.
 

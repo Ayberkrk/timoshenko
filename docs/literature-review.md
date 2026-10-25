@@ -17,9 +17,9 @@ This is a curated starting bibliography for architectural and calculation choice
 
 - Farrar and Worden frame SHM as a statistical pattern-recognition problem and discuss operational/environmental variability ([2007](https://doi.org/10.1098/rsta.2006.1928)). This motivates returning evidence and quality rather than equating one changed frequency with damage.
 - Brincker, Zhang and Andersen introduced frequency-domain decomposition as output-only modal identification ([2001](https://doi.org/10.1088/0964-1726/10/3/303)).
-- Mottershead and Friswell survey structural dynamic model updating and its parameterization/identification challenges ([1993](https://doi.org/10.1006/jsvi.1993.1340)). A one-factor stiffness scaling is therefore documented as a narrow baseline, not general model updating.
+- Mottershead and Friswell survey structural dynamic model updating and its parameterization/identification challenges ([1993](https://doi.org/10.1006/jsvi.1993.1340)). Timoshenko offers a uniform stiffness scale and a regularized per-story frequency fit as narrow, explicitly limited alternatives to general model updating.
 - A review by Zhang, Lai and Wang (2025) summarizes modal parameter recognition and damage identification under environmental excitation ([DOI: 10.32604/sdhm.2024.053662](https://doi.org/10.32604/sdhm.2024.053662)).
-- Cardoni, Elahi and Cimellaro (2025) refine automated frequency domain decomposition with MAC to identify frequencies and mode shapes ([Engineering Structures, DOI: 10.1016/j.engstruct.2024.119210](https://doi.org/10.1016/j.engstruct.2024.119210)). This is a later direction; current 0.4 FDD does not implement MAC-based pairing or SSI stabilization diagrams.
+- Cardoni, Elahi and Cimellaro (2025) refine automated frequency domain decomposition with MAC to identify frequencies and mode shapes ([Engineering Structures, DOI: 10.1016/j.engstruct.2024.119210](https://doi.org/10.1016/j.engstruct.2024.119210)). Timoshenko exposes a MAC comparison metric and covariance-driven SSI pole matching across model orders; it does not provide an interactive stabilization-diagram viewer or infer damage from the identified modes.
 
 ## Digital twins and infrastructure interoperability
 
@@ -37,13 +37,13 @@ This is a curated starting bibliography for architectural and calculation choice
 
 - The [OASIS MQTT 5.0 standard](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html) defines QoS delivery levels, retained publications, session expiry, and packet acknowledgement. Timoshenko's MQTT adapter uses application-level source/batch IDs because transport message IDs are not durable project provenance; it defaults to skipping retained samples and acknowledges QoS 1/2 only after session ingestion.
 - The [Eclipse Paho Python client API](https://eclipse.dev/paho/files/paho.mqtt.python/html/client.html) separates the connection, network loop, subscriptions, callbacks, and disconnect lifecycle. Its [callback migration guide](https://eclipse.dev/paho/files/paho.mqtt.python/html/migrations.html) documents the callback API versioning introduced in Paho 2.x. The optional adapter uses API v2 and keeps the Paho import outside the core import path.
-- Paho's published [known limitations](https://pypi.org/project/paho-mqtt/) state that client-side session state is in memory rather than restored after process restart. Persistent broker sessions therefore do not alone guarantee process-restart recovery; SQLite batch history and explicit operational replay remain necessary.
+- Paho's published [known limitations](https://pypi.org/project/paho-mqtt/) state that client-side session state is in memory rather than restored after process restart. Persistent broker sessions therefore do not alone guarantee process-restart recovery; durable SQLite or PostgreSQL batch history and explicit operational replay remain necessary.
 - The [Python Packaging User Guide](https://packaging.python.org/en/latest/specifications/declaring-project-metadata/) specifies `optional-dependencies` as per-extra PEP 508 requirements. Timoshenko uses the `mqtt` extra to avoid making Paho a core dependency.
 
 ## Time-varying environmental effects
 
 - SHM on real bridges requires separating operational/environmental effects from structural change. A recent 2026 bridge study models temperature-dependent frequencies for a particular sample of prestressed concrete bridges ([Pivetta et al., Engineering Structures, DOI: 10.1016/j.engstruct.2026.122664](https://doi.org/10.1016/j.engstruct.2026.122664)). Its bridge type, data range, and calibration are specific; it is not a universal temperature-correction equation to put in a general engine.
-- Environmental/operational variability normalization and statistical treatment remain an active area; methods should be selected and calibrated against the asset and its operating regime. Timoshenko therefore exposes generic thermal strain as an elementary mechanics calculation, while leaving frequency-vs-temperature baselines to a later calibrated SHM layer.
+- Environmental/operational variability normalization and statistical treatment remain an active area; methods should be selected and calibrated against the asset and its operating regime. `fit_environmental_baseline` fits caller-supplied repeated modal frequencies against named covariates and returns a linear normalization model. It does not select environmental variables or establish a healthy baseline.
 
 ## Engine architecture patterns consulted
 

@@ -36,9 +36,10 @@ negative/non-finite target ratios, and targets that require a negative
 coefficient. It fits two points only. Rayleigh damping changes with frequency,
 so the two targets do not imply a constant damping ratio for other modes.
 
-This helper returns coefficients only; a host solver determines which mass and
-stiffness matrices those coefficients multiply. It does not build `C`, identify
-material damping, or select initial/current/committed stiffness. Literature
+This helper returns coefficients only. `analyze_time_history` builds the
+linear damping matrix `C = alpha M + beta K` from caller-supplied Rayleigh
+coefficients for its assembled model. Neither API identifies material damping
+or selects initial/current/committed stiffness. Literature
 shows material limits: damping ratios identified from recorded earthquake
 responses of 24 instrumented buildings increased roughly linearly with modal
 frequency and gave no support for a mass-proportional term

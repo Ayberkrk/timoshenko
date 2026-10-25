@@ -97,7 +97,7 @@ Bounded rolling-window analysis of caller-supplied observation batches.
 | `tm.MonitoringSession` | Analyze regularly sampled point observations in bounded rolling windows. |
 | `tm.SessionIngestResult` | Counts of accepted and rejected observations for one batch, plus any analysis reports produced. |
 | `tm.SessionReport` | One analysis of a completed window: event time, method, updated structure, modal result and health. |
-| `tm.SessionRestoreResult` | Samples restored from a `SQLiteStore` and whether a full analysis window is ready. |
+| `tm.SessionRestoreResult` | Samples restored from a `HistoryStore` and whether a full analysis window is ready. |
 | `tm.SessionRunner` | Drive one monitoring session from a source with explicit cleanup. |
 
 ## Source adapters and plugins
@@ -138,7 +138,7 @@ Manifest-driven runs, SQLite/PostgreSQL history and HTML reports.
 | `tm.ProjectRunResult` | Serializable result of `tm.run_project`, including provenance hashes. |
 | `tm.SQLiteStore` | Local history store backed by SQLite; uses WAL and supports explicit observation pruning. |
 | `tm.PostgresStore` | Optional synchronous PostgreSQL backend; install the `postgres` extra. |
-| `tm.BatchAppendResult` | Receipt from `SQLiteStore.append_batch`: inserted rows and whether the batch was a duplicate. |
+| `tm.BatchAppendResult` | Receipt from `HistoryStore.append_batch`: inserted rows and whether the batch was a duplicate. |
 | `tm.Asset` | A monitored asset record with type, name and metadata. |
 | `tm.Relation` | A typed, directed relation between two assets. |
 | `tm.report.to_html` | Render a self-contained accessible HTML report with a small SVG chart. |
