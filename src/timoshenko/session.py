@@ -18,7 +18,7 @@ from .observations import ObservationBatch
 from .oma import FDDResult, identify_fdd
 from .oma import validate_options as validate_fdd_options
 from .sensors import SensorData
-from .storage import SQLiteStore
+from .storage import HistoryStore
 from .structure import Structure
 from .update import update
 
@@ -123,7 +123,7 @@ class MonitoringSession:
         hop_samples: int | None = None,
         timestamp_tolerance_s: float | None = None,
         analysis_options: dict[str, Any] | None = None,
-        store: SQLiteStore | None = None,
+        store: HistoryStore | None = None,
         review_threshold_pct: float | None = None,
     ):
         if not isinstance(structure, Structure):
@@ -156,8 +156,8 @@ class MonitoringSession:
             raise ValueError(
                 "timestamp_tolerance_s must be finite, non-negative, and less than half a sample interval"
             )
-        if store is not None and not isinstance(store, SQLiteStore):
-            raise TypeError("store must be a SQLiteStore or None")
+        if store is not None and not isinstance(store, HistoryStore):
+            raise TypeError("store must implement HistoryStore or be None")
 
         self._structure = structure
         self._sensor_ids = ids
@@ -221,7 +221,7 @@ class MonitoringSession:
         re-appends restored observations or reruns an old analysis report.
         """
         if self._store is None:
-            raise RuntimeError("restore requires a SQLiteStore configured on this session")
+            raise RuntimeError("restore requires a HistoryStore configured on this session")
         extra = int(extra_history_samples)
         if extra < 0 or extra > 4096:
             raise ValueError("extra_history_samples must be between 0 and 4096")

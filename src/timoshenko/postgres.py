@@ -1,0 +1,488 @@
+"""Optional PostgreSQL implementation of the local history-store contract.
+
+Install the ``postgres`` extra to use :class:`PostgresStore`. The driver is
+loaded only when a store is constructed, so PostgreSQL support does not add a
+dependency to the core package.
+"""
+
+from __future__ import annotations
+
+from importlib import import_module
+import json
+import math
+import re
+from typing import TYPE_CHECKING, Any, Literal
+import uuid
+
+from .assets import Asset, Relation
+from .observations import Observation, ObservationBatch
+from .storage import BatchAppendResult, _batch_digest, _json, _utc_now
+
+if TYPE_CHECKING:
+    from .project import ProjectRunResult
+
+
+_SCHEMA_VERSION = 1
+_SCHEMA_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+class PostgresStore:
+    """PostgreSQL history store implementing ``HistoryStore``.
+
+    Tables live in a dedicated schema (``timoshenko`` by default). The
+    connection is synchronous and thread-affine; create one instance per
+    worker. Install with ``pip install 'timoshenko-engine[postgres]'``.
+    """
+
+    def __init__(
+        self,
+        dsn: str,
+        *,
+        schema: str = "timoshenko",
+        connect_timeout_seconds: float = 5.0,
+    ) -> None:
+        identifier = str(schema).strip()
+        if not _SCHEMA_IDENTIFIER.fullmatch(identifier):
+            raise ValueError("schema must be a simple PostgreSQL identifier")
+        timeout = float(connect_timeout_seconds)
+        if not math.isfinite(timeout) or timeout <= 0.0:
+            raise ValueError("connect_timeout_seconds must be finite and positive")
+        try:
+            psycopg = import_module("psycopg")
+            rows = import_module("psycopg.rows")
+        except ImportError as error:
+            raise ImportError(
+                "PostgresStore requires the optional 'postgres' extra; "
+                "install timoshenko-engine[postgres]"
+            ) from error
+        self.schema = identifier
+        self._quoted_schema = f'"{identifier}"'
+        self._connection: Any = psycopg.connect(
+            str(dsn), connect_timeout=max(1, math.ceil(timeout)), row_factory=rows.dict_row
+        )
+        self._initialize()
+
+    def _table(self, name: str) -> str:
+        return f'{self._quoted_schema}."{name}"'
+
+    def _initialize(self) -> None:
+        with self._connection.transaction():
+            with self._connection.cursor() as cursor:
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {self._quoted_schema}")
+                cursor.execute(
+                    f"CREATE TABLE IF NOT EXISTS {self._table('schema_info')} "
+                    "(singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton), "
+                    "version integer NOT NULL)"
+                )
+                cursor.execute(f"SELECT version FROM {self._table('schema_info')} LIMIT 1")
+                version_row = cursor.fetchone()
+                if version_row is None:
+                    cursor.execute(
+                        f"INSERT INTO {self._table('schema_info')} (singleton, version) "
+                        "VALUES (true, %s)",
+                        (_SCHEMA_VERSION,),
+                    )
+                elif int(version_row["version"]) > _SCHEMA_VERSION:
+                    raise RuntimeError(
+                        f"database schema {version_row['version']} is newer than supported "
+                        f"schema {_SCHEMA_VERSION}"
+                    )
+                cursor.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {self._table('assets')} (
+                        asset_id text PRIMARY KEY,
+                        asset_type text NOT NULL,
+                        name text NOT NULL,
+                        metadata_json text NOT NULL,
+                        updated_at text NOT NULL
+                    )"""
+                )
+                cursor.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {self._table('relations')} (
+                        source_asset_id text NOT NULL REFERENCES {self._table('assets')}(asset_id) ON DELETE CASCADE,
+                        relation_type text NOT NULL,
+                        target_asset_id text NOT NULL REFERENCES {self._table('assets')}(asset_id) ON DELETE CASCADE,
+                        metadata_json text NOT NULL,
+                        PRIMARY KEY (source_asset_id, relation_type, target_asset_id)
+                    )"""
+                )
+                cursor.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {self._table('observation_batches')} (
+                        source_id text NOT NULL,
+                        batch_id text NOT NULL,
+                        item_count integer NOT NULL,
+                        batch_digest text NOT NULL,
+                        received_at text NOT NULL,
+                        PRIMARY KEY (source_id, batch_id)
+                    )"""
+                )
+                cursor.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {self._table('observations')} (
+                        observation_row_id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+                        source_id text NOT NULL,
+                        batch_id text NOT NULL,
+                        record_index integer NOT NULL,
+                        sensor_id text NOT NULL,
+                        name text NOT NULL,
+                        unit text NOT NULL,
+                        value double precision NOT NULL,
+                        event_timestamp double precision,
+                        quality boolean NOT NULL,
+                        asset_id text,
+                        observation_source_id text,
+                        metadata_json text NOT NULL,
+                        ingested_at text NOT NULL,
+                        UNIQUE (source_id, batch_id, record_index)
+                    )"""
+                )
+                cursor.execute(
+                    f"CREATE INDEX IF NOT EXISTS observations_sensor_event_idx "
+                    f"ON {self._table('observations')} (sensor_id, event_timestamp, observation_row_id)"
+                )
+                cursor.execute(
+                    f"CREATE INDEX IF NOT EXISTS observations_asset_event_idx "
+                    f"ON {self._table('observations')} (asset_id, event_timestamp, observation_row_id)"
+                )
+                cursor.execute(
+                    f"CREATE INDEX IF NOT EXISTS observations_event_prune_idx "
+                    f"ON {self._table('observations')} (event_timestamp, observation_row_id)"
+                )
+                cursor.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {self._table('analysis_runs')} (
+                        run_id text PRIMARY KEY,
+                        project_id text NOT NULL,
+                        method text NOT NULL,
+                        source_sha256 text NOT NULL,
+                        manifest_sha256 text NOT NULL,
+                        created_at text NOT NULL,
+                        result_json text NOT NULL
+                    )"""
+                )
+                cursor.execute(
+                    f"CREATE INDEX IF NOT EXISTS analysis_runs_project_created_idx "
+                    f"ON {self._table('analysis_runs')} (project_id, created_at, run_id)"
+                )
+
+    @property
+    def _db(self) -> Any:
+        connection = getattr(self, "_connection", None)
+        if connection is None or connection.closed:
+            raise RuntimeError("PostgresStore is closed")
+        return connection
+
+    def close(self) -> None:
+        connection = getattr(self, "_connection", None)
+        if connection is not None:
+            connection.close()
+            self._connection = None
+
+    def __enter__(self) -> PostgresStore:
+        _ = self._db
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self.close()
+
+    def upsert_asset(self, asset: Asset) -> None:
+        if not isinstance(asset, Asset):
+            raise TypeError("asset must be an Asset")
+        with self._db.transaction(), self._db.cursor() as cursor:
+            cursor.execute(
+                f"""INSERT INTO {self._table('assets')}
+                    (asset_id, asset_type, name, metadata_json, updated_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT(asset_id) DO UPDATE SET asset_type=excluded.asset_type,
+                    name=excluded.name, metadata_json=excluded.metadata_json,
+                    updated_at=excluded.updated_at""",
+                (asset.asset_id, asset.asset_type, asset.name, _json(asset.metadata), _utc_now()),
+            )
+
+    @staticmethod
+    def _asset(row: dict[str, Any]) -> Asset:
+        return Asset(
+            row["asset_id"], row["asset_type"], row["name"], json.loads(row["metadata_json"])
+        )
+
+    def get_asset(self, asset_id: str) -> Asset | None:
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"SELECT * FROM {self._table('assets')} WHERE asset_id=%s", (str(asset_id),)
+            )
+            row = cursor.fetchone()
+        return None if row is None else self._asset(row)
+
+    def list_assets(self, *, asset_type: str | None = None) -> tuple[Asset, ...]:
+        with self._db.cursor() as cursor:
+            if asset_type is None:
+                cursor.execute(f"SELECT * FROM {self._table('assets')} ORDER BY asset_id")
+            else:
+                cursor.execute(
+                    f"SELECT * FROM {self._table('assets')} WHERE asset_type=%s ORDER BY asset_id",
+                    (asset_type,),
+                )
+            rows = cursor.fetchall()
+        return tuple(self._asset(row) for row in rows)
+
+    def add_relation(self, relation: Relation) -> None:
+        if not isinstance(relation, Relation):
+            raise TypeError("relation must be a Relation")
+        with self._db.transaction(), self._db.cursor() as cursor:
+            cursor.execute(
+                f"""INSERT INTO {self._table('relations')}
+                    (source_asset_id, relation_type, target_asset_id, metadata_json)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT(source_asset_id, relation_type, target_asset_id)
+                    DO UPDATE SET metadata_json=excluded.metadata_json""",
+                (
+                    relation.source_asset_id,
+                    relation.relation_type,
+                    relation.target_asset_id,
+                    _json(relation.metadata),
+                ),
+            )
+
+    def relations_for(self, asset_id: str) -> tuple[Relation, ...]:
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""SELECT * FROM {self._table('relations')}
+                    WHERE source_asset_id=%s OR target_asset_id=%s
+                    ORDER BY relation_type, source_asset_id, target_asset_id""",
+                (str(asset_id), str(asset_id)),
+            )
+            rows = cursor.fetchall()
+        return tuple(
+            Relation(
+                row["source_asset_id"],
+                row["relation_type"],
+                row["target_asset_id"],
+                json.loads(row["metadata_json"]),
+            )
+            for row in rows
+        )
+
+    def has_batch(self, batch: ObservationBatch) -> bool:
+        digest = _batch_digest(batch)
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"SELECT batch_digest FROM {self._table('observation_batches')} "
+                "WHERE source_id=%s AND batch_id=%s",
+                (batch.source_id, batch.batch_id),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return False
+        if row["batch_digest"] != digest:
+            raise ValueError("batch_id was already stored with different observation content")
+        return True
+
+    def append_batch(self, batch: ObservationBatch) -> BatchAppendResult:
+        digest = _batch_digest(batch)
+        inserted = 0
+        with self._db.transaction(), self._db.cursor() as cursor:
+            cursor.execute(
+                f"""INSERT INTO {self._table('observation_batches')}
+                    (source_id, batch_id, item_count, batch_digest, received_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT(source_id, batch_id) DO NOTHING RETURNING batch_id""",
+                (batch.source_id, batch.batch_id, batch.count, digest, _utc_now()),
+            )
+            is_new = cursor.fetchone() is not None
+            if not is_new:
+                cursor.execute(
+                    f"SELECT batch_digest FROM {self._table('observation_batches')} "
+                    "WHERE source_id=%s AND batch_id=%s",
+                    (batch.source_id, batch.batch_id),
+                )
+                existing = cursor.fetchone()
+                if existing is None or existing["batch_digest"] != digest:
+                    raise ValueError(
+                        "batch_id was already stored with different observation content"
+                    )
+            else:
+                for record_index, observation in enumerate(batch.observations):
+                    cursor.execute(
+                        f"""INSERT INTO {self._table('observations')} (
+                            source_id, batch_id, record_index, sensor_id, name, unit, value,
+                            event_timestamp, quality, asset_id, observation_source_id,
+                            metadata_json, ingested_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (
+                            batch.source_id,
+                            batch.batch_id,
+                            record_index,
+                            observation.sensor_id,
+                            observation.name,
+                            observation.unit,
+                            observation.value,
+                            observation.timestamp,
+                            observation.quality,
+                            observation.asset_id,
+                            observation.source_id or batch.source_id,
+                            _json(observation.metadata),
+                            _utc_now(),
+                        ),
+                    )
+                    inserted += 1
+        duplicate_count = 0 if is_new else batch.count
+        return BatchAppendResult(
+            batch.batch_id, batch.source_id, inserted, duplicate_count, not is_new
+        )
+
+    @staticmethod
+    def _observation(row: dict[str, Any]) -> Observation:
+        return Observation(
+            sensor_id=row["sensor_id"],
+            name=row["name"],
+            unit=row["unit"],
+            value=row["value"],
+            timestamp=row["event_timestamp"],
+            quality=row["quality"],
+            asset_id=row["asset_id"],
+            source_id=row["observation_source_id"],
+            metadata=json.loads(row["metadata_json"]),
+        )
+
+    def observations(
+        self,
+        *,
+        sensor_id: str | None = None,
+        asset_id: str | None = None,
+        start_timestamp: float | None = None,
+        end_timestamp: float | None = None,
+        order_by: Literal["event_time", "arrival"] = "event_time",
+        limit: int | None = None,
+    ) -> tuple[Observation, ...]:
+        if order_by not in {"event_time", "arrival"}:
+            raise ValueError("order_by must be 'event_time' or 'arrival'")
+        clauses: list[str] = []
+        parameters: list[Any] = []
+        for column, value in (("sensor_id", sensor_id), ("asset_id", asset_id)):
+            if value is not None:
+                clauses.append(f"{column}=%s")
+                parameters.append(str(value))
+        for column, value in (("event_timestamp >=", start_timestamp), ("event_timestamp <=", end_timestamp)):
+            if value is not None:
+                number = float(value)
+                if not math.isfinite(number):
+                    raise ValueError(f"{column.split()[0]} must be finite")
+                clauses.append(f"{column} %s")
+                parameters.append(number)
+        if (
+            start_timestamp is not None
+            and end_timestamp is not None
+            and float(start_timestamp) > float(end_timestamp)
+        ):
+            raise ValueError("start_timestamp must be less than or equal to end_timestamp")
+        ordering = (
+            "event_timestamp IS NULL, event_timestamp, observation_row_id"
+            if order_by == "event_time"
+            else "observation_row_id"
+        )
+        sql = (
+            f"SELECT * FROM {self._table('observations')}"
+            + (" WHERE " + " AND ".join(clauses) if clauses else "")
+            + " ORDER BY "
+            + ordering
+        )
+        if limit is not None:
+            if int(limit) < 1:
+                raise ValueError("limit must be positive")
+            sql += " LIMIT %s"
+            parameters.append(int(limit))
+        with self._db.cursor() as cursor:
+            cursor.execute(sql, parameters)
+            rows = cursor.fetchall()
+        return tuple(self._observation(row) for row in rows)
+
+    def recent_observations(
+        self, *, sensor_id: str, limit: int, unit: str | None = None
+    ) -> tuple[Observation, ...]:
+        count = int(limit)
+        if count < 1 or count > 262_144:
+            raise ValueError("limit must be between 1 and 262144")
+        clauses = ["sensor_id=%s", "quality=true", "event_timestamp IS NOT NULL"]
+        parameters: list[Any] = [str(sensor_id)]
+        if unit is not None:
+            clauses.append("unit=%s")
+            parameters.append(str(unit))
+        parameters.append(count)
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"SELECT * FROM (SELECT * FROM {self._table('observations')} WHERE "
+                + " AND ".join(clauses)
+                + " ORDER BY event_timestamp DESC, observation_row_id DESC LIMIT %s) recent "
+                + "ORDER BY event_timestamp ASC, observation_row_id ASC",
+                parameters,
+            )
+            rows = cursor.fetchall()
+        return tuple(self._observation(row) for row in rows)
+
+    def prune_before(self, event_timestamp: float) -> int:
+        cutoff = float(event_timestamp)
+        if not math.isfinite(cutoff):
+            raise ValueError("event_timestamp must be finite")
+        with self._db.transaction(), self._db.cursor() as cursor:
+            cursor.execute(
+                f"DELETE FROM {self._table('observations')} "
+                "WHERE event_timestamp IS NOT NULL AND event_timestamp < %s",
+                (cutoff,),
+            )
+            return int(cursor.rowcount)
+
+    def save_run(self, result: ProjectRunResult, *, run_id: str | None = None) -> str:
+        from .project import ProjectRunResult
+
+        if not isinstance(result, ProjectRunResult):
+            raise TypeError("result must be a ProjectRunResult")
+        identifier = str(run_id or uuid.uuid4()).strip()
+        if not identifier:
+            raise ValueError("run_id must be non-empty")
+        with self._db.transaction(), self._db.cursor() as cursor:
+            cursor.execute(
+                f"""INSERT INTO {self._table('analysis_runs')} (
+                    run_id, project_id, method, source_sha256, manifest_sha256, created_at, result_json
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    identifier,
+                    result.project_id,
+                    result.method,
+                    result.source_sha256,
+                    result.manifest_sha256,
+                    _utc_now(),
+                    _json(result.to_dict()),
+                ),
+            )
+        return identifier
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"SELECT result_json FROM {self._table('analysis_runs')} WHERE run_id=%s",
+                (str(run_id),),
+            )
+            row = cursor.fetchone()
+        return None if row is None else json.loads(row["result_json"])
+
+    def list_runs(
+        self, *, project_id: str | None = None, limit: int = 100
+    ) -> tuple[dict[str, Any], ...]:
+        count = int(limit)
+        if count < 1:
+            raise ValueError("limit must be positive")
+        with self._db.cursor() as cursor:
+            if project_id is None:
+                cursor.execute(
+                    f"SELECT result_json FROM {self._table('analysis_runs')} "
+                    "ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    (count,),
+                )
+            else:
+                cursor.execute(
+                    f"SELECT result_json FROM {self._table('analysis_runs')} "
+                    "WHERE project_id=%s ORDER BY created_at DESC, run_id DESC LIMIT %s",
+                    (str(project_id), count),
+                )
+            rows = cursor.fetchall()
+        return tuple(json.loads(row["result_json"]) for row in rows)
+
+
+__all__ = ["PostgresStore"]

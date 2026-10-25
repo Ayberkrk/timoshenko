@@ -93,6 +93,7 @@ Bounded rolling-window analysis of caller-supplied observation batches.
 
 | Name | Description |
 |---|---|
+| `tm.HistoryStore` | Structural protocol for stores accepted by `MonitoringSession`. |
 | `tm.MonitoringSession` | Analyze regularly sampled point observations in bounded rolling windows. |
 | `tm.SessionIngestResult` | Counts of accepted and rejected observations for one batch, plus any analysis reports produced. |
 | `tm.SessionReport` | One analysis of a completed window: event time, method, updated structure, modal result and health. |
@@ -125,7 +126,7 @@ Pull-source contracts, built-in sources and entry-point plugin discovery.
 
 ## Projects, storage and reports
 
-Manifest-driven runs, local SQLite history and HTML reports.
+Manifest-driven runs, SQLite/PostgreSQL history and HTML reports.
 
 | Name | Description |
 |---|---|
@@ -135,7 +136,8 @@ Manifest-driven runs, local SQLite history and HTML reports.
 | `tm.ProjectManifest` | Validated manifest fields with file paths resolved from its directory. |
 | `tm.LoadedProject` | A validated manifest with its loaded observations and SHA-256 hashes of manifest and data. |
 | `tm.ProjectRunResult` | Serializable result of `tm.run_project`, including provenance hashes. |
-| `tm.SQLiteStore` | A one-process local history store backed by Python's SQLite module. |
+| `tm.SQLiteStore` | Local history store backed by SQLite; uses WAL and supports explicit observation pruning. |
+| `tm.PostgresStore` | Optional synchronous PostgreSQL backend; install the `postgres` extra. |
 | `tm.BatchAppendResult` | Receipt from `SQLiteStore.append_batch`: inserted rows and whether the batch was a duplicate. |
 | `tm.Asset` | A monitored asset record with type, name and metadata. |
 | `tm.Relation` | A typed, directed relation between two assets. |

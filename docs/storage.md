@@ -1,6 +1,8 @@
 # Local SQLite history
 
-`SQLiteStore` uses the Python standard library and a local SQLite file. It persists a minimal asset graph (`Asset`, `Relation`), point observations/batches, and JSON analysis results. The database uses `PRAGMA user_version` schema migration marker 1 and foreign keys for asset relations.
+`HistoryStore` is the structural protocol consumed by `MonitoringSession`: implementations provide idempotent batch receipts, event-time observation queries, and project-run history. `SQLiteStore` implements it using Python's standard library and a local SQLite file. It persists a minimal asset graph (`Asset`, `Relation`), point observations/batches, and JSON analysis results. The database uses `PRAGMA user_version` schema migrations and foreign keys for asset relations.
+
+SQLite files use write-ahead logging (WAL), allowing independent connections to read while a writer is active. SQLite serializes writers; each connection waits up to its configured `timeout_seconds` before raising `sqlite3.OperationalError`. A connection remains thread-affine as required by Python's sqlite3 defaults; use one store connection per thread or process.
 
 ## Idempotent batch ingestion
 
@@ -20,10 +22,16 @@ Repeated identical observations *within* one batch are preserved by their record
 
 `recent_observations(sensor_id=..., unit=..., limit=...)` returns a bounded, good-quality, timestamped event-time tail for one sensor. It does not bridge time gaps or resample. `MonitoringSession.restore()` uses these tails to rebuild its current synchronized sample window after an application restart.
 
+`prune_before(event_timestamp)` explicitly deletes timestamped observation rows older than the cutoff and returns the deleted row count. Untimestamped observations, analysis runs, and batch receipts are retained. Keeping receipts means a replay of an expired batch remains idempotent and does not restore its deleted rows. Pruning is explicit; the store never deletes records automatically.
+
+## PostgreSQL backend
+
+Install `timoshenko-engine[postgres]` and construct `PostgresStore(dsn)` to use PostgreSQL through the same `HistoryStore` contract. The adapter creates its tables in a dedicated `timoshenko` schema by default; pass a simple `schema` name to isolate multiple applications in one database. It has no dependency on SQLite and stores JSON-compatible metadata and project results with the same semantics. Use one synchronous store instance per worker. PostgreSQL integration tests run in CI against a PostgreSQL service; the regular SQLite test job does not require the optional driver.
+
 ## Analysis history
 
 `save_run(ProjectRunResult)` persists the serializable result with input hashes, method, project ID, and creation time. Pass a caller-chosen `run_id` when retries should use one stable run identity; duplicate IDs fail rather than overwrite. `get_run` and `list_runs` return decoded JSON-compatible dictionaries.
 
 ## Current limits
 
-The store is synchronous and intended for a single process/thread. It has no automatic pruning, encryption, replication, migration beyond schema v1, lock/retry policy, or background ingestion worker. Keep the database on storage with appropriate backups and access controls for the deployment. The engine does not claim a transactional guarantee across the SQLite file and external sources.
+The store is synchronous and local. It does not provide encryption, replication, background ingestion, automatic retention, or a transaction spanning the database and an external source. Schema v1 databases migrate additively to v2, which adds event-time pruning and project-run query indexes without rewriting stored records. Keep the database on storage with appropriate backups and access controls for the deployment.
