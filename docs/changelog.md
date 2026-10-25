@@ -6,6 +6,18 @@ change is listed here.
 
 ## Unreleased
 
+- Added covariance-driven SSI, optional EFDD damping and calibrated timestamp
+  alignment for asynchronous multi-channel records.
+- Added linear 3D truss/frame analyses and Newmark time-history response for
+  2D and 3D structural models.
+- Added a common history-store protocol, SQLite v1→v2 migration and pruning,
+  plus an optional PostgreSQL backend with a dedicated CI integration service.
+- Added per-story stiffness fitting for complete shear-building modal sets and
+  linear environmental frequency normalization from caller-supplied baseline
+  records and covariates.
+- Added ascending-order validation for per-story modal updates and optional
+  Poisson-ratio consistency checks for 3D frame materials.
+
 - `tm.HarmonicResponse`, the result type of `tm.harmonic_response`, is
   exported from the top-level package.
 - `python -m pytest --cov` now fails when total line coverage drops below 90%

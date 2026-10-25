@@ -22,6 +22,8 @@ class FDDMode:
     shape_real: tuple[float, ...]
     shape_imag: tuple[float, ...]
     singular_value_ratio: float
+    damping_ratio: float | None = None
+    damping_method: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -35,6 +37,8 @@ class FDDMode:
                 for real, imag in zip(self.shape_real, self.shape_imag, strict=True)
             ],
             "singular_value_ratio": self.singular_value_ratio,
+            "damping_ratio": self.damping_ratio,
+            "damping_method": self.damping_method,
         }
 
 
@@ -83,19 +87,25 @@ def identify_fdd(
     max_frequency_hz: float | None = None,
     min_peak_ratio: float = 0.05,
     min_singular_value_ratio: float = 0.05,
+    estimate_damping: bool = False,
 ) -> FDDResult:
     """Estimate modal frequencies and complex mode shapes with Welch FDD.
 
     The cross-spectral-density matrix is estimated from mean-removed Hann
     segments, then decomposed frequency-by-frequency. The largest singular
     value curves are searched for local peaks. This is a first-pass FDD
-    estimator: it does not use stabilization diagrams, SSI, damping fits,
-    environmental normalization, or damage classification.
+    estimator: it does not use environmental normalization or damage
+    classification. When ``estimate_damping`` is true, enhanced FDD selects
+    the contiguous modal singular-value bell using modal-vector MAC and fits
+    the logarithmic decay of its inverse-transformed correlation. Damping is
+    ``None`` when that decay is not resolved.
     """
     if not isinstance(observations, MultiChannelData):
         raise TypeError(
             "observations must be MultiChannelData; use tm.load_multichannel_csv() or construct it explicitly"
         )
+    if not isinstance(estimate_damping, bool):
+        raise TypeError("estimate_damping must be a boolean")
     if len(set(observations.units)) != 1:
         raise ValueError(
             "FDD requires channels with the same measurement unit; calibrate/transform mixed-unit channels first"
@@ -112,6 +122,7 @@ def identify_fdd(
         max_frequency_hz=max_frequency_hz,
         min_peak_ratio=min_peak_ratio,
         min_singular_value_ratio=min_singular_value_ratio,
+        estimate_damping=estimate_damping,
     )
     starts = range(0, sample_count - nperseg_value + 1, hop)
 
@@ -187,6 +198,17 @@ def identify_fdd(
             shape = shape / maximum
             phase_reference = int(np.argmax(np.abs(shape)))
             shape = shape * np.exp(-1j * np.angle(shape[phase_reference]))
+        damping = (
+            _estimate_efdd_damping(
+                frequencies,
+                singular[:, rank],
+                vectors[:, :, rank],
+                idx,
+                observations.sampling_hz,
+            )
+            if estimate_damping
+            else None
+        )
         modes.append(
             FDDMode(
                 frequency_hz=interpolate_log_peak_frequency(frequencies, singular[:, rank], idx),
@@ -199,6 +221,8 @@ def identify_fdd(
                 singular_value_ratio=float(value / singular[idx, 0])
                 if singular[idx, 0] > 0.0
                 else 0.0,
+                damping_ratio=damping,
+                damping_method="efdd" if damping is not None else None,
             )
         )
     notes = (
@@ -230,6 +254,63 @@ def validate_options(sample_count: int, sampling_hz: float, **options: Any) -> N
     _plan(int(sample_count), float(sampling_hz), **options)
 
 
+def _estimate_efdd_damping(
+    frequencies: np.ndarray,
+    singular_curve: np.ndarray,
+    vectors: np.ndarray,
+    peak_index: int,
+    sampling_hz: float,
+) -> float | None:
+    """Estimate damping from one EFDD modal bell and its free-decay correlation."""
+    peak_shape = vectors[peak_index]
+    peak_norm = float(np.vdot(peak_shape, peak_shape).real)
+    peak_value = float(singular_curve[peak_index])
+    if peak_norm <= 0.0 or peak_value <= 0.0:
+        return None
+    mac = np.asarray(
+        [
+            abs(np.vdot(peak_shape, vector)) ** 2
+            / max(peak_norm * float(np.vdot(vector, vector).real), np.finfo(float).tiny)
+            for vector in vectors
+        ]
+    )
+    selected = (mac >= 0.9) & (singular_curve >= peak_value * 0.02)
+    left, right = peak_index, peak_index
+    while left > 0 and selected[left - 1]:
+        left -= 1
+    while right + 1 < len(selected) and selected[right + 1]:
+        right += 1
+    if right - left < 4 or len(frequencies) < 3:
+        return None
+    bell = np.zeros_like(singular_curve, dtype=float)
+    bell[left : right + 1] = singular_curve[left : right + 1]
+    correlation = np.fft.irfft(bell, n=2 * (len(bell) - 1))
+    if not np.isfinite(correlation).all() or correlation[0] <= 0.0:
+        return None
+    peak_frequency = float(frequencies[peak_index])
+    peak_indices = [
+        index
+        for index in range(2, len(correlation) - 1)
+        if correlation[index] > correlation[index - 1]
+        and correlation[index] >= correlation[index + 1]
+        and index / sampling_hz <= 8.0 / max(peak_frequency, 1e-9)
+    ]
+    if len(peak_indices) < 3:
+        return None
+    amplitudes = np.abs(correlation[peak_indices])
+    valid = amplitudes > np.finfo(float).tiny
+    if np.count_nonzero(valid) < 3:
+        return None
+    times = np.asarray(peak_indices, dtype=float) / sampling_hz
+    slope = float(np.polyfit(times[valid], np.log(amplitudes[valid]), 1)[0])
+    decay = -slope
+    omega_d = 2.0 * math.pi * peak_frequency
+    damping = decay / math.sqrt(decay**2 + omega_d**2)
+    if not math.isfinite(damping) or not 0.0 < damping < 0.5:
+        return None
+    return float(damping)
+
+
 def _plan(
     sample_count: int,
     sampling_hz: float,
@@ -242,8 +323,11 @@ def _plan(
     max_frequency_hz: float | None = None,
     min_peak_ratio: float = 0.05,
     min_singular_value_ratio: float = 0.05,
+    estimate_damping: bool = False,
 ) -> tuple[int, int, int, float, float, float]:
     """Validate options and return segment length, hop, count, resolution and band."""
+    if not isinstance(estimate_damping, bool):
+        raise TypeError("estimate_damping must be a boolean")
     if max_modes < 1 or max_singular_values < 1:
         raise ValueError("max_modes and max_singular_values must be positive")
     if not 0.0 <= min_peak_ratio < 1.0:

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import timoshenko as tm
+from timoshenko.storage import HistoryStore
 
 
 def batch(
@@ -73,6 +74,71 @@ def test_newer_schema_is_refused(tmp_path):
     connection.close()
     with pytest.raises(RuntimeError):
         tm.SQLiteStore(path)
+
+
+def test_history_store_protocol_is_implemented_by_sqlite_and_accepted_by_session():
+    with tm.SQLiteStore(":memory:") as store:
+        assert isinstance(store, HistoryStore)
+        session = make_session(store=store)
+        assert session.restore().restored_samples == 0
+
+
+def test_v1_database_migrates_additive_indexes_without_losing_data(tmp_path):
+    path = tmp_path / "v1.db"
+    original_batch = batch(0, 4, batch_id="legacy", source_id="gateway")
+    with tm.SQLiteStore(path) as store:
+        store.append_batch(original_batch)
+
+    connection = sqlite3.connect(path)
+    connection.execute("DROP INDEX observations_event_prune_idx")
+    connection.execute("DROP INDEX analysis_runs_project_created_idx")
+    connection.execute("PRAGMA user_version = 1")
+    connection.commit()
+    connection.close()
+
+    with tm.SQLiteStore(path) as migrated:
+        assert migrated._db.execute("PRAGMA user_version").fetchone()[0] == 2
+        index_names = {
+            row["name"] for row in migrated._db.execute("PRAGMA index_list(observations)")
+        }
+        assert "observations_event_prune_idx" in index_names
+        assert len(migrated.observations(sensor_id="a")) == 4
+        assert migrated.has_batch(original_batch)
+
+
+def test_prune_before_retains_batch_receipts_for_idempotent_replay():
+    readings = [
+        tm.Observation("a", "a", "g", value, timestamp=timestamp)
+        for timestamp, value in ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))
+    ]
+    readings.append(tm.Observation("a", "snapshot", "g", 4.0, timestamp=None))
+    replay = tm.ObservationBatch(readings, batch_id="batch-1", source_id="source-1")
+    with tm.SQLiteStore(":memory:") as store:
+        store.append_batch(replay)
+        assert store.prune_before(2.5) == 2
+        assert [item.value for item in store.observations(order_by="event_time")] == [3.0, 4.0]
+        assert store.has_batch(replay)
+        duplicate = store.append_batch(replay)
+        assert duplicate.was_duplicate
+        assert duplicate.inserted_count == 0
+        assert len(store.observations(order_by="arrival")) == 2
+        with pytest.raises(ValueError, match="finite"):
+            store.prune_before(math.inf)
+
+
+def test_wal_allows_independent_connections_and_obeys_busy_timeout(tmp_path):
+    path = tmp_path / "concurrent.db"
+    with (
+        tm.SQLiteStore(path, timeout_seconds=0.05) as writer,
+        tm.SQLiteStore(path, timeout_seconds=0.05) as contender,
+    ):
+        assert writer._db.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
+        writer._db.execute("BEGIN IMMEDIATE")
+        with pytest.raises(sqlite3.OperationalError, match="locked"):
+            contender.append_batch(batch(0, 2, batch_id="blocked", source_id="source"))
+        writer._db.rollback()
+        result = contender.append_batch(batch(0, 2, batch_id="ok", source_id="source"))
+        assert result.inserted_count == 2
 
 
 def make_session(**kwargs):

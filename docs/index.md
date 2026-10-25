@@ -33,6 +33,10 @@ print(tm.cantilever_tip_load(5_000.0, 3.0, 200e9, 8.0e-6).bending_m)
 **Modal analysis and monitoring**
 
 - [Data contract](data-contract.md): validated sensor data and observation records.
+- [Advanced OMA and channel alignment](advanced-oma.md): EFDD, SSI-COV and bounded asynchronous-channel alignment.
+- [2D and 3D structural analysis](structural-analysis.md) and [3D models](structural-3d.md).
+- [Linear time-history response](time-history.md): Newmark integration, Rayleigh damping and base excitation.
+- [Environmental normalization and story updates](numerical-methods.md): limits and model assumptions.
 - [Live sessions](live-sessions.md): bounded rolling-window analysis and restart.
 - [Project manifests](project-manifest.md): repeatable one-shot runs with provenance.
 - [Reports](reporting.md): standalone HTML evidence reports.
@@ -41,7 +45,7 @@ print(tm.cantilever_tip_load(5_000.0, 3.0, 200e9, 8.0e-6).bending_m)
 
 - [Source adapters](adapters.md) and the [plugin contract](plugin-contract.md).
 - [CSV replay](csv-source.md), [MQTT](mqtt-adapter.md), and [OGC SensorThings](sensorthings-adapter.md).
-- [Local SQLite history](storage.md).
+- [SQLite and PostgreSQL history stores](storage.md).
 
 **Engineering calculations**
 

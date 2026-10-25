@@ -69,7 +69,7 @@ Every envelope needs `schema_version=1`, a stable source ID, a unique batch ID, 
 
 ## Delivery and failure behavior
 
-- QoS 1 or 2 deliveries are manually acknowledged only after `SessionRunner` successfully calls `session.ingest()`. With `SQLiteStore`, the observation batch is committed before the acknowledgement. `clean_session=False` is the default and requires a stable client ID so the broker can retain session state across reconnects. Use unique IDs so a redelivery can be deduplicated.
+- QoS 1 or 2 deliveries are manually acknowledged only after `SessionRunner` successfully calls `session.ingest()`. With either `SQLiteStore` or `PostgresStore`, the observation batch is committed before the acknowledgement. `clean_session=False` is the default and requires a stable client ID so the broker can retain session state across reconnects. Use unique IDs so a redelivery can be deduplicated.
 - The adapter uses a bounded in-memory queue (`queue_capacity`, default 1024). An overflow or malformed/oversized payload stops the source with `MQTTSourceError`; it never silently counts the batch as valid. Configure capacity for expected rate/burst and monitor source failures.
 - Retained publications are skipped by default because the latest retained sample is not necessarily a fresh sample. The count is available through `retained_drop_count`; `allow_retained=True` opts in.
 - `tls=True` uses Paho's default TLS context. For custom certificate configuration or a custom Paho client, inject `client_factory`. Credentials should come from an application secret store.

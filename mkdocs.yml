@@ -25,6 +25,7 @@ nav:
       - Architecture: architecture.md
       - API reference: api.md
       - Numerical methods: numerical-methods.md
+      - Advanced OMA and channel alignment: advanced-oma.md
   - Modal analysis and monitoring:
       - Data contract: data-contract.md
       - Live sessions: live-sessions.md
@@ -41,6 +42,8 @@ nav:
       - Section properties: section-properties.md
       - Polygon sections: polygon-sections.md
       - 2D frame analysis: structural-analysis.md
+      - 3D frame analysis: structural-3d.md
+      - Time-history analysis: time-history.md
       - Rayleigh damping: rayleigh-damping.md
       - Uncertainty: uncertainty.md
   - Project:

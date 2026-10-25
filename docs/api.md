@@ -13,6 +13,14 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 |---|---|
 | `tm.Structure` | A shear-building model with one lateral degree of freedom per floor. |
 | `tm.StructuralModel` | A planar truss/frame with nodes, prismatic members, restraints, prescribed support displacements, nodal loads and optional lumped masses. |
+| `tm.StructuralModel3D` | Separate small, linear 3D truss/frame model with six degrees of freedom per node. |
+| `tm.FrameNode3D` | A 3D node with x, y and z coordinates. |
+| `tm.FrameMaterial3D` / `tm.FrameSection3D` | Elastic moduli (with optional Poisson-ratio consistency validation) and prismatic 3D section properties. |
+| `tm.FrameMember3D` / `tm.TrussMember3D` | 3D frame and axial truss inputs, including explicit member local-axis orientation. |
+| `tm.analyze_linear_static_3d` / `tm.analyze_modes_3d` / `tm.analyze_linear_buckling_3d` | Dense-matrix 3D static, modal and ideal linear buckling analyses. |
+| `tm.StaticAnalysis3DResult` / `tm.ModalAnalysis3DResult` | 3D nodal static response or undamped modal frequencies, shapes and participation data. |
+| `tm.BucklingAnalysis3DResult` | 3D ideal buckling factors, mode shapes and reference member axial forces. |
+| `tm.assemble_matrices_3d` | Assemble global 3D stiffness and mass matrices for advanced caller workflows. |
 | `tm.AxialMember` | A two-node axial bar for planar truss assembly. |
 | `tm.FrameNode` | A frame node with global x and y coordinates in metres. |
 | `tm.FrameMaterial` | Elastic Young's and shear moduli, with an optional isotropic Poisson-ratio consistency check. |
@@ -29,12 +37,16 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.ModalAnalysisResult` | Natural frequencies, peak-normalized mode shapes, generalized and effective modal masses, and directional participation ratios. |
 | `tm.modal_assurance_criterion` | Compare two real or complex mode-shape vectors after the caller maps them to a common degree-of-freedom order. |
 | `tm.analyze_linear_buckling` | Estimate ideal elastic system load factors for one explicit proportional reference load pattern. |
+| `tm.analyze_time_history` | Integrate a 2D or 3D linear model with Newmark average acceleration and optional Rayleigh damping/base acceleration. |
+| `tm.TimeHistoryResult` | Nodal displacement, velocity, acceleration and reaction histories. |
 | `tm.BucklingAnalysisResult` | Linear buckling load factors, mode shapes and reference member axial forces. |
 | `tm.modal.identify` | Estimate modal peaks with a Hann-windowed single-sided FFT and sub-bin peak interpolation. |
 | `tm.modal.pair_modes` | Pair observed with reference frequencies by nearest log-frequency. |
 | `tm.ModalResult` | Single-channel identification result: modes sorted by frequency, resolution, status and method notes. |
 | `tm.Mode` | One identified peak: frequency, spectral amplitude and damping ratio (`None` when not resolvable). |
 | `tm.update` | Scale all story stiffnesses uniformly to fit identified frequencies. |
+| `tm.update_story_stiffness` | Estimate individual shear-building story stiffness scales from a complete set of observed modal frequencies. |
+| `tm.StoryUpdateResult` | Local story update, fitted frequencies, residual and convergence status. |
 | `tm.health.assess` | Compare observed frequencies with the structure's preserved baseline. |
 | `tm.HealthAssessment` | Paired mode changes against the baseline, evidence status, optional review flag and interpretation limits. |
 | `tm.monitor` | Run single-channel FFT or multi-channel FDD identification, uniform model update, then health comparison; forward estimator options as keyword arguments. |
@@ -49,8 +61,20 @@ Frequency domain decomposition for synchronized channels.
 | `tm.MultiChannelData` | Aligned array shaped ``(sample, channel)`` with explicit metadata. |
 | `tm.load_multichannel_csv` | Read aligned numeric channels from a headered CSV file. |
 | `tm.identify_fdd` | Estimate modal frequencies with sub-bin peak interpolation and complex mode shapes with Welch FDD. |
+| `tm.identify_ssi` | Estimate stable modal frequencies, damping and mode shapes with covariance-driven SSI. |
+| `tm.SSIMode` / `tm.SSIResult` | SSI modal estimates with stability counts/scores and input metadata. |
+| `tm.TimedChannel` / `tm.align_multichannel` | Apply explicit clock offsets and calibration, then resample asynchronous channels onto contiguous shared grids. |
+| `tm.AlignmentResult` / `tm.AlignedSegment` | Aligned multi-channel segments with timestamps and dropped-grid-point diagnostics. |
+| `tm.identify_fdd(..., estimate_damping=True)` | Optionally estimate FDD damping with EFDD; unresolved damping is returned as `None`. |
 | `tm.FDDResult` | Multi-channel FDD result: modes, resolution, segment settings, channels and notes. |
 | `tm.FDDMode` | One FDD mode: frequency, singular value, and complex mode shape normalized to unit peak magnitude. |
+
+Environmental normalization fits repeated modal-frequency records against explicit environmental covariates:
+
+| Name | Description |
+|---|---|
+| `tm.fit_environmental_baseline` | Fit per-mode linear frequency trends against named environmental features. |
+| `tm.EnvironmentalFrequencyBaseline` | Fitted baseline, reference environment, frequency scatter and normalization method. |
 
 ## Sensor data
 
@@ -69,10 +93,11 @@ Bounded rolling-window analysis of caller-supplied observation batches.
 
 | Name | Description |
 |---|---|
+| `tm.HistoryStore` | Structural protocol for stores accepted by `MonitoringSession`. |
 | `tm.MonitoringSession` | Analyze regularly sampled point observations in bounded rolling windows. |
 | `tm.SessionIngestResult` | Counts of accepted and rejected observations for one batch, plus any analysis reports produced. |
 | `tm.SessionReport` | One analysis of a completed window: event time, method, updated structure, modal result and health. |
-| `tm.SessionRestoreResult` | Samples restored from a `SQLiteStore` and whether a full analysis window is ready. |
+| `tm.SessionRestoreResult` | Samples restored from a `HistoryStore` and whether a full analysis window is ready. |
 | `tm.SessionRunner` | Drive one monitoring session from a source with explicit cleanup. |
 
 ## Source adapters and plugins
@@ -101,7 +126,7 @@ Pull-source contracts, built-in sources and entry-point plugin discovery.
 
 ## Projects, storage and reports
 
-Manifest-driven runs, local SQLite history and HTML reports.
+Manifest-driven runs, SQLite/PostgreSQL history and HTML reports.
 
 | Name | Description |
 |---|---|
@@ -111,8 +136,9 @@ Manifest-driven runs, local SQLite history and HTML reports.
 | `tm.ProjectManifest` | Validated manifest fields with file paths resolved from its directory. |
 | `tm.LoadedProject` | A validated manifest with its loaded observations and SHA-256 hashes of manifest and data. |
 | `tm.ProjectRunResult` | Serializable result of `tm.run_project`, including provenance hashes. |
-| `tm.SQLiteStore` | A one-process local history store backed by Python's SQLite module. |
-| `tm.BatchAppendResult` | Receipt from `SQLiteStore.append_batch`: inserted rows and whether the batch was a duplicate. |
+| `tm.SQLiteStore` | Local history store backed by SQLite; uses WAL and supports explicit observation pruning. |
+| `tm.PostgresStore` | Optional synchronous PostgreSQL backend; install the `postgres` extra. |
+| `tm.BatchAppendResult` | Receipt from `HistoryStore.append_batch`: inserted rows and whether the batch was a duplicate. |
 | `tm.Asset` | A monitored asset record with type, name and metadata. |
 | `tm.Relation` | A typed, directed relation between two assets. |
 | `tm.report.to_html` | Render a self-contained accessible HTML report with a small SVG chart. |

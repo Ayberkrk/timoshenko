@@ -9,7 +9,7 @@ import json
 import math
 from pathlib import Path
 import sqlite3
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 import uuid
 
 from .assets import Asset, Relation
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .project import ProjectRunResult
 
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 
 def _utc_now() -> str:
@@ -59,8 +59,58 @@ class BatchAppendResult:
         return self.duplicate_batch
 
 
+@runtime_checkable
+class HistoryStore(Protocol):
+    """Storage contract used by :class:`MonitoringSession` and project runs.
+
+    Implementations preserve batch idempotency and return observations in the
+    order documented by ``observations`` and ``recent_observations``.
+    """
+
+    def upsert_asset(self, asset: Asset) -> None: ...
+
+    def get_asset(self, asset_id: str) -> Asset | None: ...
+
+    def list_assets(self, *, asset_type: str | None = None) -> tuple[Asset, ...]: ...
+
+    def add_relation(self, relation: Relation) -> None: ...
+
+    def relations_for(self, asset_id: str) -> tuple[Relation, ...]: ...
+
+    def has_batch(self, batch: ObservationBatch) -> bool: ...
+
+    def append_batch(self, batch: ObservationBatch) -> BatchAppendResult: ...
+
+    def recent_observations(
+        self, *, sensor_id: str, limit: int, unit: str | None = None
+    ) -> tuple[Observation, ...]: ...
+
+    def prune_before(self, event_timestamp: float) -> int: ...
+
+    def observations(
+        self,
+        *,
+        sensor_id: str | None = None,
+        asset_id: str | None = None,
+        start_timestamp: float | None = None,
+        end_timestamp: float | None = None,
+        order_by: Literal["event_time", "arrival"] = "event_time",
+        limit: int | None = None,
+    ) -> tuple[Observation, ...]: ...
+
+    def save_run(self, result: ProjectRunResult, *, run_id: str | None = None) -> str: ...
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None: ...
+
+    def list_runs(
+        self, *, project_id: str | None = None, limit: int = 100
+    ) -> tuple[dict[str, Any], ...]: ...
+
+    def close(self) -> None: ...
+
+
 class SQLiteStore:
-    """A one-process local history store backed by Python's SQLite module.
+    """A local history store backed by Python's SQLite module.
 
     Batch ingestion is idempotent for the unique ``(source_id, batch_id)``
     pair. Observations retain arrival order and timestamps as supplied. Reads
@@ -79,8 +129,13 @@ class SQLiteStore:
             raise ValueError("timeout_seconds must be finite and positive")
         self._connection: sqlite3.Connection | None = sqlite3.connect(self.path, timeout=timeout)
         self._connection.row_factory = sqlite3.Row
+        self.timeout_seconds = timeout
         self._db.execute("PRAGMA foreign_keys = ON")
         self._initialize()
+        if self.path != ":memory:":
+            # WAL lets independent store instances/processes read while another
+            # connection writes. SQLite's configured timeout bounds writer waits.
+            self._db.execute("PRAGMA journal_mode = WAL")
 
     def _initialize(self) -> None:
         version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
@@ -90,6 +145,9 @@ class SQLiteStore:
                 f"database schema {version} is newer than supported schema {_SCHEMA_VERSION}"
             )
         if version == _SCHEMA_VERSION:
+            return
+        if version == 1:
+            self._migrate_v1_to_v2()
             return
         with self._db:
             self._db.executescript(
@@ -137,6 +195,8 @@ class SQLiteStore:
                     ON observations (sensor_id, event_timestamp, observation_row_id);
                 CREATE INDEX IF NOT EXISTS observations_asset_event_idx
                     ON observations (asset_id, event_timestamp, observation_row_id);
+                CREATE INDEX IF NOT EXISTS observations_event_prune_idx
+                    ON observations (event_timestamp, observation_row_id);
                 CREATE TABLE IF NOT EXISTS analysis_runs (
                     run_id TEXT PRIMARY KEY,
                     project_id TEXT NOT NULL,
@@ -146,9 +206,24 @@ class SQLiteStore:
                     created_at TEXT NOT NULL,
                     result_json TEXT NOT NULL
                 );
-                PRAGMA user_version = 1;
+                CREATE INDEX IF NOT EXISTS analysis_runs_project_created_idx
+                    ON analysis_runs (project_id, created_at, run_id);
+                PRAGMA user_version = 2;
                 """
             )
+
+    def _migrate_v1_to_v2(self) -> None:
+        """Apply the additive v1→v2 query-index migration without rewriting data."""
+        with self._db:
+            self._db.execute(
+                "CREATE INDEX IF NOT EXISTS observations_event_prune_idx "
+                "ON observations (event_timestamp, observation_row_id)"
+            )
+            self._db.execute(
+                "CREATE INDEX IF NOT EXISTS analysis_runs_project_created_idx "
+                "ON analysis_runs (project_id, created_at, run_id)"
+            )
+            self._db.execute("PRAGMA user_version = 2")
 
     @property
     def _db(self) -> sqlite3.Connection:
@@ -411,6 +486,23 @@ class SQLiteStore:
             )
             for row in rows
         )
+
+    def prune_before(self, event_timestamp: float) -> int:
+        """Delete timestamped observations earlier than ``event_timestamp``.
+
+        Batch receipts are intentionally retained so a replay of a pruned batch
+        remains idempotent and cannot silently restore expired observations.
+        Untimestamped observations and analysis runs are unaffected.
+        """
+        cutoff = float(event_timestamp)
+        if not math.isfinite(cutoff):
+            raise ValueError("event_timestamp must be finite")
+        with self._db:
+            cursor = self._db.execute(
+                "DELETE FROM observations WHERE event_timestamp IS NOT NULL AND event_timestamp < ?",
+                (cutoff,),
+            )
+        return int(cursor.rowcount)
 
     def save_run(self, result: ProjectRunResult, *, run_id: str | None = None) -> str:
         from .project import ProjectRunResult
