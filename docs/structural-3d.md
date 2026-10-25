@@ -30,9 +30,11 @@ reference vector is projected into the plane perpendicular to local x; the
 right-handed local z axis is their cross product. The vector must not be
 parallel to the member axis. The default reference `(0, 1, 0)` is suitable for
 most horizontal members; choose an explicit reference for vertical or
-otherwise aligned members. Frame stiffness uses Euler-Bernoulli bending,
-elastic axial stiffness and Saint-Venant torsion. The model uses six degrees of
-freedom per node in `(ux, uy, uz, rx, ry, rz)` order.
+otherwise aligned members. `FrameMaterial3D` accepts Young's and shear moduli;
+an optional Poisson ratio validates their isotropic consistency. Frame
+stiffness uses Euler-Bernoulli bending, elastic axial stiffness and
+Saint-Venant torsion. The model uses six degrees of freedom per node in
+`(ux, uy, uz, rx, ry, rz)` order.
 
 `analyze_linear_static_3d` solves one nodal load case and returns node
 displacements, support reactions, strain energy and the free-degree residual.

@@ -33,6 +33,8 @@ def test_story_update_rejects_incomplete_or_invalid_modal_data() -> None:
         update_story_stiffness(model, (2.0,))
     with pytest.raises(ValueError, match="finite and positive"):
         update_story_stiffness(model, (2.0, float("nan")))
+    with pytest.raises(ValueError, match="ascending modal order"):
+        update_story_stiffness(model, tuple(reversed(model.natural_frequencies_hz)))
     with pytest.raises(ValueError, match="regularization"):
         update_story_stiffness(model, model.natural_frequencies_hz, regularization=0.0)
 

@@ -15,7 +15,7 @@ Build a lumped-mass shear-building reference model, or analyze a prismatic 2D fr
 | `tm.StructuralModel` | A planar truss/frame with nodes, prismatic members, restraints, prescribed support displacements, nodal loads and optional lumped masses. |
 | `tm.StructuralModel3D` | Separate small, linear 3D truss/frame model with six degrees of freedom per node. |
 | `tm.FrameNode3D` | A 3D node with x, y and z coordinates. |
-| `tm.FrameMaterial3D` / `tm.FrameSection3D` | Isotropic elastic moduli and prismatic 3D section properties. |
+| `tm.FrameMaterial3D` / `tm.FrameSection3D` | Elastic moduli (with optional Poisson-ratio consistency validation) and prismatic 3D section properties. |
 | `tm.FrameMember3D` / `tm.TrussMember3D` | 3D frame and axial truss inputs, including explicit member local-axis orientation. |
 | `tm.analyze_linear_static_3d` / `tm.analyze_modes_3d` / `tm.analyze_linear_buckling_3d` | Dense-matrix 3D static, modal and ideal linear buckling analyses. |
 | `tm.StaticAnalysis3DResult` / `tm.ModalAnalysis3DResult` | 3D nodal static response or undamped modal frequencies, shapes and participation data. |

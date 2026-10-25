@@ -38,6 +38,7 @@ class FrameNode3D:
 class FrameMaterial3D:
     youngs_modulus_pa: float
     shear_modulus_pa: float
+    poisson_ratio: float | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -46,6 +47,18 @@ class FrameMaterial3D:
         object.__setattr__(
             self, "shear_modulus_pa", _positive("shear_modulus_pa", self.shear_modulus_pa)
         )
+        if self.poisson_ratio is not None:
+            ratio = _finite("poisson_ratio", self.poisson_ratio)
+            if not -1.0 < ratio < 0.5:
+                raise ValueError(
+                    "poisson_ratio must be between -1 and 0.5 for an isotropic elastic material"
+                )
+            expected_shear = self.youngs_modulus_pa / (2.0 * (1.0 + ratio))
+            if not math.isclose(self.shear_modulus_pa, expected_shear, rel_tol=2e-3):
+                raise ValueError(
+                    "youngs_modulus_pa, shear_modulus_pa and poisson_ratio are inconsistent"
+                )
+            object.__setattr__(self, "poisson_ratio", ratio)
 
 
 @dataclass(frozen=True)

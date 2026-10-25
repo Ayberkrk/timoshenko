@@ -15,6 +15,8 @@ change is listed here.
 - Added per-story stiffness fitting for complete shear-building modal sets and
   linear environmental frequency normalization from caller-supplied baseline
   records and covariates.
+- Added ascending-order validation for per-story modal updates and optional
+  Poisson-ratio consistency checks for 3D frame materials.
 
 - `tm.HarmonicResponse`, the result type of `tm.harmonic_response`, is
   exported from the top-level package.

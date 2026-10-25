@@ -61,6 +61,8 @@ def update_story_stiffness(
         raise ValueError("measured_frequencies_hz must contain one value per story mode")
     if not np.isfinite(observed).all() or np.any(observed <= 0.0):
         raise ValueError("measured frequencies must be finite and positive")
+    if np.any(np.diff(observed) < 0.0):
+        raise ValueError("measured frequencies must be supplied in ascending modal order")
     penalty = float(regularization)
     if not math.isfinite(penalty) or penalty <= 0.0:
         raise ValueError("regularization must be finite and positive")

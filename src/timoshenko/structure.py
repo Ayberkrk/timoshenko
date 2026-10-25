@@ -1,7 +1,7 @@
-"""Simple structural models used by Timoshenko's first release.
+"""Lumped-mass shear-building models for modal comparison and monitoring.
 
-Version 0.1 implements a linear lumped-mass shear-building model. It is a
-reference model for modal comparison, not a general purpose FEM solver.
+``Structure`` is a compact reference model, not a general-purpose finite
+element model.
 """
 
 from __future__ import annotations

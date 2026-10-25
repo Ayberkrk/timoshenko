@@ -38,6 +38,53 @@ def test_3d_cantilever_static_matches_euler_bernoulli_solution():
     assert result.free_dof_residual_norm < 1e-7
 
 
+def test_3d_asymmetric_cantilever_matches_second_bending_axis_and_torsion():
+    length, youngs, shear, inertia_y, inertia_z, torsion_constant = (
+        3.0,
+        200e9,
+        77e9,
+        4e-6,
+        8e-6,
+        1e-5,
+    )
+    material = FrameMaterial3D(youngs, shear)
+    section = FrameSection3D(0.01, inertia_y, inertia_z, torsion_constant)
+    member = FrameMember3D(0, 1, material, section)
+
+    def solve(load):
+        model = StructuralModel3D(
+            nodes=(FrameNode3D(0.0, 0.0, 0.0), FrameNode3D(length, 0.0, 0.0)),
+            members=(member,),
+            restraints=((True,) * 6, (False,) * 6),
+            nodal_loads=((0.0,) * 6, load),
+        )
+        return analyze_linear_static_3d(model)
+
+    force_z, torque_x = -12_000.0, 3_000.0
+    bending = solve((0.0, 0.0, force_z, 0.0, 0.0, 0.0))
+    torsion = solve((0.0, 0.0, 0.0, torque_x, 0.0, 0.0))
+    assert bending.displacements[1][2] == pytest.approx(
+        force_z * length**3 / (3.0 * youngs * inertia_y)
+    )
+    assert torsion.displacements[1][3] == pytest.approx(
+        torque_x * length / (shear * torsion_constant)
+    )
+
+
+def test_free_3d_frame_has_six_rigid_body_modes():
+    model = cantilever_3d()
+    free_model = StructuralModel3D(
+        nodes=model.nodes,
+        members=model.members,
+        restraints=((False,) * 6, (False,) * 6),
+    )
+    stiffness, _ = assemble_matrices_3d(free_model)
+    eigenvalues = np.linalg.eigvalsh(stiffness)
+    scale = np.max(np.abs(eigenvalues))
+    assert np.max(np.abs(eigenvalues[:6])) < 1e-12 * scale
+    assert eigenvalues[6] > 1e-12 * scale
+
+
 def test_3d_modes_condense_zero_mass_rotations_and_report_frequencies():
     model = cantilever_3d(mass_per_length=12.0)
     result = analyze_modes_3d(model, mode_count=3)
@@ -110,6 +157,9 @@ def test_3d_static_fully_restrained_model_returns_support_reactions():
 
 
 def test_3d_member_orientation_and_model_validation():
+    assert FrameMaterial3D(200e9, 77e9, poisson_ratio=0.2987).poisson_ratio == pytest.approx(0.2987)
+    with pytest.raises(ValueError, match="inconsistent"):
+        FrameMaterial3D(200e9, 77e9, poisson_ratio=0.25)
     with pytest.raises(ValueError, match="parallel"):
         model = StructuralModel3D(
             nodes=(FrameNode3D(0, 0, 0), FrameNode3D(1, 0, 0)),
