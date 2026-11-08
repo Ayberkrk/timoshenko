@@ -275,7 +275,22 @@ def test_installed_entry_points_load():
 
 
 class FakePaho:
-    def __init__(self, backlog=()):
+    def __init__(
+        self,
+        backlog=(),
+        *,
+        connect_result=0,
+        reason_code=0,
+        subscribe_result=0,
+        ack_result=0,
+        notify_connect=True,
+    ):
+        self.connect_result = connect_result
+        self.reason_code = reason_code
+        self.subscribe_result = subscribe_result
+        self.ack_result = ack_result
+        self.notify_connect = notify_connect
+        self.loop_started = self.loop_stopped = self.disconnected = False
         self.acks, self.subscriptions = [], []
         self.on_connect = self.on_message = None
         self.backlog = list(backlog)
@@ -287,26 +302,29 @@ class FakePaho:
         self.tls = True
 
     def connect(self, host, port, keepalive):
-        return 0
+        self.connection = (host, port, keepalive)
+        return self.connect_result
 
     def loop_start(self):
-        self.on_connect(self, None, {}, 0, None)
+        self.loop_started = True
+        if self.notify_connect:
+            self.on_connect(self, None, {}, self.reason_code, None)
         for args, kwargs in self.backlog:
             self.deliver(*args, **kwargs)
 
     def loop_stop(self):
-        pass
+        self.loop_stopped = True
 
     def disconnect(self):
-        pass
+        self.disconnected = True
 
     def subscribe(self, topic, qos):
         self.subscriptions.append((topic, qos))
-        return 0, 1
+        return self.subscribe_result, 1
 
     def ack(self, mid, qos):
         self.acks.append(mid)
-        return 0
+        return self.ack_result
 
     def deliver(self, mid, payload, *, retain=False, qos=1):
         body = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
@@ -412,6 +430,182 @@ def test_mqtt_configuration_validation():
         tm.MqttObservationSource(host="b", topic="t")
     with pytest.raises(ValueError):
         tm.MqttObservationSource(host="b", topic="t", client_id="c", password="x")
+
+
+@pytest.mark.parametrize(
+    "options, message",
+    [
+        ({"port": 0}, "port must be in 1..65535"),
+        ({"port": 65536}, "port must be in 1..65535"),
+        ({"qos": -1}, "qos must be 0, 1, or 2"),
+        ({"qos": 3}, "qos must be 0, 1, or 2"),
+        ({"keepalive_s": 0}, "must be positive"),
+        ({"queue_capacity": 0}, "must be positive"),
+        ({"max_payload_bytes": 0}, "must be positive"),
+        ({"connect_timeout_s": 0}, "must be finite and positive"),
+        ({"connect_timeout_s": -1}, "must be finite and positive"),
+        ({"connect_timeout_s": math.inf}, "must be finite and positive"),
+        ({"connect_timeout_s": -math.inf}, "must be finite and positive"),
+        ({"connect_timeout_s": math.nan}, "must be finite and positive"),
+    ],
+)
+def test_mqtt_rejects_invalid_numeric_configuration(options, message):
+    with pytest.raises(ValueError, match=message):
+        tm.MqttObservationSource(host="broker", topic="t", client_id="c", **options)
+
+
+def test_mqtt_credentials_tls_and_duplicate_open():
+    client = FakePaho()
+    source = tm.MqttObservationSource(
+        host="broker",
+        topic="t",
+        port=8883,
+        qos=2,
+        keepalive_s=30,
+        client_id="c",
+        username="test-user",
+        password="synthetic-password",
+        tls=True,
+        client_factory=lambda: client,
+    )
+    source.open()
+    try:
+        assert client.credentials == ("test-user", "synthetic-password")
+        assert client.tls is True
+        assert client.connection == ("broker", 8883, 30)
+        assert client.subscriptions == [("t", 2)]
+        with pytest.raises(RuntimeError, match="already open"):
+            source.open()
+    finally:
+        source.close()
+    assert client.disconnected and client.loop_stopped
+    source.close()  # Closing an already-closed source is harmless.
+
+
+@pytest.mark.parametrize(
+    "options, exception, message, started",
+    [
+        ({"connect_result": 7}, tm.MQTTSourceError, "connect returned error code 7", False),
+        ({"reason_code": 5}, tm.MQTTSourceError, "broker rejected the connection: 5", True),
+        ({"subscribe_result": 4}, tm.MQTTSourceError, "subscribe returned error code 4", True),
+        ({"notify_connect": False}, TimeoutError, "timed out waiting for MQTT subscription", True),
+    ],
+)
+def test_mqtt_open_failure_cleans_up(options, exception, message, started):
+    client = FakePaho(**options)
+    source = tm.MqttObservationSource(
+        host="broker",
+        topic="t",
+        client_id="c",
+        connect_timeout_s=0.001,
+        client_factory=lambda: client,
+    )
+    with pytest.raises(exception, match=message):
+        source.open()
+    assert client.disconnected
+    assert client.loop_started is started
+    assert client.loop_stopped is started
+    with pytest.raises(RuntimeError, match="must be opened before reading"):
+        source.read_batch()
+
+
+def test_mqtt_read_requires_open():
+    source = tm.MqttObservationSource(host="broker", topic="t", client_id="c")
+    with pytest.raises(RuntimeError, match="must be opened before reading"):
+        source.read_batch()
+
+
+@pytest.mark.parametrize(
+    "payload, options, message",
+    [
+        (mqtt_payload("large", 0, 4097), {}, "at most 4096 observations"),
+        (b"12345", {"max_payload_bytes": 4}, "payload exceeded 4 bytes"),
+        (
+            {"schema_version": 1, "source_id": "g", "batch_id": "b", "observations": []},
+            {},
+            "non-empty observations list are required",
+        ),
+    ],
+)
+def test_mqtt_callback_failure_is_preserved(payload, options, message):
+    client = FakePaho()
+    source = tm.MqttObservationSource(
+        host="broker", topic="t", client_id="c", client_factory=lambda: client, **options
+    )
+    source.open()
+    try:
+        client.deliver(1, payload)
+        # A subsequent callback must not hide the first error or acknowledge a batch.
+        client.deliver(2, mqtt_payload("later", 0, 1))
+        with pytest.raises(tm.MQTTSourceError, match=message):
+            source.read_batch()
+        assert client.acks == []
+    finally:
+        source.close()
+
+
+def test_mqtt_retained_acknowledgement_failure_surfaces():
+    client = FakePaho(ack_result=9)
+    source = tm.MqttObservationSource(
+        host="broker", topic="t", client_id="c", client_factory=lambda: client
+    )
+    source.open()
+    try:
+        client.deliver(1, mqtt_payload("retained", 0, 1), retain=True)
+        with pytest.raises(tm.MQTTSourceError, match="retained message failed with code 9"):
+            source.read_batch()
+        assert client.acks == [1]
+        assert source.retained_drop_count == 1
+    finally:
+        source.close()
+
+
+def test_mqtt_acknowledge_unknown_batch():
+    client = FakePaho()
+    source = tm.MqttObservationSource(
+        host="broker", topic="t", client_id="c", client_factory=lambda: client
+    )
+    source.open()
+    try:
+        batch = tm.ObservationBatch([], source_id="gateway", batch_id="unknown")
+        result = session().ingest(batch)
+        with pytest.raises(
+            tm.MQTTSourceError, match="no pending MQTT delivery for batch 'unknown'"
+        ):
+            source.acknowledge(batch, result)
+        assert client.acks == []
+    finally:
+        source.close()
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_mqtt_acknowledgement_failure(closed):
+    client = FakePaho(ack_result=6)
+    source = tm.MqttObservationSource(
+        host="broker", topic="t", client_id="c", client_factory=lambda: client
+    )
+    source.open()
+    try:
+        client.deliver(1, mqtt_payload("b1", 0, 1))
+        batch = source.read_batch()
+        result = session().ingest(batch)
+        if closed:
+            source.close()
+        message = "after source close" if closed else "acknowledgement failed with code 6"
+        with pytest.raises(tm.MQTTSourceError, match=message):
+            source.acknowledge(batch, result)
+        if closed:
+            assert client.acks == []
+        else:
+            assert client.acks == [1]
+            # Failed acknowledgements remain pending and can be retried.
+            client.ack_result = 0
+            source.acknowledge(batch, result)
+            assert client.acks == [1, 1]
+            with pytest.raises(tm.MQTTSourceError, match="no pending MQTT delivery"):
+                source.acknowledge(batch, result)
+    finally:
+        source.close()
 
 
 def sensorthings_page(start, count, next_link=None):
