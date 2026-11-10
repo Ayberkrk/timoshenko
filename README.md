@@ -19,7 +19,7 @@
 | src/timoshenko/modal.py          |      128 |        5 |     96% |76, 214, 216, 265, 269 |
 | src/timoshenko/model\_update.py  |       91 |       15 |     84% |58, 74, 77, 123-128, 139-145 |
 | src/timoshenko/monitor.py        |       26 |        0 |    100% |           |
-| src/timoshenko/mqtt.py           |      202 |       33 |     84% |73, 75, 77, 113, 115-121, 138, 140, 144, 148, 151-153, 165, 168-170, 177, 183, 191-194, 214, 218, 253, 257-258, 269, 272, 277, 288 |
+| src/timoshenko/mqtt.py           |      202 |        7 |     97% |115-121, 257-258 |
 | src/timoshenko/multichannel.py   |       80 |        0 |    100% |           |
 | src/timoshenko/observations.py   |       58 |        5 |     91% |40, 42, 91-92, 95 |
 | src/timoshenko/oma.py            |      175 |       19 |     89% |104, 108, 149, 166, 269, 284, 289, 299, 303, 310, 330, 332, 334, 339, 342, 344-345, 349, 361 |
@@ -44,7 +44,7 @@
 | src/timoshenko/uncertainty.py    |      172 |        7 |     96% |127-128, 180, 185, 215-216, 232 |
 | src/timoshenko/update.py         |       22 |        3 |     86% |24, 26, 41 |
 | src/timoshenko/vibration.py      |       83 |        9 |     89% |22, 57, 61, 93, 102, 108, 132, 148, 151 |
-| **TOTAL**                        | **5022** |  **463** | **91%** |           |
+| **TOTAL**                        | **5022** |  **437** | **91%** |           |
 
 
 ## Setup coverage badge
