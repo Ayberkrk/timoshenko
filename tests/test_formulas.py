@@ -159,6 +159,31 @@ def test_thin_wall_cylinder_validation_names_argument():
         tm.thin_wall_cylinder_stress(2e6, 0.0, 0.01)
 
 
+@pytest.mark.parametrize("pressure", [math.nan, math.inf, -math.inf])
+def test_thin_wall_cylinder_rejects_nonfinite_pressure(pressure):
+    with pytest.raises(ValueError, match="pressure_difference_pa must be finite"):
+        tm.thin_wall_cylinder_stress(pressure, 0.5, 0.01)
+
+
+@pytest.mark.parametrize("thickness", [0.0, -0.01, math.nan])
+def test_thin_wall_cylinder_rejects_invalid_thickness(thickness):
+    with pytest.raises(ValueError, match="wall_thickness_m must be finite and greater than zero"):
+        tm.thin_wall_cylinder_stress(2e6, 0.5, thickness)
+
+
+@pytest.mark.parametrize(
+    "inner, message",
+    [
+        (-0.01, "must be non-negative"),
+        (0.09, "must be smaller than outer_diameter_m"),
+        (math.nan, "must be finite"),
+    ],
+)
+def test_circular_torsion_rejects_invalid_inner_diameter(inner, message):
+    with pytest.raises(ValueError, match=f"inner_diameter_m {message}"):
+        tm.circular_shaft_torsion(5e3, 2.0, 80e9, 0.08, inner)
+
+
 def test_circular_torsion_validation_names_argument():
     with pytest.raises(ValueError, match="shear_modulus_pa"):
         tm.circular_shaft_torsion(5e3, 2.0, 0.0, 0.08)
@@ -178,6 +203,20 @@ def test_euler_buckling_and_slenderness():
 def test_euler_critical_load_validation_names_argument():
     with pytest.raises(ValueError, match="second_moment_m4"):
         tm.euler_critical_load(200e9, 0.0, 3.0)
+
+
+@pytest.mark.parametrize("length", [0.0, -1.0, math.nan, math.inf])
+def test_euler_critical_load_rejects_invalid_length(length):
+    with pytest.raises(ValueError, match="length_m must be finite and greater than zero"):
+        tm.euler_critical_load(200e9, 1e-6, length)
+
+
+@pytest.mark.parametrize("factor", [0.0, -1.0, math.nan, math.inf])
+def test_slenderness_ratio_rejects_invalid_effective_length_factor(factor):
+    with pytest.raises(
+        ValueError, match="effective_length_factor must be finite and greater than zero"
+    ):
+        tm.slenderness_ratio(3.0, factor, 4e-3, 1e-6)
 
 
 def test_slenderness_ratio_validation_names_argument():
@@ -227,6 +266,60 @@ def test_sdof_vibration_matches_complex_transfer_function():
         tm.harmonic_response(1.0, tm.natural_frequency_hz(m, k), m, k, 0.0)
 
 
+@pytest.mark.parametrize("damping", [-1.0, math.nan, math.inf, -math.inf])
+def test_damping_ratio_rejects_invalid_damping(damping):
+    with pytest.raises(ValueError, match="damping_n_s_m must be finite and non-negative"):
+        tm.damping_ratio(250.0, 4e5, damping)
+
+
+@pytest.mark.parametrize("force", [math.nan, math.inf, -math.inf])
+def test_harmonic_response_rejects_nonfinite_force(force):
+    with pytest.raises(ValueError, match="force_amplitude_n must be finite"):
+        tm.harmonic_response(force, 5.5, 250.0, 4e5, 900.0)
+
+
+@pytest.mark.parametrize("frequency", [-1.0, math.nan, math.inf, -math.inf])
+def test_harmonic_response_rejects_invalid_excitation(frequency):
+    with pytest.raises(ValueError, match="excitation_hz must be finite and non-negative"):
+        tm.harmonic_response(120.0, frequency, 250.0, 4e5, 900.0)
+
+
+@pytest.mark.parametrize("invalid", [-0.01, math.nan, math.inf, -math.inf])
+@pytest.mark.parametrize("target", [1, 2])
+def test_rayleigh_rejects_invalid_target_damping(invalid, target):
+    z1, z2 = (invalid, 0.03) if target == 1 else (0.03, invalid)
+    with pytest.raises(ValueError, match="target damping ratios must be finite and non-negative"):
+        tm.rayleigh_damping_coefficients(1.0, z1, 10.0, z2)
+
+
+def test_rayleigh_rejects_frequencies_outside_numerical_range():
+    with pytest.raises(
+        ValueError, match="target frequencies are outside the supported numerical range"
+    ):
+        tm.rayleigh_damping_coefficients(1.0, 0.03, 1e308, 0.03)
+
+
+def test_rayleigh_rejects_nonfinite_coefficients():
+    with pytest.raises(ValueError, match="Rayleigh coefficient fit produced a non-finite value"):
+        tm.rayleigh_damping_coefficients(1.0, 1e308, 10.0, 1e308)
+
+
+def test_rayleigh_result_to_dict_preserves_targets_and_units():
+    result = tm.rayleigh_damping_coefficients(7.5, 0.03, 1.2, 0.03)
+    data = result.to_dict()
+    assert data == {
+        "frequency_1_hz": 7.5,
+        "damping_ratio_1": 0.03,
+        "frequency_2_hz": 1.2,
+        "damping_ratio_2": 0.03,
+        "alpha_mass_s_inv": result.alpha_mass_s_inv,
+        "beta_stiffness_s": result.beta_stiffness_s,
+        "alpha_unit": "s^-1",
+        "beta_unit": "s",
+    }
+    assert json.loads(json.dumps(data, allow_nan=False)) == data
+
+
 def test_rayleigh_equal_targets_match_closed_form():
     f1, f2, zeta = 1.2, 7.5, 0.03
     w1, w2 = 2 * math.pi * f1, 2 * math.pi * f2
@@ -239,9 +332,11 @@ def test_rayleigh_equal_targets_match_closed_form():
 
 
 def test_rayleigh_rejects_non_passive_and_degenerate_targets():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="require a negative coefficient"):
         tm.rayleigh_damping_coefficients(1.0, 0.05, 10.0, 0.001)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="target frequencies must be distinct and sufficiently separated"
+    ):
         tm.rayleigh_damping_coefficients(2.0, 0.02, 2.0, 0.03)
 
 

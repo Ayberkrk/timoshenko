@@ -67,6 +67,55 @@ def test_assets_and_relations():
             store.add_relation(tm.Relation("s-1", "mounted_on", "missing"))
 
 
+@pytest.mark.parametrize("asset_id, asset_type", [("", "bridge"), ("bridge-1", "  ")])
+def test_asset_rejects_empty_identifiers(asset_id, asset_type):
+    with pytest.raises(ValueError, match="asset_id and asset_type must be non-empty"):
+        tm.Asset(asset_id, asset_type)
+
+
+@pytest.mark.parametrize("metadata", [None, [], "metadata"])
+def test_asset_and_relation_reject_nonmapping_metadata(metadata):
+    with pytest.raises(ValueError, match="asset metadata must be a mapping"):
+        tm.Asset("bridge-1", "bridge", metadata=metadata)
+    with pytest.raises(ValueError, match="relation metadata must be a mapping"):
+        tm.Relation("s-1", "mounted_on", "bridge-1", metadata=metadata)
+
+
+@pytest.mark.parametrize(
+    "source, kind, target",
+    [(" ", "mounted_on", "bridge-1"), ("s-1", "", "bridge-1"), ("s-1", "mounted_on", " ")],
+)
+def test_relation_rejects_empty_identifiers(source, kind, target):
+    with pytest.raises(ValueError, match="relation source, type, and target must be non-empty"):
+        tm.Relation(source, kind, target)
+
+
+def test_relation_rejects_self_relation_after_trimming():
+    with pytest.raises(ValueError, match="self-relations are not supported"):
+        tm.Relation(" bridge-1 ", "connected_to", "bridge-1")
+
+
+def test_asset_and_relation_to_dict_preserve_normalized_records():
+    metadata = {"location": "deck"}
+    asset = tm.Asset(" bridge-1 ", " bridge ", "Main span", metadata)
+    relation = tm.Relation(" s-1 ", " mounted_on ", " bridge-1 ", metadata)
+    assert asset.to_dict() == {
+        "asset_id": "bridge-1",
+        "asset_type": "bridge",
+        "name": "Main span",
+        "metadata": metadata,
+    }
+    assert relation.to_dict() == {
+        "source_asset_id": "s-1",
+        "relation_type": "mounted_on",
+        "target_asset_id": "bridge-1",
+        "metadata": metadata,
+    }
+    asset.to_dict()["metadata"]["location"] = "changed"
+    relation.to_dict()["metadata"]["location"] = "changed"
+    assert asset.metadata == relation.metadata == {"location": "deck"}
+
+
 def test_newer_schema_is_refused(tmp_path):
     path = tmp_path / "future.db"
     connection = sqlite3.connect(path)

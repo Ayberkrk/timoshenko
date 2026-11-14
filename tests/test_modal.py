@@ -1,9 +1,11 @@
+from dataclasses import replace
 import math
 
 import numpy as np
 import pytest
 
 import timoshenko as tm
+from timoshenko._spectral import interpolate_log_peak_frequency
 
 
 def uniform_shear_building_frequencies(stories, mass, stiffness):
@@ -59,6 +61,28 @@ def sine_record(frequencies, amplitudes, fs=100.0, n=8192, noise=0.0, seed=0):
     if noise:
         signal = signal + noise * np.random.default_rng(seed).standard_normal(n)
     return tm.SensorData(signal, fs)
+
+
+@pytest.mark.parametrize("peak_index", [0, 2])
+def test_spectral_interpolation_preserves_endpoint_frequency(peak_index):
+    frequencies = np.array([1.0, 2.0, 3.0])
+    assert (
+        interpolate_log_peak_frequency(frequencies, np.array([1.0, 4.0, 1.0]), peak_index)
+        == frequencies[peak_index]
+    )
+
+
+@pytest.mark.parametrize("value", [0.0, -1.0, math.nan, math.inf, -math.inf])
+@pytest.mark.parametrize("index", [0, 1, 2])
+def test_spectral_interpolation_preserves_bin_for_invalid_magnitude(value, index):
+    spectrum = np.array([1.0, 4.0, 1.0])
+    spectrum[index] = value
+    assert interpolate_log_peak_frequency(np.array([1.0, 2.0, 3.0]), spectrum, 1) == 2.0
+
+
+@pytest.mark.parametrize("spectrum", [[1.0, 1.0, 1.0], [4.0, 1.0, 4.0]])
+def test_spectral_interpolation_preserves_bin_without_concave_peak(spectrum):
+    assert interpolate_log_peak_frequency(np.array([1.0, 2.0, 3.0]), np.array(spectrum), 1) == 2.0
 
 
 def test_peak_picking_recovers_frequencies_within_resolution():
@@ -185,8 +209,37 @@ def test_update_does_not_mutate_input_and_rejects_empty_modal():
     assert structure.update_status == "not_updated"
     assert updated is not structure
     empty = tm.modal.identify(tm.SensorData([0.0] * 32, 10.0))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="cannot update structure from modal result with status"):
         tm.update(structure, empty)
+
+
+def test_update_rejects_wrong_input_types():
+    structure = tm.Structure([1e5], [2e8])
+    modal = tm.modal.identify(sine_record([7.0], [1.0]))
+    with pytest.raises(TypeError, match="structure must be a timoshenko.Structure"):
+        tm.update(object(), modal)
+    with pytest.raises(TypeError, match="modal must be a result from"):
+        tm.update(structure, object())
+
+
+def test_update_rejects_non_ok_modal_with_modes():
+    modal = tm.modal.identify(sine_record([7.0], [1.0]))
+    assert modal.modes
+    with pytest.raises(
+        ValueError,
+        match="cannot update structure from modal result with status 'insufficient_evidence'",
+    ):
+        tm.update(tm.Structure([1e5], [2e8]), replace(modal, status="insufficient_evidence"))
+
+
+@pytest.mark.parametrize("frequency", [math.nan, 1e-200])
+def test_update_rejects_unpaired_or_underflowed_stiffness_scale(frequency):
+    modal = tm.modal.identify(sine_record([7.0], [1.0]))
+    mode = replace(modal.modes[0], frequency_hz=frequency)
+    with pytest.raises(
+        ValueError, match="modal/model frequency pairing produced an invalid stiffness scale"
+    ):
+        tm.update(tm.Structure([1e5], [2e8]), replace(modal, modes=(mode,)))
 
 
 def test_monitor_reports_insufficient_evidence_for_flat_signal():
