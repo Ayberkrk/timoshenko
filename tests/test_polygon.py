@@ -143,25 +143,41 @@ def test_regular_polygon_converges_to_circle():
 
 
 @pytest.mark.parametrize(
-    "outer, holes",
+    ("outer", "holes", "message"),
     [
-        ([(0, 0), (1, 1), (1, 0), (0, 1)], ()),
-        ([(0, 0), (1, 0), (2, 0)], ()),
-        (rectangle(0, 0, 1, 1), [rectangle(0.5, 0.5, 1, 1)]),
-        (rectangle(0, 0, 1, 1), [rectangle(2, 2, 0.1, 0.1)]),
-        (rectangle(0, 0, 1, 1), [rectangle(0.1, 0.1, 0.3, 0.3), rectangle(0.2, 0.2, 0.3, 0.3)]),
-        ([(0, 0), (1, 0), (1, 0), (0, 1)], ()),
+        ([(0, 0), (1, 1), (1, 0), (0, 1)], (), "ring 0 must not self-intersect"),
+        ([(0, 0), (1, 0), (2, 0)], (), "backtracking overlapping edge"),
+        (
+            rectangle(0, 0, 1, 1),
+            [rectangle(0.5, 0.5, 1, 1)],
+            "hole 0 must not touch or cross the outer ring",
+        ),
+        (
+            rectangle(0, 0, 1, 1),
+            [rectangle(2, 2, 0.1, 0.1)],
+            "hole 0 must be strictly inside the outer ring",
+        ),
+        (
+            rectangle(0, 0, 1, 1),
+            [rectangle(0.1, 0.1, 0.3, 0.3), rectangle(0.2, 0.2, 0.3, 0.3)],
+            "holes 0 and 1 must not overlap",
+        ),
+        (
+            [(0, 0), (1, 0), (1, 0), (0, 1)],
+            (),
+            "outer must not contain repeated consecutive vertices",
+        ),
     ],
     ids=["bowtie", "collinear", "hole-crosses", "hole-outside", "holes-overlap", "repeated-vertex"],
 )
-def test_invalid_geometry_is_rejected(outer, holes):
-    with pytest.raises(ValueError):
+def test_invalid_geometry_is_rejected(outer, holes, message):
+    with pytest.raises(ValueError, match=message):
         tm.polygon_section(outer, holes=holes)
 
 
 def test_vertex_limit():
     ring = [(math.cos(2 * math.pi * i / 513), math.sin(2 * math.pi * i / 513)) for i in range(513)]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="at most 512 total vertices"):
         tm.polygon_section(ring)
 
 

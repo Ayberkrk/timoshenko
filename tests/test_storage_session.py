@@ -36,9 +36,11 @@ def test_batch_append_is_idempotent_and_detects_changed_content(tmp_path):
         again = store.append_batch(batch(0, 10, batch_id="b1", source_id="s"))
         assert (first.inserted_count, first.was_duplicate) == (10, False)
         assert (again.inserted_count, again.was_duplicate) == (0, True)
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="batch_id was already stored with different observation content"
+        ):
             store.append_batch(batch(0, 11, batch_id="b1", source_id="s"))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="batch_id and source_id are required"):
             store.append_batch(batch(0, 3))
     with tm.SQLiteStore(tmp_path / "h.db") as reopened:
         assert len(reopened.observations(sensor_id="a")) == 10
@@ -256,9 +258,9 @@ def test_multichannel_session_uses_fdd():
 
 
 def test_session_rejects_unknown_options_and_mixed_units():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"unsupported analysis option\(s\).*nperseg"):
         make_session(analysis_options={"nperseg": 64})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="same measurement unit"):
         make_session(sensor_ids=["a", "b"], units=["g", "m"])
 
 
@@ -298,9 +300,9 @@ def test_restore_without_store_is_an_error():
 
 
 def test_observation_validation():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="observation value must be finite"):
         tm.Observation("a", "a", "g", float("nan"))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="sensor_id, name, and unit must be non-empty"):
         tm.Observation("", "a", "g", 1.0)
     with pytest.raises(TypeError):
         tm.ObservationBatch([1.0])
@@ -314,16 +316,20 @@ def test_has_batch_is_read_only_and_detects_conflicts(tmp_path):
         assert not store.has_batch(first)
         store.append_batch(first)
         assert store.has_batch(first)
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="batch_id was already stored with different observation content"
+        ):
             store.has_batch(batch(0, 5, batch_id="b1", source_id="s"))
 
 
 def test_invalid_analysis_option_values_fail_at_construction():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="frequency bounds.*max greater than min"):
         make_session(analysis_options={"max_frequency_hz": 0.1})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="at least two overlapping FFT segments are required"):
         make_session(sensor_ids=["a", "b"], units=["g", "g"], analysis_options={"nperseg": 256})
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="review_threshold_pct must be finite and greater than zero"
+    ):
         make_session(review_threshold_pct=-1.0)
 
 

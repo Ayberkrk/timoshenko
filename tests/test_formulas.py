@@ -92,9 +92,9 @@ def test_beam_deflection_matches_unit_load_integration(function, load, fields):
 
 def test_beam_shear_term_is_optional_but_needs_both_inputs():
     assert tm.cantilever_tip_load(1e3, 2.0, E, INERTIA).shear_m == 0.0
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="provide both shear_modulus_pa and area_m2"):
         tm.cantilever_tip_load(1e3, 2.0, E, INERTIA, shear_modulus_pa=G)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="span_m must be finite and greater than zero"):
         tm.cantilever_tip_load(1e3, -2.0, E, INERTIA)
 
 
@@ -110,7 +110,9 @@ def test_rectangle_and_circle_sections():
     assert circle.second_moment_y_m4 == pytest.approx(math.pi * 0.15**4 / 4)
     tube = tm.circular_tube_section(0.3, 0.2)
     assert tube.second_moment_y_m4 == pytest.approx(math.pi * (0.15**4 - 0.1**4) / 4)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="inner_diameter_m must be finite, non-negative, and smaller"
+    ):
         tm.circular_tube_section(0.2, 0.2)
 
 
@@ -121,7 +123,7 @@ def test_i_section_equals_outer_rectangle_minus_side_voids():
     assert section.area_m2 == pytest.approx(b * h - void_w * void_h)
     assert section.second_moment_y_m4 == pytest.approx(b * h**3 / 12 - void_w * void_h**3 / 12)
     assert section.second_moment_z_m4 == pytest.approx(2 * tf * b**3 / 12 + void_h * tw**3 / 12)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="web_thickness_m must be smaller than overall_width_m"):
         tm.i_section(b, h, b, tf)
 
 
@@ -142,7 +144,7 @@ def test_elementary_mechanics():
     assert tm.axial_strain(200e6, 200e9) == pytest.approx(1e-3)
     assert tm.thermal_strain(12e-6, -30.0) == pytest.approx(-3.6e-4)
     assert tm.youngs_modulus_from_shear(80e9, 0.25) == pytest.approx(200e9)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="poisson_ratio must be finite and satisfy"):
         tm.youngs_modulus_from_shear(80e9, 0.5)
 
 
@@ -262,7 +264,7 @@ def test_sdof_vibration_matches_complex_transfer_function():
     assert result.phase_lag_rad == pytest.approx(-math.atan2(transfer.imag, transfer.real))
     assert tm.natural_frequency_hz(m, k) == pytest.approx(math.sqrt(k / m) / (2 * math.pi))
     assert tm.damping_ratio(m, k, c) == pytest.approx(c / (2 * math.sqrt(k * m)))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="undamped resonance has unbounded steady-state response"):
         tm.harmonic_response(1.0, tm.natural_frequency_hz(m, k), m, k, 0.0)
 
 
