@@ -237,6 +237,16 @@ always resolves to the latest release; each release also has its own DOI on
 [`CITATION.cff`](https://github.com/Ayberkrk/timoshenko/blob/main/CITATION.cff),
 which GitHub's "Cite this repository" button reads.
 
+## Contributors
+
+Thanks to everyone who has contributed:
+
+<a href="https://github.com/Ayberkrk/timoshenko/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Ayberkrk/timoshenko" alt="Contributors" />
+</a>
+
+New here? The [good first issues](https://github.com/Ayberkrk/timoshenko/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) each come with a clear "done when" check, and questions are welcome in [Discussions](https://github.com/Ayberkrk/timoshenko/discussions). If the project is useful to you, a star helps others find it.
+
 ## License
 
 Apache License 2.0. See [LICENSE](https://github.com/Ayberkrk/timoshenko/blob/main/LICENSE).
