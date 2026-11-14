@@ -27,7 +27,7 @@
 | src/timoshenko/polygon.py        |      190 |       21 |     89% |107, 116, 133, 141, 143, 149, 164, 185, 189, 194, 208, 211, 217-218, 220, 222, 231, 233-234, 238, 240 |
 | src/timoshenko/postgres.py       |      201 |       43 |     79% |46, 49, 53-54, 88, 181-182, 185, 189, 218, 229, 276, 357, 371, 379, 392-395, 406, 427, 437-459, 462-468, 473-490 |
 | src/timoshenko/pressure.py       |       15 |        0 |    100% |           |
-| src/timoshenko/project.py        |      152 |       20 |     87% |98, 101, 107, 120, 123, 126, 129-130, 135, 141, 146, 153, 157, 162, 165, 170, 202, 231, 236, 240 |
+| src/timoshenko/project.py        |      152 |        2 |     99% |  236, 240 |
 | src/timoshenko/report.py         |       81 |        6 |     93% |14, 21, 32, 120, 135, 139 |
 | src/timoshenko/sections.py       |       79 |        4 |     95% |96, 122, 142, 147 |
 | src/timoshenko/sensors.py        |       93 |        0 |    100% |           |
@@ -44,7 +44,7 @@
 | src/timoshenko/uncertainty.py    |      172 |        7 |     96% |127-128, 180, 185, 215-216, 232 |
 | src/timoshenko/update.py         |       22 |        3 |     86% |24, 26, 41 |
 | src/timoshenko/vibration.py      |       83 |        9 |     89% |22, 57, 61, 93, 102, 108, 132, 148, 151 |
-| **TOTAL**                        | **5022** |  **417** | **92%** |           |
+| **TOTAL**                        | **5022** |  **399** | **92%** |           |
 
 
 ## Setup coverage badge
