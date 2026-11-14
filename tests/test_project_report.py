@@ -94,6 +94,144 @@ def test_manifest_validation(tmp_path, mutate):
         tm.read_manifest(path)
 
 
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda m: m.update(project=[]), r"project\.id must be a non-empty string"),
+        (lambda m: m["project"].update(id=" \t"), r"project\.id must be a non-empty string"),
+        (lambda m: m.update(observations=[]), "observations must be a JSON object"),
+        (
+            lambda m: m["observations"].update(file=" "),
+            r"observations\.file must be a non-empty path",
+        ),
+        (lambda m: m["observations"].update(file="data.txt"), "support CSV observations"),
+        (
+            lambda m: m["observations"].pop("sampling_hz"),
+            r"sampling_hz must be a finite positive number",
+        ),
+        (
+            lambda m: m["observations"].update(channels=[]),
+            r"observations\.channels must be a non-empty list",
+        ),
+        (
+            lambda m: m["observations"].update(channels={}),
+            r"observations\.channels must be a non-empty list",
+        ),
+        (
+            lambda m: m["observations"].update(channels=["acc"]),
+            r"observations\.channels\[0\] must be an object",
+        ),
+        (
+            lambda m: m["observations"]["channels"][0].update(column=" "),
+            r"channels\[0\] needs non-empty column, id, and unit",
+        ),
+        (
+            lambda m: m["observations"]["channels"][0].update(id=" "),
+            r"channels\[0\] needs non-empty column, id, and unit",
+        ),
+        (
+            lambda m: m["observations"]["channels"][0].update(unit=" "),
+            r"channels\[0\] needs non-empty column, id, and unit",
+        ),
+        (
+            lambda m: m["observations"]["channels"].append({"column": "acc", "id": "other"}),
+            "channel columns and ids must each be unique",
+        ),
+        (
+            lambda m: m["observations"].update(
+                channels=[{"column": "a", "id": "same"}, {"column": "b", "id": "same"}]
+            ),
+            "channel columns and ids must each be unique",
+        ),
+        (lambda m: m.update(analysis=[]), "analysis must be a JSON object"),
+        (
+            lambda m: m["analysis"].update(method="unknown"),
+            r"analysis\.method must be 'peak_picking' or 'fdd'",
+        ),
+        (lambda m: m["analysis"].update(options=[]), r"analysis\.options must be a JSON object"),
+    ],
+    ids=[
+        "project-object",
+        "blank-project-id",
+        "observations-object",
+        "blank-file",
+        "non-csv-file",
+        "missing-sampling",
+        "empty-channels",
+        "channels-object",
+        "channel-object",
+        "blank-column",
+        "blank-channel-id",
+        "blank-unit",
+        "duplicate-column",
+        "duplicate-channel-id",
+        "analysis-object",
+        "unknown-method",
+        "options-object",
+    ],
+)
+def test_manifest_rejects_invalid_fields(tmp_path, mutate, message):
+    path, _ = write_project(tmp_path)
+    manifest = json.loads(path.read_text())
+    mutate(manifest)
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=message):
+        tm.read_manifest(path)
+
+
+@pytest.mark.parametrize("sampling_hz", [None, "invalid", "nan", "inf", "-inf", 0, -1])
+def test_manifest_rejects_invalid_sampling_rate(tmp_path, sampling_hz):
+    path, _ = write_project(tmp_path)
+    manifest = json.loads(path.read_text())
+    manifest["observations"]["sampling_hz"] = sampling_hz
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(
+        ValueError, match=r"observations\.sampling_hz must be a finite positive number"
+    ):
+        tm.read_manifest(path)
+
+
+def test_manifest_rejects_non_json_extension(tmp_path):
+    path = tmp_path / "project.txt"
+    path.write_text("{}")
+    with pytest.raises(ValueError, match=r"project manifests must use the \.json extension"):
+        tm.read_manifest(path)
+
+
+@pytest.mark.parametrize("payload", [[], None, "project", 1])
+def test_manifest_rejects_non_object_root(tmp_path, payload):
+    path = tmp_path / "project.json"
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="project manifest root must be a JSON object"):
+        tm.read_manifest(path)
+
+
+def test_manifest_rejects_peak_picking_with_multiple_channels(tmp_path):
+    path, _ = write_project(tmp_path, channels=("a", "b"))
+    manifest = json.loads(path.read_text())
+    manifest["analysis"]["method"] = "peak_picking"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="peak_picking requires exactly one channel; use fdd"):
+        tm.read_manifest(path)
+
+
+def test_load_project_rejects_missing_observation_file(tmp_path):
+    path, _ = write_project(tmp_path)
+    manifest = json.loads(path.read_text())
+    manifest["observations"]["file"] = "missing.csv"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(FileNotFoundError, match=r"observation CSV not found: .*missing\.csv"):
+        tm.load_project(path)
+
+
+def test_run_project_rejects_invalid_input():
+    with pytest.raises(
+        TypeError,
+        match=r"project must be a manifest path or LoadedProject from tm\.load_project\(\)",
+    ):
+        tm.run_project(object())
+
+
 def test_report_escapes_user_text_and_lists_limits(tmp_path):
     manifest, _ = write_project(tmp_path)
     result = tm.run_project(manifest)
