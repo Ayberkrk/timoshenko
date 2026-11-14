@@ -31,6 +31,23 @@ records, and nonstationary operating conditions can produce missed or
 spurious stable poles. To bound temporary memory, `block_rows * channel_count`
 cannot exceed 1024. No automatic environmental correction is applied.
 
+## Runnable synthetic SSI example
+
+Run `python examples/ssi_identification.py` from an installed checkout. It
+builds a three-story shear model and mixes independently excited, damped
+AR(2) modal oscillators through that model's eigenvectors to produce three
+synthetic displacement channels in metres. A fixed seed, discarded startup
+transient and small sensor noise make the example reproducible, not measured
+data. The 512-second record is simulated in memory; no real-time wait is needed.
+
+The script prints each model frequency, SSI frequency, relative error, and
+model/estimated damping ratio. It requires all three stable modes and less
+than 2% frequency error, so the existing example runner also checks this
+numerical acceptance condition. The small order set `(6, 12, 18, 24)` keeps
+runtime short. Damping remains a finite-record estimate, not an exact
+acceptance criterion. The example does not validate field instrumentation,
+real-building damping, or structural safety.
+
 ## EFDD damping estimate
 
 `identify_fdd(..., estimate_damping=True)` selects the singular-value bell

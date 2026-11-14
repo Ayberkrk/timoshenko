@@ -6,6 +6,9 @@ change is listed here.
 
 ## Unreleased
 
+- Added a runnable synthetic SSI-COV example comparing three shear-building
+  frequencies and damping estimates with the generating modal model.
+
 - Added covariance-driven SSI, optional EFDD damping and calibrated timestamp
   alignment for asynchronous multi-channel records.
 - Added linear 3D truss/frame analyses and Newmark time-history response for
