@@ -160,20 +160,20 @@ def test_3d_member_orientation_and_model_validation():
     assert FrameMaterial3D(200e9, 77e9, poisson_ratio=0.2987).poisson_ratio == pytest.approx(0.2987)
     with pytest.raises(ValueError, match="inconsistent"):
         FrameMaterial3D(200e9, 77e9, poisson_ratio=0.25)
-    with pytest.raises(ValueError, match="parallel"):
-        model = StructuralModel3D(
-            nodes=(FrameNode3D(0, 0, 0), FrameNode3D(1, 0, 0)),
-            members=(
-                FrameMember3D(
-                    0,
-                    1,
-                    FrameMaterial3D(10, 5),
-                    FrameSection3D(1, 1, 1, 1),
-                    local_y_reference=(1, 0, 0),
-                ),
+    model = StructuralModel3D(
+        nodes=(FrameNode3D(0, 0, 0), FrameNode3D(1, 0, 0)),
+        members=(
+            FrameMember3D(
+                0,
+                1,
+                FrameMaterial3D(10, 5),
+                FrameSection3D(1, 1, 1, 1),
+                local_y_reference=(1, 0, 0),
             ),
-            restraints=((True,) * 6, (True,) * 6),
-        )
+        ),
+        restraints=((True,) * 6, (True,) * 6),
+    )
+    with pytest.raises(ValueError, match="parallel"):
         assemble_matrices_3d(model)
     with pytest.raises(ValueError, match="six-boolean"):
         StructuralModel3D(
