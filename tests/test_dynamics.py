@@ -89,3 +89,17 @@ def test_initial_conditions_on_restrained_dofs_are_rejected(parameter, message):
 def test_rejects_model_that_is_not_a_structural_model():
     with pytest.raises(TypeError, match="model must be a StructuralModel or StructuralModel3D"):
         analyze_time_history("not a model", [0.0, 0.1])
+
+
+@pytest.mark.parametrize("stiffness_damping", [-1.0, float("nan"), float("inf")])
+def test_rejects_negative_or_non_finite_rayleigh_stiffness(stiffness_damping):
+    model, _, _ = axial_oscillator()
+    with pytest.raises(
+        ValueError, match="rayleigh_stiffness_s must be finite and non-negative"
+    ):
+        analyze_time_history(
+            model,
+            [0.0, 0.1],
+            rayleigh_mass_per_s=0.0,
+            rayleigh_stiffness_s=stiffness_damping,
+        )
