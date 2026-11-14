@@ -5,11 +5,11 @@
 | Name                             |    Stmts |     Miss |   Cover |   Missing |
 |--------------------------------- | -------: | -------: | ------: | --------: |
 | src/timoshenko/\_\_init\_\_.py   |       44 |        0 |    100% |           |
-| src/timoshenko/\_spectral.py     |       22 |        4 |     82% |18, 23, 28, 31 |
+| src/timoshenko/\_spectral.py     |       22 |        1 |     95% |        31 |
 | src/timoshenko/\_validation.py   |       12 |        0 |    100% |           |
 | src/timoshenko/adapters.py       |       68 |        0 |    100% |           |
 | src/timoshenko/alignment.py      |      162 |       17 |     90% |39, 41, 45, 78, 124, 128, 130, 133, 140, 147, 153, 164, 181, 190, 222-223, 233 |
-| src/timoshenko/assets.py         |       41 |        7 |     83% |19, 21, 28, 49, 51, 53, 60 |
+| src/timoshenko/assets.py         |       41 |        0 |    100% |           |
 | src/timoshenko/beams.py          |       39 |        0 |    100% |           |
 | src/timoshenko/csv\_source.py    |      125 |        1 |     99% |        41 |
 | src/timoshenko/dynamics.py       |      141 |       17 |     88% |63, 76, 106, 110, 113, 119, 126, 128, 131, 144, 148, 152, 156, 164-165, 183-184 |
@@ -33,7 +33,7 @@
 | src/timoshenko/sensors.py        |       93 |        0 |    100% |           |
 | src/timoshenko/sensorthings.py   |      179 |        2 |     99% |     68-69 |
 | src/timoshenko/session.py        |      247 |       21 |     91% |36, 68, 90, 130, 142, 144, 150, 152, 154, 156, 160, 227, 240, 244, 257, 286, 340, 360, 365, 369, 388 |
-| src/timoshenko/shafts.py         |       23 |        1 |     96% |        44 |
+| src/timoshenko/shafts.py         |       23 |        0 |    100% |           |
 | src/timoshenko/ssi.py            |      188 |       18 |     90% |28, 62, 106, 111, 117, 123, 129, 131, 133, 135, 139, 144, 149, 151, 186, 219, 264, 321 |
 | src/timoshenko/stability.py      |       17 |        0 |    100% |           |
 | src/timoshenko/storage.py        |      210 |        1 |     99% |       544 |
@@ -42,9 +42,9 @@
 | src/timoshenko/structural\_3d.py |      353 |       43 |     88% |22, 53, 89, 93, 96, 100, 116, 123, 138, 142, 144, 149, 154, 158-160, 180, 191, 204, 220, 292, 300-301, 310, 360, 362, 364, 368-369, 383, 388-389, 395, 403, 417-418, 440, 449-452, 481-482 |
 | src/timoshenko/structure.py      |       63 |        3 |     95% |44, 53, 59 |
 | src/timoshenko/uncertainty.py    |      172 |        7 |     96% |127-128, 180, 185, 215-216, 232 |
-| src/timoshenko/update.py         |       22 |        3 |     86% |24, 26, 41 |
-| src/timoshenko/vibration.py      |       83 |        9 |     89% |22, 57, 61, 93, 102, 108, 132, 148, 151 |
-| **TOTAL**                        | **5022** |  **399** | **92%** |           |
+| src/timoshenko/update.py         |       22 |        0 |    100% |           |
+| src/timoshenko/vibration.py      |       83 |        2 |     98% |   57, 132 |
+| **TOTAL**                        | **5022** |  **378** | **92%** |           |
 
 
 ## Setup coverage badge
