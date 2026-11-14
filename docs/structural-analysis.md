@@ -179,6 +179,18 @@ result = tm.analyze_linear_static(model)
 text = json.dumps(result.to_dict())
 ```
 
+## Synthetic earthquake base excitation
+
+Run `python examples/time_history_base_excitation.py` for a fixed-base,
+two-storey portal driven horizontally by a synthetic acceleration pulse.
+It fits 5% Rayleigh damping at the first two natural frequencies and prints
+the peak **relative** roof displacement and the sum of the horizontal support
+reactions (base shear). A slow-ramp check compares the roof displacement with
+the static inertia load `-M*r*a_g`, within 1%. Only NumPy and the core package
+are required; no records are downloaded. Members are massless, floor masses
+are lumped at the nodes, and the model is linear elastic. This is an offline
+numerical example, not a measured earthquake or a safety assessment.
+
 ## Scope and checks
 
 The initial solver covers small-displacement, linear-elastic, planar trusses
