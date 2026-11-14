@@ -45,11 +45,11 @@ def test_two_story_nonuniform_matches_characteristic_equation():
 
 
 def test_structure_validation():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must have the same non-zero length"):
         tm.Structure([1.0, 2.0], [1.0])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="story stiffnesses must be finite positive"):
         tm.Structure([1.0], [-1.0])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="reference_frequencies_hz cannot contain more entries"):
         tm.Structure([1.0], [1.0], reference_frequencies_hz=(1.0, 2.0))
 
 
@@ -135,7 +135,7 @@ def test_peak_picking_flags_constant_signal():
 
 
 def test_peak_picking_rejects_bad_bounds():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="frequency bounds.*max greater than min"):
         tm.modal.identify(sine_record([2.0], [1.0]), min_frequency_hz=5.0, max_frequency_hz=4.0)
 
 
@@ -173,13 +173,13 @@ def test_fdd_interpolates_a_tone_between_fft_bins():
 
 def test_fdd_rejects_mixed_units_and_single_segment():
     samples = np.random.default_rng(0).standard_normal((64, 2))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="FDD requires channels with the same measurement unit"):
         tm.identify_fdd(
             tm.MultiChannelData(
                 samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "m/s^2"]
             )
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="at least two overlapping FFT segments are required"):
         tm.identify_fdd(
             tm.MultiChannelData(
                 samples, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "g"]
@@ -295,16 +295,16 @@ def test_load_sensors_csv_json_and_array(tmp_path):
     from_array = tm.load_sensors([i * 0.5 for i in range(10)], sampling_hz=20.0)
     assert from_csv.samples == from_json.samples == from_array.samples
     assert from_csv.channel == "acc"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="sampling_hz is required"):
         tm.load_sensors(csv_path)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="CSV column 'missing' not found"):
         tm.load_sensors(csv_path, sampling_hz=20.0, column="missing")
 
 
 def test_multichannel_csv_rejects_blank_cells(tmp_path):
     path = tmp_path / "mc.csv"
     path.write_text("a,b\n" + "".join(f"{i},{i}\n" for i in range(9)) + "1,\n")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="CSV row 11 has a missing/non-numeric value in 'b'"):
         tm.load_multichannel_csv(path, columns=["a", "b"], sampling_hz=10.0)
 
 
@@ -313,7 +313,7 @@ def test_multichannel_data_is_read_only_copy():
     data = tm.MultiChannelData(source, sampling_hz=10.0, channel_ids=["a", "b"], units=["g", "g"])
     source[0, 0] = 99.0
     assert data.samples[0, 0] == 0.0
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="assignment destination is read-only"):
         data.samples[0, 0] = 1.0
 
 
@@ -326,7 +326,7 @@ def test_load_sensors_rejects_blank_samples_instead_of_dropping_them(tmp_path):
         tm.load_sensors(path, sampling_hz=100.0)
     wide = tmp_path / "wide.csv"
     wide.write_text("t,value\n0,1.0\n1,\n2,3.0\n" + "".join(f"{i},{i}\n" for i in range(3, 10)))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="sensor input line 3 is not numeric"):
         tm.load_sensors(wide, sampling_hz=10.0)
 
 
@@ -398,7 +398,9 @@ def test_review_flag_needs_a_threshold():
     )
     assert flagged.review_recommended
     assert flagged.to_dict()["review_threshold_pct"] == 5.0
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="review_threshold_pct must be finite and greater than zero"
+    ):
         tm.health.assess(
             structure=structure,
             observations=sine_record([damaged], [1.0]),

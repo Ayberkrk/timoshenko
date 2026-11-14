@@ -123,7 +123,7 @@ def test_runner_ingests_acknowledges_and_closes():
 
 def test_runner_closes_source_on_read_error_and_early_exit():
     failing = ListSource([], fail_at=0)
-    with pytest.raises(OSError), tm.SessionRunner(failing, session()) as runner:
+    with pytest.raises(OSError, match="link down"), tm.SessionRunner(failing, session()) as runner:
         list(runner)
     assert failing.closed == 1
     partial = ListSource([obs_batch(0, 8, "b1"), obs_batch(8, 8, "b2")])
@@ -424,11 +424,11 @@ def test_mqtt_queue_overflow_is_not_silent():
 
 
 def test_mqtt_configuration_validation():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="topic filters are not accepted"):
         tm.MqttObservationSource(host="b", topic="site/#", client_id="c")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="a stable client_id is required"):
         tm.MqttObservationSource(host="b", topic="t")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="username is required when password is supplied"):
         tm.MqttObservationSource(host="b", topic="t", client_id="c", password="x")
 
 

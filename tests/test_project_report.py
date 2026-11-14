@@ -75,22 +75,28 @@ def test_project_multichannel_uses_fdd_and_can_be_stored(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "mutate",
+    ("mutate", "message"),
     [
-        lambda m: m.update(schema_version="2"),
-        lambda m: m["structure"].update(type="frame"),
-        lambda m: m["analysis"].update(options={"nperseg": 256}),
-        lambda m: m["analysis"].update(method="fdd"),
-        lambda m: m["observations"].update(sampling_hz=0),
+        (lambda m: m.update(schema_version="2"), "unsupported schema_version"),
+        (lambda m: m["structure"].update(type="frame"), "supports structure.type='shear_building'"),
+        (
+            lambda m: m["analysis"].update(options={"nperseg": 256}),
+            "unsupported analysis options for peak_picking",
+        ),
+        (lambda m: m["analysis"].update(method="fdd"), "fdd requires at least two channels"),
+        (
+            lambda m: m["observations"].update(sampling_hz=0),
+            "observations.sampling_hz must be a finite positive number",
+        ),
     ],
     ids=["schema", "structure-type", "option-for-method", "fdd-one-channel", "sampling"],
 )
-def test_manifest_validation(tmp_path, mutate):
+def test_manifest_validation(tmp_path, mutate, message):
     path, _ = write_project(tmp_path)
     manifest = json.loads(path.read_text())
     mutate(manifest)
     path.write_text(json.dumps(manifest))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         tm.read_manifest(path)
 
 

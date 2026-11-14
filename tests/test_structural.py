@@ -1061,16 +1061,28 @@ def test_triangular_truss_and_portal_frame_assemble_global_equilibrium():
 
 
 @pytest.mark.parametrize(
-    "factory",
+    ("factory", "message"),
     [
-        lambda: tm.FrameMaterial(0.0, G),
-        lambda: tm.FrameSection(AREA, 0.0),
-        lambda: tm.FrameSection(AREA, INERTIA, 0.0),
-        lambda: tm.FrameMember(0, 0, MATERIAL, SECTION),
+        (
+            lambda: tm.FrameMaterial(0.0, G),
+            "youngs_modulus_pa must be finite and greater than zero",
+        ),
+        (
+            lambda: tm.FrameSection(AREA, 0.0),
+            "second_moment_local_z_m4 must be finite and greater than zero",
+        ),
+        (
+            lambda: tm.FrameSection(AREA, INERTIA, 0.0),
+            "shear_area_local_y_m2 must be finite and greater than zero",
+        ),
+        (
+            lambda: tm.FrameMember(0, 0, MATERIAL, SECTION),
+            "a frame member must connect two different nodes",
+        ),
     ],
 )
-def test_frame_component_dimensions_are_validated(factory):
-    with pytest.raises(ValueError):
+def test_frame_component_dimensions_are_validated(factory, message):
+    with pytest.raises(ValueError, match=message):
         factory()
 
 
