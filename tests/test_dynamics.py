@@ -84,3 +84,8 @@ def test_initial_conditions_on_restrained_dofs_are_rejected(parameter, message):
     options = {parameter: np.asarray([1.0, 0.0, 0.0, 0.0, 0.0, 0.0])}
     with pytest.raises(ValueError, match=message):
         analyze_time_history(model, [0.0, 0.1], **options)
+
+
+def test_rejects_model_that_is_not_a_structural_model():
+    with pytest.raises(TypeError, match="model must be a StructuralModel or StructuralModel3D"):
+        analyze_time_history("not a model", [0.0, 0.1])
