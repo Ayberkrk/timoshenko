@@ -30,6 +30,9 @@ change is listed here.
 
 **Added**
 
+- Synthetic earthquake base-excitation example for a two-storey portal with
+  Rayleigh damping, roof displacement, base shear and a quasi-static check.
+
 - JSON-ready `to_dict()` methods on the closed-form beam, pressure, shaft,
   strength, vibration and section-property result classes.
 - Multi-channel FDD example `examples/multichannel_fdd.py`: a synthetic
