@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/timoshenko/model_update.py: 84%</title>
+    <title>Coverage for src/timoshenko/model_update.py: 98%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_54cfdca1.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src<span class="sep">/</span>timoshenko<span class="sep">/</span>model_update.py</b>:
-            <span class="pc_cov">84%</span>
+            <span class="pc_cov">98%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">91 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">76<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">15<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">89<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">2<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_806970307e7ac7c3_monitor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-14 07:45 +0000
+            created at 2026-11-14 13:37 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -137,7 +137,7 @@
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    not perform mode pairing or use mode shapes.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">structure</span><span class="op">,</span> <span class="nam">Structure</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">        <span class="key">raise</span> <span class="nam">TypeError</span><span class="op">(</span><span class="str">&quot;structure must be a timoshenko.Structure&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">        <span class="key">raise</span> <span class="nam">TypeError</span><span class="op">(</span><span class="str">&quot;structure must be a timoshenko.Structure&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">observed</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">asarray</span><span class="op">(</span><span class="nam">tuple</span><span class="op">(</span><span class="nam">measured_frequencies_hz</span><span class="op">)</span><span class="op">,</span> <span class="nam">dtype</span><span class="op">=</span><span class="nam">float</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="key">if</span> <span class="nam">observed</span><span class="op">.</span><span class="nam">shape</span> <span class="op">!=</span> <span class="op">(</span><span class="nam">structure</span><span class="op">.</span><span class="nam">story_count</span><span class="op">,</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">&quot;measured_frequencies_hz must contain one value per story mode&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -153,10 +153,10 @@
     <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">        <span class="key">or</span> <span class="nam">int</span><span class="op">(</span><span class="nam">maximum_iterations</span><span class="op">)</span> <span class="op">!=</span> <span class="nam">maximum_iterations</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">        <span class="key">or</span> <span class="nam">maximum_iterations</span> <span class="op">&lt;</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">&quot;maximum_iterations must be a positive integer&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">&quot;maximum_iterations must be a positive integer&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">tolerance_value</span> <span class="op">=</span> <span class="nam">float</span><span class="op">(</span><span class="nam">tolerance</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">math</span><span class="op">.</span><span class="nam">isfinite</span><span class="op">(</span><span class="nam">tolerance_value</span><span class="op">)</span> <span class="key">or</span> <span class="nam">tolerance_value</span> <span class="op">&lt;=</span> <span class="num">0.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">&quot;tolerance must be finite and positive&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">&quot;tolerance must be finite and positive&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">initial</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">asarray</span><span class="op">(</span><span class="nam">structure</span><span class="op">.</span><span class="nam">story_stiffness_n_m</span><span class="op">,</span> <span class="nam">dtype</span><span class="op">=</span><span class="nam">float</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">log_scale</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">zeros</span><span class="op">(</span><span class="nam">structure</span><span class="op">.</span><span class="nam">story_count</span><span class="op">,</span> <span class="nam">dtype</span><span class="op">=</span><span class="nam">float</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -202,12 +202,12 @@
     <p class="run"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">        <span class="nam">diagonal</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">maximum</span><span class="op">(</span><span class="nam">np</span><span class="op">.</span><span class="nam">diag</span><span class="op">(</span><span class="nam">normal</span><span class="op">)</span><span class="op">,</span> <span class="num">1.0</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">            <span class="nam">delta</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">linalg</span><span class="op">.</span><span class="nam">solve</span><span class="op">(</span><span class="nam">normal</span> <span class="op">+</span> <span class="nam">damping</span> <span class="op">*</span> <span class="nam">np</span><span class="op">.</span><span class="nam">diag</span><span class="op">(</span><span class="nam">diagonal</span><span class="op">)</span><span class="op">,</span> <span class="op">-</span><span class="nam">gradient</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="key">except</span> <span class="nam">np</span><span class="op">.</span><span class="nam">linalg</span><span class="op">.</span><span class="nam">LinAlgError</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">            <span class="nam">damping</span> <span class="op">*=</span> <span class="num">10.0</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="key">if</span> <span class="nam">damping</span> <span class="op">&gt;</span> <span class="num">1e12</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">                <span class="nam">iterations</span> <span class="op">=</span> <span class="nam">iteration</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">            <span class="key">continue</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">        <span class="key">except</span> <span class="nam">np</span><span class="op">.</span><span class="nam">linalg</span><span class="op">.</span><span class="nam">LinAlgError</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">            <span class="nam">damping</span> <span class="op">*=</span> <span class="num">10.0</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">            <span class="key">if</span> <span class="nam">damping</span> <span class="op">&gt;</span> <span class="num">1e12</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">                <span class="nam">iterations</span> <span class="op">=</span> <span class="nam">iteration</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">            <span class="key">continue</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">        <span class="nam">candidate_parameters</span> <span class="op">=</span> <span class="nam">log_scale</span> <span class="op">+</span> <span class="nam">delta</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">        <span class="nam">candidate_residual</span> <span class="op">=</span> <span class="nam">residual</span><span class="op">(</span><span class="nam">candidate_parameters</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">        <span class="key">if</span> <span class="nam">float</span><span class="op">(</span><span class="nam">candidate_residual</span> <span class="op">@</span> <span class="nam">candidate_residual</span><span class="op">)</span> <span class="op">&lt;</span> <span class="nam">float</span><span class="op">(</span><span class="nam">current</span> <span class="op">@</span> <span class="nam">current</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -221,10 +221,10 @@
     <p class="mis show_mis"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">                <span class="nam">converged</span> <span class="op">=</span> <span class="key">True</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">        <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">            <span class="nam">damping</span> <span class="op">*=</span> <span class="num">10.0</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">            <span class="nam">iterations</span> <span class="op">=</span> <span class="nam">iteration</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">            <span class="key">if</span> <span class="nam">damping</span> <span class="op">&gt;</span> <span class="num">1e12</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">            <span class="nam">damping</span> <span class="op">*=</span> <span class="num">10.0</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">            <span class="nam">iterations</span> <span class="op">=</span> <span class="nam">iteration</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">            <span class="key">if</span> <span class="nam">damping</span> <span class="op">&gt;</span> <span class="num">1e12</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">                <span class="key">break</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="nam">fitted</span> <span class="op">=</span> <span class="nam">predict</span><span class="op">(</span><span class="nam">log_scale</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">    <span class="nam">scales</span> <span class="op">=</span> <span class="nam">np</span><span class="op">.</span><span class="nam">exp</span><span class="op">(</span><span class="nam">log_scale</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -261,7 +261,7 @@
             <a class="nav" href="z_806970307e7ac7c3_monitor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-14 07:45 +0000
+            created at 2026-11-14 13:37 +0000
         </p>
     </div>
 </footer>

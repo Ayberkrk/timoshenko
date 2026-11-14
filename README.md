@@ -13,11 +13,11 @@
 | src/timoshenko/beams.py          |       39 |        0 |    100% |           |
 | src/timoshenko/csv\_source.py    |      125 |        1 |     99% |        41 |
 | src/timoshenko/dynamics.py       |      141 |       17 |     88% |63, 76, 106, 110, 113, 119, 126, 128, 131, 144, 148, 152, 156, 164-165, 183-184 |
-| src/timoshenko/environmental.py  |       79 |       13 |     84% |41, 43, 45, 49, 51, 55, 57, 71, 75, 77, 113, 115, 117 |
+| src/timoshenko/environmental.py  |       79 |        0 |    100% |           |
 | src/timoshenko/health.py         |       66 |        5 |     92% |95, 97, 104, 106, 136 |
 | src/timoshenko/mechanics.py      |       26 |        1 |     96% |        45 |
 | src/timoshenko/modal.py          |      128 |        5 |     96% |76, 214, 216, 265, 269 |
-| src/timoshenko/model\_update.py  |       91 |       15 |     84% |58, 74, 77, 123-128, 139-145 |
+| src/timoshenko/model\_update.py  |       91 |        2 |     98% |   139-140 |
 | src/timoshenko/monitor.py        |       26 |        0 |    100% |           |
 | src/timoshenko/mqtt.py           |      202 |        7 |     97% |115-121, 257-258 |
 | src/timoshenko/multichannel.py   |       80 |        0 |    100% |           |
@@ -44,7 +44,7 @@
 | src/timoshenko/uncertainty.py    |      172 |        7 |     96% |127-128, 180, 185, 215-216, 232 |
 | src/timoshenko/update.py         |       22 |        0 |    100% |           |
 | src/timoshenko/vibration.py      |       83 |        2 |     98% |   57, 132 |
-| **TOTAL**                        | **5022** |  **378** | **92%** |           |
+| **TOTAL**                        | **5022** |  **352** | **93%** |           |
 
 
 ## Setup coverage badge
