@@ -427,15 +427,16 @@ def test_recover_member_response_validates_member_and_analysis_type():
         tm.recover_member_response(model, result, 1, (0.0,))
     with pytest.raises(ValueError, match="must not exceed"):
         tm.recover_member_response(model, result, 0, (3.1,))
+    truss = tm.StructuralModel(
+        nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(1.0, 0.0)),
+        members=(tm.AxialMember(0, 1, E, AREA),),
+        restraints=((True, True, True), (False, True, True)),
+    )
+    truss_result = tm.analyze_linear_static(truss)
     with pytest.raises(TypeError, match="FrameMember"):
-        truss = tm.StructuralModel(
-            nodes=(tm.FrameNode(0.0, 0.0), tm.FrameNode(1.0, 0.0)),
-            members=(tm.AxialMember(0, 1, E, AREA),),
-            restraints=((True, True, True), (False, True, True)),
-        )
-        tm.recover_member_response(truss, tm.analyze_linear_static(truss), 0, (0.0,))
+        tm.recover_member_response(truss, truss_result, 0, (0.0,))
+    p_delta = tm.analyze_p_delta(model)
     with pytest.raises(ValueError, match="first-order"):
-        p_delta = tm.analyze_p_delta(model)
         tm.recover_member_response(model, p_delta, 0, (0.0,))
 
 
