@@ -1,4 +1,5 @@
 import math
+import re
 
 import numpy as np
 import pytest
@@ -84,3 +85,57 @@ def test_initial_conditions_on_restrained_dofs_are_rejected(parameter, message):
     options = {parameter: np.asarray([1.0, 0.0, 0.0, 0.0, 0.0, 0.0])}
     with pytest.raises(ValueError, match=message):
         analyze_time_history(model, [0.0, 0.1], **options)
+
+
+def test_rejects_model_that_is_not_a_structural_model():
+    with pytest.raises(TypeError, match="model must be a StructuralModel or StructuralModel3D"):
+        analyze_time_history("not a model", [0.0, 0.1])
+
+
+@pytest.mark.parametrize("stiffness_damping", [-1.0, float("nan"), float("inf")])
+def test_rejects_negative_or_non_finite_rayleigh_stiffness(stiffness_damping):
+    model, _, _ = axial_oscillator()
+    with pytest.raises(ValueError, match="rayleigh_stiffness_s must be finite and non-negative"):
+        analyze_time_history(
+            model,
+            [0.0, 0.1],
+            rayleigh_mass_per_s=0.0,
+            rayleigh_stiffness_s=stiffness_damping,
+        )
+
+
+@pytest.mark.parametrize("direction", ["z", "theta"])
+def test_rejects_invalid_direction_with_base_acceleration(direction):
+    model, _, _ = axial_oscillator()
+    # re.escape stops pytest from reading the square brackets in the message as a regex.
+    message = re.escape("direction must be one of ['x', 'y']")
+    with pytest.raises(ValueError, match=message):
+        analyze_time_history(
+            model, [0.0, 0.1], base_acceleration_m_s2=[0.0, 0.0], direction=direction
+        )
+
+
+@pytest.mark.parametrize(
+    "ground",
+    [
+        [0.0],
+        [0.0, 0.0, 0.0],
+        [0.0, float("nan")],
+        [0.0, float("inf")],
+    ],
+)
+def test_rejects_base_acceleration_with_wrong_length_or_non_finite_values(ground):
+    model, _, _ = axial_oscillator()
+    with pytest.raises(
+        ValueError, match="base_acceleration_m_s2 must have one finite value per time step"
+    ):
+        analyze_time_history(model, [0.0, 0.1], base_acceleration_m_s2=ground, direction="x")
+
+
+@pytest.mark.parametrize("direction", ["z", "theta"])
+def test_rejects_invalid_direction_without_base_acceleration(direction):
+    model, _, _ = axial_oscillator()
+    with pytest.raises(
+        ValueError, match="direction must name a translational axis supported by the model"
+    ):
+        analyze_time_history(model, [0.0, 0.1], direction=direction)
