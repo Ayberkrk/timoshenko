@@ -5,7 +5,14 @@ import numpy as np
 import pytest
 
 from timoshenko.dynamics import analyze_time_history
-from timoshenko.structural import AxialMember, FrameNode, StructuralModel
+from timoshenko.structural import (
+    AxialMember,
+    FrameMaterial,
+    FrameMember,
+    FrameNode,
+    FrameSection,
+    StructuralModel,
+)
 
 
 def axial_oscillator():
@@ -139,3 +146,47 @@ def test_rejects_invalid_direction_without_base_acceleration(direction):
         ValueError, match="direction must name a translational axis supported by the model"
     ):
         analyze_time_history(model, [0.0, 0.1], direction=direction)
+
+
+def cantilever(*, release_tip_rotation):
+    # One 1 m frame member, fixed at node 0. EI = 3 N*m^2, mass 1 kg/m.
+    member = FrameMember(
+        0,
+        1,
+        FrameMaterial(youngs_modulus_pa=3.0, shear_modulus_pa=1.0),
+        FrameSection(area_m2=1.0, second_moment_local_z_m4=1.0),
+        mass_per_length_kg_m=1.0,
+        release_rotation_j=release_tip_rotation,
+    )
+    return StructuralModel(
+        nodes=(FrameNode(0.0, 0.0), FrameNode(1.0, 0.0)),
+        members=(member,),
+        restraints=((True, True, True), (False, False, False)),
+    )
+
+
+def test_released_member_end_matches_unreleased_cantilever_and_static_deflection():
+    # A rotation release at the free tip of a cantilever changes nothing physically:
+    # the member end still rotates freely. The solver stores that rotation on an
+    # extra internal DOF, so loads must be padded with a zero column for it.
+    released = cantilever(release_tip_rotation=True)
+    reference = cantilever(release_tip_rotation=False)
+    times = np.linspace(0.0, 20.0, 2001)
+    loads = np.zeros((len(times), 6))
+    loads[:, 4] = 1.0  # constant 1 N tip force in +y (node 1, DOF uy)
+    options = {"force_history_n": loads, "rayleigh_mass_per_s": 2.0}
+
+    result = analyze_time_history(released, times, **options)
+    expected = analyze_time_history(reference, times, **options)
+
+    displacements = np.asarray(result.displacements)
+    assert displacements.shape == (len(times), 2, 3)
+    # Tip translations (ux, uy) match the unreleased model at every time step.
+    np.testing.assert_allclose(
+        displacements[:, 1, :2],
+        np.asarray(expected.displacements)[:, 1, :2],
+        rtol=1e-9,
+        atol=1e-12,
+    )
+    # Damping lets the step response settle to the static cantilever deflection.
+    assert displacements[-1, 1, 1] == pytest.approx(1.0 / (3.0 * 3.0), rel=1e-6)
