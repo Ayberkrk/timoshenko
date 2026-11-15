@@ -190,3 +190,48 @@ def test_released_member_end_matches_unreleased_cantilever_and_static_deflection
     )
     # Damping lets the step response settle to the static cantilever deflection.
     assert displacements[-1, 1, 1] == pytest.approx(1.0 / (3.0 * 3.0), rel=1e-6)
+
+
+@pytest.mark.parametrize("parameter", ["initial_displacements_m", "initial_velocities_m_s"])
+@pytest.mark.parametrize(
+    "values",
+    [
+        [0.0, 0.0, 0.0, 0.0, 0.0],  # 5 values instead of 6
+        [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],  # 2D shape (1, 6)
+        [0.0, 0.0, 0.0, float("nan"), 0.0, 0.0],
+        [0.0, 0.0, 0.0, float("inf"), 0.0, 0.0],
+    ],
+)
+def test_rejects_initial_conditions_with_wrong_shape_or_non_finite_values(parameter, values):
+    model, _, _ = axial_oscillator()
+    # re.escape stops pytest from reading "(6,)" in the message as a regex group.
+    message = re.escape(f"{parameter} must have shape (6,)")
+    with pytest.raises(ValueError, match=message):
+        analyze_time_history(model, [0.0, 0.1], **{parameter: values})
+
+
+def test_initial_displacement_and_velocity_start_the_free_vibration():
+    model, stiffness, mass = axial_oscillator()
+    initial_displacement = 0.01
+    initial_velocity = 0.2
+    dt = 0.0005
+    times = np.arange(2001) * dt
+
+    result = analyze_time_history(
+        model,
+        times,
+        initial_displacements_m=[0.0, 0.0, 0.0, initial_displacement, 0.0, 0.0],
+        initial_velocities_m_s=[0.0, 0.0, 0.0, initial_velocity, 0.0, 0.0],
+    )
+
+    # Node 1, component ux (index 0) is the only free degree of freedom.
+    assert result.displacements[0][1][0] == initial_displacement
+    assert result.velocities[0][1][0] == initial_velocity
+    # With no load and no damping, m*a0 + k*u0 = 0.
+    assert result.accelerations[0][1][0] == pytest.approx(-stiffness * initial_displacement / mass)
+    # Undamped free vibration: u(t) = u0*cos(wt) + (v0/w)*sin(wt).
+    omega = math.sqrt(stiffness / mass)
+    expected = initial_displacement * math.cos(omega * times[-1]) + (
+        initial_velocity / omega
+    ) * math.sin(omega * times[-1])
+    assert result.displacements[-1][1][0] == pytest.approx(expected, rel=1e-4)
