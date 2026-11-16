@@ -235,3 +235,18 @@ def test_initial_displacement_and_velocity_start_the_free_vibration():
         initial_velocity / omega
     ) * math.sin(omega * times[-1])
     assert result.displacements[-1][1][0] == pytest.approx(expected, rel=1e-4)
+
+
+def test_massless_mechanism_makes_effective_stiffness_singular():
+    # Horizontal bar: its uy row in K and M is exactly zero (sin = 0), so the
+    # singularity is exact on every platform; a tilted bar would only be near-singular.
+    model = StructuralModel(
+        nodes=(FrameNode(0.0, 0.0), FrameNode(2.0, 0.0)),
+        members=(AxialMember(0, 1, 1000.0, 1.0),),  # no mass_per_length_kg_m -> zero mass
+        restraints=((True, True, True), (False, False, True)),  # node 1 uy is free
+    )
+    with pytest.raises(
+        ValueError, match="effective dynamic stiffness is singular; check restraints and model"
+    ) as excinfo:
+        analyze_time_history(model, [0.0, 0.1])
+    assert isinstance(excinfo.value.__cause__, np.linalg.LinAlgError)
