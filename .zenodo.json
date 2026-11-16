@@ -3,7 +3,9 @@
   "description": "An embeddable Python library with reusable structural engineering calculations, modal analysis, sensor workflows, and monitoring components for engineering applications.",
   "creators": [
     {
-      "name": "Korkmaz, Ayberk"
+      "name": "Korkmaz, Ayberk",
+      "affiliation": "Eskişehir Osmangazi University",
+      "orcid": "0009-0009-0699-090X"
     }
   ],
   "license": "apache-2.0",

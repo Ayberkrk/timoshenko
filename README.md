@@ -237,6 +237,9 @@ always resolves to the latest release; each release also has its own DOI on
 [`CITATION.cff`](https://github.com/Ayberkrk/timoshenko/blob/main/CITATION.cff),
 which GitHub's "Cite this repository" button reads.
 
+Author: Ayberk Korkmaz, Eskişehir Osmangazi University
+([ORCID 0009-0009-0699-090X](https://orcid.org/0009-0009-0699-090X)).
+
 ## Contributors
 
 Thanks to everyone who has contributed:

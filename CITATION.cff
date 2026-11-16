@@ -14,6 +14,8 @@ abstract: >-
 authors:
   - family-names: Korkmaz
     given-names: Ayberk
+    orcid: "https://orcid.org/0009-0009-0699-090X"
+    affiliation: "Eskişehir Osmangazi University"
 keywords:
   - structural engineering
   - structural health monitoring
